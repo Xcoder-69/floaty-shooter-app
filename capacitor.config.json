@@ -1,0 +1,16 @@
+{
+  "appId": "com.hyperflux.floatyshooter",
+  "appName": "Floaty Shooter",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "screenOrientation": "landscape",
+  "plugins": {
+    "AdMob": {
+      "appId": "ca-app-pub-5141258475616427~6142646624"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "backgroundColor": "#000000"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Floaty Shooter",
+  "short_name": "FloatyShooter",
+  "description": "Premium Cyberpunk 2D Shooter",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#020b14",
+  "theme_color": "#00eaff",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Floaty Shooter — Cyberpunk Campaign</title>
+    <meta name="description" content="Floaty Shooter: A premium 2D cyberpunk shooting game with 6 chapters, 140 levels, and intense combat." />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('SW Registered'))
+                    .catch(e => console.log('SW Registration Failed', e));
+            });
+        }
+    </script>
+    <script>
+        window.DEBUG_MODE = true; // [SET TO FALSE FOR PRODUCTION]
+        
+    // ---- STARTUP: Video → Loading → Game ----
+    (function() {
+        var videoGone = false;
+        var loadingGone = false;
+
+        function dismissVideo() {
+            if (videoGone) return;
+            videoGone = true;
+            var ov = document.getElementById('intro-video-overlay');
+            var vid = document.getElementById('intro-video');
+            if (vid) { vid.pause(); vid.removeAttribute('src'); vid.load(); }
+            if (ov) {
+                ov.style.opacity = '0';
+                setTimeout(function() {
+                    ov.style.display = 'none';
+                    showLoadingThenStart();
+                }, 800);
+            } else {
+                showLoadingThenStart();
+            }
+        }
+
+        function showLoadingThenStart() {
+            if (loadingGone) return;
+            loadingGone = true;
+            var lo = document.getElementById('loading-overlay');
+            var bar = lo && lo.querySelector('.loader-bar');
+            if (bar) bar.style.width = '100%';
+            // Unlock audio context on any interaction before game starts
+            unlockAudio();
+            setTimeout(function() {
+                if (lo) {
+                    lo.style.opacity = '0';
+                    setTimeout(function() { lo.style.display = 'none'; }, 500);
+                }
+            }, 1200);
+        }
+
+        function unlockAudio() {
+            // Resume WebAudio context suspended by browser autoplay policy
+            var tryUnlock = function() {
+                if (window._audioUnlocked) return;
+                window._audioUnlocked = true;
+                // If game's AudioEngine is ready, resume it
+                if (window._gameAudioEngine && window._gameAudioEngine.ctx) {
+                    window._gameAudioEngine.ctx.resume().catch(function(){});
+                    // Try playing background music silently
+                    var music = window._gameAudioEngine.music;
+                    if (music && window._gameAudioEngine.musicEnabled && music.paused) {
+                        music.volume = 0;
+                        music.play().then(function() {
+                            music.volume = 0.8;
+                        }).catch(function() { music.volume = 0.8; });
+                    }
+                }
+                // Create a silent AudioContext to unlock on iOS/Android
+                try {
+                    var AC = window.AudioContext || window.webkitAudioContext;
+                    if (AC) {
+                        var tmpCtx = new AC();
+                        var buf = tmpCtx.createBuffer(1,1,22050);
+                        var src = tmpCtx.createBufferSource();
+                        src.buffer = buf;
+                        src.connect(tmpCtx.destination);
+                        src.start(0);
+                        setTimeout(function(){ tmpCtx.close(); }, 500);
+                    }
+                } catch(e) {}
+            };
+            ['touchstart','touchend','click','keydown'].forEach(function(ev) {
+                document.addEventListener(ev, tryUnlock, { once: true, capture: true });
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            var vid = document.getElementById('intro-video');
+            var overlay = document.getElementById('intro-video-overlay');
+
+            if (!vid || !overlay) { dismissVideo(); return; }
+
+            // Safety timeout — never freeze longer than 8 seconds
+            var safetyTimeout = setTimeout(dismissVideo, 8000);
+
+            // Try to play WITH sound first (works on Capacitor/native WebView)
+            vid.muted = false;
+            var playPromise = vid.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(function() {
+                    // Browser blocked unmuted autoplay — retry muted and add tap-to-unmute
+                    vid.muted = true;
+                    vid.play().then(function() {
+                        // Video playing muted — unmute on first user interaction
+                        var unmuteHandler = function() {
+                            vid.muted = false;
+                            document.removeEventListener('click', unmuteHandler, true);
+                            document.removeEventListener('touchstart', unmuteHandler, true);
+                        };
+                        document.addEventListener('click', unmuteHandler, { once: true, capture: true });
+                        document.addEventListener('touchstart', unmuteHandler, { once: true, capture: true });
+                    }).catch(function() {
+                        clearTimeout(safetyTimeout);
+                        dismissVideo();
+                    });
+                });
+            }
+
+            vid.addEventListener('ended', function() {
+                clearTimeout(safetyTimeout);
+                dismissVideo();
+            });
+
+            vid.addEventListener('error', function() {
+                clearTimeout(safetyTimeout);
+                dismissVideo();
+            });
+
+            // Also allow tap-to-skip
+            overlay.addEventListener('click', function() {
+                clearTimeout(safetyTimeout);
+                dismissVideo();
+            });
+            overlay.addEventListener('touchend', function() {
+                clearTimeout(safetyTimeout);
+                dismissVideo();
+            }, { passive: true });
+        });
+
+        unlockAudio();
+    })();
+    </script>
+</head>
+<body oncontextmenu="return false;">
+    <!-- INTRO VIDEO OVERLAY -->
+    <div id="intro-video-overlay" style="background: #000;">
+        <video id="intro-video" autoplay muted playsinline webkit-playsinline preload="auto" style="width:100%; height:100%; object-fit:cover;">
+            <source src="video/hyperflux_studio.mp4" type="video/mp4">
+        </video>
+        <!-- Simulated Ad Overlay -->
+        <div id="simulated-ad-overlay" class="big-overlay hidden">
+            <div class="loader-content">
+                <div class="loader-icon">📺</div>
+                <div class="loader-title">WATCHING AD...</div>
+                <div class="loader-sub">NEURAL LINK SYNCING</div>
+                <div class="loader-bar-wrap"><div class="loader-bar ad-progress"></div></div>
+            </div>
+        </div>
+
+        <!-- Debug Indicator -->
+        <div id="debug-indicator" style="position:fixed; top:10px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:white; padding:4px 12px; border-radius:4px; font-family:var(--font-head); font-size:10px; z-index:10000; pointer-events:none; display:none; letter-spacing:1px; box-shadow:0 0 15px rgba(255,0,0,0.5);">🛠️ TEST MODE ACTIVE</div>
+    </div>
+
+    <!-- PREMIUM LOADING SCREEN -->
+    <div id="loading-overlay">
+        <div class="loader-content">
+            <div class="loader-icon">🎮</div>
+            <div class="loader-title">FLOATY SHOOTER</div>
+            <div class="loader-sub">LOADING SYSTEMS...</div>
+            <div class="loader-bar-wrap">
+                <div class="loader-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- PORTRAIT WARNING -->
+    <div id="portrait-warning">
+        <svg viewBox="0 0 24 24"><path d="M16,1H8C6.34,1 5,2.34 5,4V20C5,21.66 6.34,23 8,23H16C17.66,23 19,21.66 19,20V4C19,2.34 17.66,1 16,1M14,21H10V20H14V21M17,18H7V6H17V18Z"/></svg>
+        <h2>PLEASE ROTATE DEVICE</h2>
+        <p>This game requires Landscape mode.</p>
+    </div>
+
+    <div id="ui-container">
+
+        <!-- ========== SCREEN 1: START PAGE ========== -->
+        <div id="screen-start" class="screen active">
+            <div id="toast-container"></div>
+            <!-- Top-Left: Privacy & Terms -->
+            <div class="start-top-left">
+                <button class="start-link" onclick="openPopup('privacy-popup')">Privacy Policy</button>
+                <button class="start-link" onclick="openPopup('terms-popup')">Terms & Conditions</button>
+            </div>
+
+            <!-- Top-Right: Settings Gear -->
+            <div class="start-top-right">
+                <button class="start-gear-btn" onclick="toggleSettings()">⚙️</button>
+            </div>
+
+            <!-- Center: Title -->
+            <div class="start-center">
+                <div class="start-logo-sub">HYPERFLUX STUDIOS</div>
+                <div class="start-logo-text" onclick="handleTitleTap()">FLOATY<br>SHOOTER</div>
+            </div>
+
+            <!-- Bottom Center: BIG PLAY Button -->
+            <div class="start-bottom">
+                <button id="btn-start-game" class="btn-play" onclick="goToMainMenu()">
+                    <span class="play-shine"></span>
+                    PLAY
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== GLOBAL POPUPS & OVERLAYS ========== -->
+        <!-- Settings Panel (dropdown) -->
+            <div id="settings-panel" class="settings-panel hidden">
+                <h3>⚙️ SETTINGS</h3>
+                <div class="settings-list">
+                    <button class="settings-item" onclick="showControls()">🎮 Controls</button>
+                    <button class="settings-item" onclick="showHistory()">📜 History</button>
+                    <button class="settings-item" onclick="openPopup('collection-popup');renderCollectionUI();">🚀 Collection</button>
+                    <button id="music-toggle-btn" class="settings-item" onclick="toggleMusic()">🔊 Music: ON</button>
+                    <button class="settings-item" onclick="showStats()">📊 Stats</button>
+
+                </div>
+            </div>
+
+            <!-- Controls Popup -->
+            <div id="controls-popup" class="popup-overlay hidden">
+                <div class="popup-box">
+                    <button class="popup-close" onclick="closePopup('controls-popup')">✕</button>
+                    <h3>🎮 Controls</h3>
+                    <ul class="controls-list">
+                        <li>🕹️ Left Joystick — Move & Aim</li>
+                        <li>🔥 Fire Button — Shoot</li>
+                        <li>🚀 Missile Button — Launch Missile</li>
+                        <li>⏸ Pause Button — Pause Game</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- History Popup -->
+            <div id="history-popup" class="popup-overlay hidden">
+                <div class="popup-box">
+                    <button class="popup-close" onclick="closePopup('history-popup')">✕</button>
+                    <h3>📜 Match History</h3>
+                    <div id="history-list" class="history-list"></div>
+                </div>
+            </div>
+
+            <!-- Stats Popup -->
+            <div id="stats-popup" class="popup-overlay hidden">
+                <div class="popup-box">
+                    <button class="popup-close" onclick="closePopup('stats-popup')">✕</button>
+                    <h3>📊 Statistics</h3>
+                    <div id="stats-content" class="stats-grid"></div>
+                </div>
+            </div>
+
+            <!-- Collection Popup -->
+            <div id="collection-popup" class="popup-overlay hidden">
+                <div class="popup-box popup-box-large">
+                    <button class="popup-close" onclick="closePopup('collection-popup')">✕</button>
+                    <h3>🚀 Ship Collection</h3>
+                    <p class="popup-subtitle">Unlocked Chapter Ships</p>
+                    <div id="collection-grid" class="collection-grid"></div>
+                </div>
+            </div>
+
+            <!-- Ship Trial Popup -->
+            <div id="trial-popup" class="popup-overlay hidden">
+                <div class="popup-box popup-box-large">
+                    <button class="popup-close" onclick="closePopup('trial-popup')">✕</button>
+                    <h3>🔬 Ship Trial Lab</h3>
+                    <p class="popup-subtitle">Watch an ad to test-drive any ship for this session!</p>
+                    <div id="trial-grid" class="collection-grid"></div>
+                </div>
+            </div>
+
+            <!-- Privacy Policy Popup -->
+            <div id="privacy-popup" class="popup-overlay hidden">
+                <div class="popup-box popup-box-large">
+                    <button class="popup-close" onclick="closePopup('privacy-popup')">✕</button>
+                    <h3>🔒 Privacy Policy</h3>
+                    <div class="legal-text">
+                        <p class="legal-date">Last Updated: 3/31/2026</p>
+                        <p>This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile or web-based game application ("Game"). By accessing or using the Game, you agree to the terms of this Privacy Policy.</p>
+
+                        <h5>1. INFORMATION WE COLLECT</h5>
+                        <p><strong>a) Personal Information</strong><br>We do not require users to provide personal information such as name, email address, or phone number to play the Game. However, such information may be collected if voluntarily provided by the user (for example, through support requests).</p>
+                        <p><strong>b) Non-Personal Information</strong><br>We may collect non-personal information automatically, including:</p>
+                        <ul><li>Device type and operating system</li><li>Game usage data and interactions</li><li>Performance and crash reports</li><li>Anonymous identifiers</li></ul>
+                        <p><strong>c) Advertising Data</strong><br>Third-party advertising providers may collect information such as device identifiers, IP address, and interaction with advertisements for the purpose of delivering relevant ads.</p>
+
+                        <h5>2. HOW WE USE YOUR INFORMATION</h5>
+                        <p>We use collected information to:</p>
+                        <ul><li>Improve game performance and user experience</li><li>Fix bugs and technical issues</li><li>Analyze usage trends</li><li>Provide customer support</li><li>Deliver advertisements</li></ul>
+
+                        <h5>3. THIRD-PARTY SERVICES</h5>
+                        <p>We may use third-party services, including analytics and advertising networks. These third parties may collect and process data in accordance with their own privacy policies. We do not control how third-party services use your data.</p>
+
+                        <h5>4. DATA SECURITY</h5>
+                        <p>We take reasonable measures to protect your information. However, no method of transmission over the internet or electronic storage is 100% secure. We cannot guarantee absolute security.</p>
+
+                        <h5>5. CHILDREN'S PRIVACY</h5>
+                        <p>The Game is not intended for children under the age required by applicable laws in their country. We do not knowingly collect personal information from children. If such data is discovered, it will be removed promptly.</p>
+
+                        <h5>6. DATA RETENTION</h5>
+                        <p>We retain non-personal data only as long as necessary for analytics, performance improvement, and legal compliance.</p>
+
+                        <h5>7. YOUR RIGHTS</h5>
+                        <p>Depending on your location, you may have rights regarding your data, including:</p>
+                        <ul><li>Access to collected data</li><li>Request deletion of data</li><li>Restrict or object to processing</li></ul>
+                        <p>Requests can be made through the contact information below.</p>
+
+                        <h5>8. CHANGES TO THIS POLICY</h5>
+                        <p>We may update this Privacy Policy at any time. Updates will be reflected by the "Last Updated" date. Continued use of the Game means you accept the updated policy.</p>
+
+                        <h5>9. CONTACT</h5>
+                        <p>If you have any questions about this Privacy Policy, please contact us at: craze777@gmail.com (for when user finds an issue or to share feedback)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terms & Conditions Popup -->
+            <div id="terms-popup" class="popup-overlay hidden">
+                <div class="popup-box popup-box-large">
+                    <button class="popup-close" onclick="closePopup('terms-popup')">✕</button>
+                    <h3>📜 Terms & Conditions</h3>
+                    <div class="legal-text">
+                        <p class="legal-date">Last Updated: 3/31/2026</p>
+                        <p>By downloading, accessing, or using this Game, you agree to be bound by these Terms and Conditions.</p>
+
+                        <h5>1. USE OF THE GAME</h5>
+                        <p>You are granted a limited, non-exclusive, non-transferable license to use the Game for personal, non-commercial purposes only. You agree not to:</p>
+                        <ul><li>Modify, copy, distribute, or reproduce any part of the Game</li><li>Use the Game for unlawful purposes</li><li>Attempt to reverse engineer or exploit the Game</li></ul>
+
+                        <h5>2. INTELLECTUAL PROPERTY RIGHTS</h5>
+                        <p>All content within the Game, including but not limited to:</p>
+                        <ul><li>Design</li><li>Graphics</li><li>Code</li><li>Visual assets</li><li>Audio</li></ul>
+                        <p>is the exclusive property of the developer. Unauthorized copying, reproduction, distribution, or use of any assets is strictly prohibited and may result in legal action under applicable intellectual property laws.</p>
+
+                        <h5>3. IN-GAME FEATURES AND PURCHASES</h5>
+                        <p>The Game may include optional features such as virtual items or rewards. These items:</p>
+                        <ul><li>Have no real-world monetary value</li><li>Cannot be exchanged outside the Game</li></ul>
+                        <p>All purchases or rewards are final and non-refundable unless required by law.</p>
+
+                        <h5>4. ADVERTISEMENTS</h5>
+                        <p>The Game may display third-party advertisements. We are not responsible for the content or practices of these advertisers.</p>
+
+                        <h5>5. DISCLAIMER</h5>
+                        <p>The Game is provided "as is" without warranties of any kind. We do not guarantee:</p>
+                        <ul><li>That the Game will be error-free</li><li>That access will be uninterrupted</li></ul>
+
+                        <h5>6. LIMITATION OF LIABILITY</h5>
+                        <p>To the fullest extent permitted by law, we shall not be liable for:</p>
+                        <ul><li>Any indirect or incidental damages</li><li>Loss of data or progress</li><li>Any issues arising from use of the Game</li></ul>
+
+                        <h5>7. TERMINATION</h5>
+                        <p>We reserve the right to suspend or terminate access to the Game at any time without prior notice if these Terms are violated.</p>
+
+                        <h5>8. GOVERNING LAW</h5>
+                        <p>These Terms shall be governed and interpreted in accordance with the laws of your jurisdiction.</p>
+
+                        <h5>9. CHANGES TO TERMS</h5>
+                        <p>We may update these Terms at any time. Continued use of the Game after changes means you accept the updated Terms.</p>
+
+                        <h5>10. CONTACT</h5>
+                        <p>For any questions regarding these Terms, contact: craze777@gmail.com</p>
+                    </div>
+                </div>
+            </div>
+
+        <!-- ========== SCREEN 2: CHAPTER SELECT ========== -->
+        <div id="screen-chapters" class="screen">
+            <!-- TOP BAR -->
+            <div class="cs-topbar">
+                <!-- Left: Back Arrow -->
+                <div class="cs-topbar-left">
+                    <button class="cs-back-btn" onclick="goToStart()">◀</button>
+                </div>
+
+                <!-- Center: Inventory Items -->
+                <div class="cs-topbar-center">
+                    <span class="cs-inv-item"><img src="image/coin.png" class="ui-icon-inv"><b id="inv-coins">0</b></span>
+                    <span class="cs-inv-item"><img src="image/missile.png" class="ui-icon-inv"><b id="inv-missiles">0</b></span>
+                    <span class="cs-inv-item"><img src="image/shield.png" class="ui-icon-inv"><b id="inv-shields">0</b></span>
+                    <span class="cs-inv-item"><img src="image/double_fire.png" class="ui-icon-inv"><b id="inv-double">0</b></span>
+                </div>
+
+                <!-- Right: Store + Settings -->
+                <div class="cs-topbar-right">
+                    <button class="cs-trial-btn" onclick="openPopup('collection-popup');renderCollectionUI();">
+                        <span>🚀 COLLECTION</span>
+                    </button>
+                    <button class="cs-store-btn" onclick="openStore()">
+                        <span class="cs-store-label">🏪 STORE</span>
+                    </button>
+                    <button class="cs-gear-btn" onclick="toggleSettings()">⚙️</button>
+                </div>
+            </div>
+
+
+
+            <!-- CHAPTER CARDS AREA -->
+            <div class="cs-stages-area">
+                <div id="cs-chapter-cards" class="cs-stage-cards">
+                    <!-- Filled dynamically with 6 chapter cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== SCREEN 3: LEVEL MAP ========== -->
+        <div id="screen-levels" class="screen">
+            <!-- NAVBAR -->
+            <div class="lm-navbar">
+                <div class="lm-navbar-left">
+                    <button class="lm-back" onclick="goToChapterSelect()">◀</button>
+                    <div class="lm-chapter-info">
+                        <span id="lm-ch-name" class="lm-ch-name">CHAPTER 1</span>
+                        <span id="lm-ch-sub" class="lm-ch-sub">GENESIS PROTOCOL</span>
+                    </div>
+                </div>
+                
+                <div class="lm-navbar-center">
+                    <div class="lm-stars">⭐ <b id="lm-star-count">0</b>/<span id="lm-star-total">10</span></div>
+                    <div class="lm-inv">
+                        <span class="lm-inv-item"><img src="image/coin.png" class="ui-icon"> <b id="lm-coins">0</b></span>
+                        <span class="lm-inv-item"><img src="image/missile.png" class="ui-icon"> <b id="lm-missiles">0</b></span>
+                        <span class="lm-inv-item"><img src="image/shield.png" class="ui-icon"> <b id="lm-shields">0</b></span>
+                        <span class="lm-inv-item"><img src="image/double_fire.png" class="ui-icon"> <b id="lm-dbl">0</b></span>
+                    </div>
+                </div>
+
+                <div class="lm-navbar-right">
+                    <button class="lm-store-btn" onclick="openStore()">
+                        <span class="lm-store-icon">🏪</span> STORE
+                    </button>
+                    <button class="lm-gear" onclick="toggleSettings()">⚙️</button>
+                </div>
+            </div>
+
+
+            <!-- LEVEL MAP AREA -->
+            <div class="lm-area" id="lm-area">
+                <svg id="lm-svg" class="lm-svg"></svg>
+                <div id="lm-nodes" class="lm-nodes"></div>
+            </div>
+        </div>
+
+        <!-- ========== STORE OVERLAY ========== -->
+        <div id="store-overlay" class="popup-overlay hidden">
+            <div class="popup-box store-box">
+                <button class="popup-close" onclick="closeStore()">✕</button>
+                <h3>🏪 STORE</h3>
+                <div class="store-coins"><img src="image/coin.png" class="ui-icon"> <span id="store-coins-display">0</span></div>
+
+                <div class="store-grid">
+                    <!-- Missile -->
+                    <div class="store-item">
+                        <div class="store-item-icon"><img src="image/missile.png" class="ui-icon-large"></div>
+                        <div class="store-item-name">Missile</div>
+                        <div class="store-item-desc">Clears all enemies on screen</div>
+                        <div class="store-item-actions">
+                            <button id="buy-missile" class="btn-store-buy" onclick="buyItem('missile')">
+                                <img src="image/coin.png" class="ui-icon"> <span id="price-missile">100</span>
+                            </button>
+                            <button id="ad-missile" class="btn-store-ad" onclick="showRewardAd('missile')">
+                                📺 Watch Ad
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Shield -->
+                    <div class="store-item">
+                        <div class="store-item-icon"><img src="image/shield.png" class="ui-icon-large"></div>
+                        <div class="store-item-name">Shield</div>
+                        <div class="store-item-desc">Absorbs 3 hits for 15 seconds</div>
+                        <div class="store-item-actions">
+                            <button id="buy-shield" class="btn-store-buy" onclick="buyItem('shield')">
+                                <img src="image/coin.png" class="ui-icon"> <span id="price-shield">75</span>
+                            </button>
+                            <button id="ad-shield" class="btn-store-ad" onclick="showRewardAd('shield')">
+                                📺 Watch Ad
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Double Bullet -->
+                    <div class="store-item">
+                        <div class="store-item-icon"><img src="image/double_fire.png" class="ui-icon-large"></div>
+                        <div class="store-item-name">Double Fire</div>
+                        <div class="store-item-desc">Dual bullets for 7 seconds</div>
+                        <div class="store-item-actions">
+                            <button id="buy-double" class="btn-store-buy" onclick="buyItem('doubleBullet')">
+                                <img src="image/coin.png" class="ui-icon"> <span id="price-double">50</span>
+                            </button>
+                            <button id="ad-double" class="btn-store-ad" onclick="showRewardAd('doubleBullet')">
+                                📺 Watch Ad
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== AD OVERLAY (placeholder) ========== -->
+        <div id="ad-overlay" class="popup-overlay hidden">
+            <div class="popup-box ad-box">
+                <div class="ad-content">
+                    <div class="ad-icon">📺</div>
+                    <div class="ad-text">Watching Ad...</div>
+                    <div class="ad-timer"><span class="ad-countdown">3</span>s</div>
+                    <div class="loader-bar-wrap" style="margin-top:15px;">
+                        <div class="loader-bar" style="animation-duration:3s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== IN-GAME HUD ========== -->
+        <div id="hud" class="hidden">
+            <!-- Level Intro Text -->
+            <div id="level-intro-text" class="level-intro hidden">
+                <h1 id="intro-level-num">LEVEL 1</h1>
+                <p id="intro-chapter-name">GENESIS PROTOCOL</p>
+            </div>
+            
+            <!-- Top Left: Coins -->
+            <div class="hud-top-left">
+                <div class="hud-chip hud-coins-chip">
+                    <img src="image/coin.png" class="ui-icon"> <span id="hud-coins">0</span>
+                </div>
+                <div class="hud-chip" id="hud-level-info">
+                    <span id="hud-chapter-text">CH.1</span>
+                    <span id="hud-level-text">LVL 1</span>
+                </div>
+            </div>
+
+            <!-- Top Center: Combo -->
+            <div class="hud-top-center">
+                <div id="combo-display" class="combo-display hidden">
+                    <span id="combo-text" class="combo-text">x2</span>
+                    <span id="combo-label" class="combo-label">COMBO!</span>
+                </div>
+                <!-- Power-up Timers Container -->
+                <div id="hud-powerup-timers" class="hud-powerup-timers"></div>
+            </div>
+
+            <!-- Top Right: Pause + Enemies -->
+            <div class="hud-top-right">
+                <div class="hud-chip" id="hud-enemies-info">
+                    <span id="hud-enemies-text">3 enemies</span>
+                </div>
+                <div class="hud-chip" id="hud-score-chip">
+                    ⭐ <span id="hud-score-text">0</span>
+                </div>
+                <button id="btn-sound-hud" class="hud-btn pause-btn" onclick="toggleMusic()">🔊</button>
+                <button id="btn-pause" class="hud-btn pause-btn" onclick="togglePause()">⏸</button>
+            </div>
+
+            <!-- Bottom Left: Missile Button -->
+            <div class="hud-bottom-left">
+                <button id="hud-missile-btn" class="hud-btn missile-btn hidden" onclick="useMissile()">
+                    <img src="image/missile.png" class="ui-icon"> <span class="missile-count">0</span>
+                </button>
+                <button id="hud-shield-btn" class="hud-btn shield-btn hidden" onclick="useShield()">
+                    <img src="image/shield.png" class="ui-icon">
+                </button>
+            </div>
+
+            <!-- HP Bar -->
+            <div class="hud-hp-section">
+                <span class="hud-label">HP</span>
+                <div class="hp-bar-container">
+                    <div id="hp-bar" class="hp-bar"></div>
+                </div>
+                <span id="hp-text" class="hp-text">10/10</span>
+            </div>
+
+            <!-- Mission Objective (shown on fun levels) -->
+            <div id="mission-display" class="mission-display hidden">
+                <div class="mission-icon" id="mission-icon">💀</div>
+                <div class="mission-text" id="mission-text">Kill 40 enemies</div>
+                <div class="mission-progress" id="mission-progress">0/40</div>
+            </div>
+
+            <!-- Mobile Controls -->
+            <div id="mobile-controls" class="mobile-controls hidden">
+                <div id="joystick-zone" class="joystick-zone">
+                    <div id="joystick-base" class="joystick-base">
+                        <div id="joystick-handle" class="joystick-handle"></div>
+                    </div>
+                </div>
+
+                <!-- Left Side Items -->
+                <div class="powerups-left">
+                    <button id="btn-shield-mobile" class="action-btn shield-mobile-btn hidden" onclick="useShield()">
+                        <div class="btn-count">0</div>
+                        <img src="image/shield.png">
+                        <span>SHIELD</span>
+                    </button>
+
+                    <button id="btn-double-mobile" class="action-btn double-mobile-btn hidden" onclick="useDoubleFire()">
+                        <div class="btn-count">0</div>
+                        <img src="image/double_fire.png">
+                        <span>DOUBLE</span>
+                    </button>
+                </div>
+
+                <!-- Right Side Actions -->
+                <div class="action-buttons">
+                    <button id="btn-fire" class="action-btn fire-btn"><span>FIRE</span></button>
+                    
+                    <button id="btn-missile-mobile" class="action-btn missile-mobile-btn hidden" onclick="useMissile()">
+                        <div class="btn-count">0</div>
+                        <img src="image/missile.png">
+                        <span>MISSILE</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pause Overlay -->
+            <div id="pause-overlay" class="big-overlay hidden">
+                <div class="big-overlay-box pause-box">
+                    <h2>⏸ PAUSED</h2>
+                    <div class="pause-buttons">
+                        <button class="btn primary" onclick="togglePause()">▶️ RESUME</button>
+                        <button class="btn secondary" onclick="exitToMenu()">🏠 EXIT</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Level Complete Overlay -->
+            <div id="level-complete-overlay" class="big-overlay hidden">
+                <div class="big-overlay-box level-complete-box">
+                    <h2 id="level-complete-title">⭐ LEVEL COMPLETE!</h2>
+                    <p id="level-complete-score">Score: 0</p>
+                    <p id="level-complete-coins">Coins: +0</p>
+                    <p id="next-level-text">Entering Level 2…</p>
+                    <div class="overlay-bar-wrap"><div id="overlay-countdown-bar" class="overlay-bar"></div></div>
+                </div>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="game-over-overlay" class="big-overlay hidden">
+                <div class="big-overlay-box game-over-box">
+                    <h2>💥 GAME OVER</h2>
+                    <p>Chapter <span id="go-chapter">1</span> — Level <span id="go-level">1</span></p>
+                    <p>Score: <span id="go-score">0</span></p>
+                    <p>Enemies destroyed: <span id="go-kills">0</span></p>
+                    <div class="gameover-buttons">
+                        <button class="btn secondary" onclick="exitToMenu()">🏠 Exit</button>
+                        <button class="btn primary btn-ad-respawn" onclick="watchAdToRespawn()">📺 Watch Ad to Respawn</button>
+                        <button class="btn primary" onclick="retryLevel()">🔄 Retry Level</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chapter Complete Overlay -->
+            <div id="chapter-complete-overlay" class="big-overlay hidden">
+                <div class="big-overlay-box chapter-complete-box">
+                    <div class="win-stars">★ ★ ★</div>
+                    <h2 id="chapter-win-title">CHAPTER COMPLETE!</h2>
+                    <p id="chapter-win-sub" class="win-sub">You conquered all levels!</p>
+                    <button class="btn primary" onclick="exitToMenu()">🏠 Back to Menu</button>
+                </div>
+            </div>
+
+            <!-- Fun Level Popup -->
+            <div id="fun-level-popup" class="big-overlay hidden">
+                <div class="big-overlay-box fun-level-box">
+                    <div class="fun-level-badge">🎯</div>
+                    <h2 id="fun-level-title">FUN LEVEL!</h2>
+                    <p id="fun-level-objective" class="fun-level-desc">Kill 40 enemies</p>
+                    <p class="fun-level-reward">Complete the objective for bonus coins!</p>
+                    <button class="btn primary" onclick="resumeFromFunLevel()">▶️ RESUME</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="admob-manager.js"></script>
+    <script src="data.js"></script>
+    <script src="store.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
