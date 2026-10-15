@@ -141,6 +141,14 @@ function releaseEnemy(e) { if (enemyPool.length < 100) enemyPool.push(e); }
 function acquireParticle() { return particlePool.length > 0 ? particlePool.pop() : {}; }
 function releaseParticle(p) { if (particlePool.length < 1000) particlePool.push(p); }
 
+function distToSegment(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
 function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
 resize();window.addEventListener('resize',()=>{initBg();resize();});
 
@@ -149,16 +157,57 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     window.goToStart = function(){window.showScreen('screen-start');};
     window.goToMainMenu = function(){try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}window.showScreen('screen-chapters');try{window.updateInventoryUI();}catch(e){}};
     window.goToChapterSelect = function(){try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}window.showScreen('screen-chapters');};
+    window.handlePlayButton = function(){
+        const screenName = document.getElementById('screen-name');
+        const savedName = localStorage.getItem('floaty_player_name');
+        if (screenName && (!savedName || savedName.trim() === '')) {
+            window.showScreen('screen-name');
+            const input = document.getElementById('player-name-input');
+            if (input) setTimeout(() => input.focus(), 100);
+        } else {
+            window.goToMainMenu();
+        }
+    };
+    window.confirmPlayerName = function(){
+        const input = document.getElementById('player-name-input');
+        const name = input && input.value.trim() ? input.value.trim() : 'PILOT';
+        localStorage.setItem('floaty_player_name', name);
+        window.goToMainMenu();
+    };
 
     window.toggleSettings = function(){const p=document.getElementById('settings-panel'); if(p)p.classList.toggle('hidden');};
     window.showControls = function(){window.closeAllPopups();document.getElementById('controls-popup').classList.remove('hidden');};
     window.showHistory = function(){window.closeAllPopups();window.renderHistoryUI();document.getElementById('history-popup').classList.remove('hidden');};
     window.showStats = function(){window.closeAllPopups();window.renderStatsUI();document.getElementById('stats-popup').classList.remove('hidden');};
     window.showPrivacy = function(){window.closeAllPopups();document.getElementById('privacy-popup').classList.remove('hidden');};
+    window.openLeaderboard = function(){
+        window.closeAllPopups();
+        const p = document.getElementById('leaderboard-popup');
+        if (p) {
+            p.classList.remove('hidden');
+            const list = document.getElementById('leaderboard-list');
+            if (list) {
+                const history = window.getHistory ? window.getHistory() : [];
+                const playerName = localStorage.getItem('floaty_player_name') || 'PILOT';
+                const sorted = [...history].sort((a,b) => (b.score||0) - (a.score||0)).slice(0, 10);
+                if (sorted.length === 0) {
+                    list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-dim);font-family:var(--font-head);font-size:0.85rem;">NO MISSIONS RECORDED YET<br><span style="font-size:0.75rem;color:var(--cyan);">Play campaign levels to set high scores!</span></div>`;
+                } else {
+                    list.innerHTML = sorted.map((h, i) => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0.8rem;background:rgba(255,255,255,0.03);border:1px solid rgba(0,234,255,0.15);border-radius:8px;margin-bottom:0.4rem;font-family:var(--font-head);">
+                            <span style="color:var(--cyan);font-weight:700;font-size:0.85rem;">#${i+1} ${playerName}</span>
+                            <span style="font-size:0.8rem;color:var(--text-dim);">CH.${h.chapter} LVL.${h.level}</span>
+                            <span style="color:#ffcc00;font-weight:700;font-size:0.85rem;">★ ${h.score||0}</span>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+    };
     window.openPopup = function(id){window.closeAllPopups();document.getElementById(id).classList.remove('hidden');};
     window.closePopup = function(id){document.getElementById(id).classList.add('hidden');};
     window.closeAllPopups = function(){
-        ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','fun-level-popup','trial-popup'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
+        ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','fun-level-popup','trial-popup','leaderboard-popup'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
         if(document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
     };
     window.openStore = function(){document.getElementById('store-overlay').classList.remove('hidden');document.getElementById('store-coins-display').textContent=window.getSaveData().coins;window.updateStoreUI();};
@@ -543,8 +592,12 @@ function spawnPickup(x,y,type){
         const cfg=getEnemyConfig(chapter,level);    game.enemiesPending = cfg.count;
     game.enemiesConfig = cfg;
     
-    if (game.mission && (game.mission.id === 'survive_time' || game.mission.id === 'pacifist')) {
-        game.enemiesPending = Infinity; // Infinite spawn until time is up
+    if (game.mission) {
+        if (game.mission.id === 'survive_time' || game.mission.id === 'pacifist' || game.mission.id === 'no_damage' || game.mission.id === 'time_kill') {
+            game.enemiesPending = Infinity; // Infinite spawn until time is up or objective met
+        } else if (game.mission.id === 'kill_count') {
+            game.enemiesPending = Math.max(cfg.count, game.mission.target);
+        }
     }
 
     let spawned=0;
@@ -558,7 +611,7 @@ function spawnPickup(x,y,type){
     }
     
     // Spawn up to max concurrent (6 + 1 every 5 levels)
-    game.maxConcurrentEnemies = Math.min(5 + Math.floor(level/5), cfg.count);
+    game.maxConcurrentEnemies = Math.min(6 + Math.floor(level/5), game.mission ? 8 : cfg.count);
     for(let i=spawned;i<game.maxConcurrentEnemies && game.enemiesPending>0;i++){
         const t=cfg.types[Math.floor(Math.random()*cfg.types.length)];
         spawnEnemy(chapter,level,t);
@@ -676,6 +729,12 @@ function processMissileStrike(now) {
             const coins=getCoinsOnKill(game.chapter, game.level, e.type);
             game.coinsEarned+=coins; addCoins(coins);
             game.score+=getScoreOnKill(game.chapter, game.level, e.type);
+            if(game.mission && (game.mission.id === 'kill_count' || game.mission.id === 'time_kill')) game.missionProgress++;
+            if(game.mission && game.mission.id === 'pacifist'){
+                showToast('❌ RULE BROKEN — You killed an enemy! Mission failed.');
+                game.mission = null;
+                triggerGameOver();
+            }
             releaseEnemy(e);
             game.enemies.splice(i, 1);
             screenShake = 15;
@@ -756,8 +815,18 @@ function gameLoop(timestamp){
     if(game.mission){
         if(game.mission.id==='survive_time'){game.missionTimer+=dt;game.missionProgress=Math.floor(game.missionTimer);}
         if(game.mission.id==='no_damage'){game.noDamageTimer+=dt;game.missionProgress=Math.floor(game.noDamageTimer);}
-        if(game.mission.id==='time_kill'){game.missionTimer+=dt; if(game.missionTimer>=60 && game.missionProgress<game.mission.target) {triggerGameOver(); return;}}
-        if(game.mission.id==='pacifist'){game.missionTimer+=dt;game.missionProgress=Math.floor(game.missionTimer); if(game.mission.failed) {triggerGameOver(); return;}}
+        // ★ RULE ENFORCEMENT: Time Attack — fail if 60s passes without hitting kill target
+        if(game.mission.id==='time_kill'){
+            game.missionTimer+=dt;
+            if(game.missionTimer>=60 && game.missionProgress<game.mission.target && !game.mission._failed){
+                game.mission._failed = true;
+                showToast("❌ TIME'S UP — Kill target not reached! Mission failed.");
+                game.mission = null;
+                triggerGameOver();
+            }
+        }
+        // ★ Pacifist timer tracks time (for progress HUD) — kill fail handled at kill site
+        if(game.mission.id==='pacifist'){game.missionTimer+=dt;game.missionProgress=Math.floor(game.missionTimer);}
     }
     // Camera
     camera.x+=(p.x-canvas.width/2-camera.x)*0.1;camera.y+=(p.y-canvas.height/2-camera.y)*0.1;
@@ -780,12 +849,23 @@ function gameLoop(timestamp){
             e.x-=nvx*ol*0.5;e.y-=nvy*ol*0.5;p.x+=nvx*ol*0.5;p.y+=nvy*ol*0.5;
             e.vx -= nvx * 250; e.vy -= nvy * 250; 
             p.vx += nvx * 250; p.vy += nvy * 250;
+            if(!game.shieldActive){
+                p.hp--; hitFlash=0.45; screenShake=8;
+                spawnHitSpark(p.x, p.y, '#ff3a22');
+                if(game.mission && game.mission.id==='no_damage'){
+                    showToast('❌ RULE BROKEN — Enemy rammed into you! Mission failed.');
+                    game.mission = null;
+                    triggerGameOver();
+                }
+                if(p.hp<=0){spawnExplosion(p.x,p.y,p.color); audio.play('playerDeath', 1.0); triggerGameOver();}
+            }
         }
         // Enemy shoot
         if(game.safeTimer<=0){e.shootCooldown--;
-            if(dist<600&&e.shootCooldown<=0){e.shootCooldown=e.fireRate;
-                const bs=3.5+game.level*0.1;
-                const eox=e.x+Math.cos(e.angle)*(e.radius+6), eoy=e.y+Math.sin(e.angle)*(e.radius+6);
+            if(dist<650&&e.shootCooldown<=0){e.shootCooldown=e.fireRate;
+                const bs=8.5+Math.min(game.level*0.15, 5.0); // Faster, arcade-speed enemy bullets
+                const shootAngle=Math.atan2(p.y-e.y, p.x-e.x); // Aim directly at player's current position
+                const eox=e.x+Math.cos(shootAngle)*(e.radius+6), eoy=e.y+Math.sin(shootAngle)*(e.radius+6);
 
                 const addEnemyBullet = (ang, color, shadow, shape, spd) => {
                     const b = acquireBullet();
@@ -793,7 +873,7 @@ function gameLoop(timestamp){
                     const s = spd || bs;
                     b.vx = Math.cos(ang) * s;
                     b.vy = Math.sin(ang) * s;
-                    b.life = shape === 'redDash' ? 100 : 90;
+                    b.life = 180; // Extended lifetime ensures bullets cross full screen and hit player
                     b.ownerType = 'enemy';
                     b.color = color; b.shadow = shadow;
                     b.size = shape === 'bossBeam' ? 8 : 5;
@@ -802,19 +882,19 @@ function gameLoop(timestamp){
                 };
 
                 if(e.type==='bossTankA') {
-                    [-0.5,-0.25,0,0.25,0.5].forEach(a => addEnemyBullet(e.angle+a, '#ff5500', '#ff2200', 'bossBeam', bs*1.1));
-                    spawnMuzzleFlash(e.x,e.y,e.angle);
+                    [-0.5,-0.25,0,0.25,0.5].forEach(a => addEnemyBullet(shootAngle+a, '#ff5500', '#ff2200', 'bossBeam', bs*1.15));
+                    spawnMuzzleFlash(e.x,e.y,shootAngle);
                     if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
                     else if (game.chapter >= 2) playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
                     else audio.play('enemyShoot');
                 } else if(e.type==='bossTankB') {
-                    for(let burst=0;burst<3;burst++) addEnemyBullet(e.angle+(Math.random()-0.5)*0.12, '#cc66ff', '#8800ff', 'shadowVolt', bs*1.3);
-                    spawnMuzzleFlash(e.x,e.y,e.angle);
+                    for(let burst=0;burst<3;burst++) addEnemyBullet(shootAngle+(Math.random()-0.5)*0.12, '#cc66ff', '#8800ff', 'shadowVolt', bs*1.3);
+                    spawnMuzzleFlash(e.x,e.y,shootAngle);
                     if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
                     else playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
                 } else {
-                    addEnemyBullet(e.angle, '#ff3a22', '#ff0000', 'redDash');
-                    spawnMuzzleFlash(e.x,e.y,e.angle);
+                    addEnemyBullet(shootAngle, '#ff3a22', '#ff0000', 'redDash');
+                    spawnMuzzleFlash(e.x,e.y,shootAngle);
                     if (e.type === 'tank') {
                         if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
                         else playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
@@ -823,8 +903,8 @@ function gameLoop(timestamp){
                         else playCustomSound('music/enemy.ogg', 8, 0.6);
                     }
                     if(e.isMiniboss || e.type==='boss'){
-                        (e.type==='boss' ? [-0.6,-0.3,0.3,0.6] : [-0.3,0.3]).forEach(a => addEnemyBullet(e.angle+a, e.type==='boss'?'#ff3a5c':'#ff66ff', e.type==='boss'?'#ff0000':'#ff00ff', 'redDash'));
-                        if(e.type==='boss'&&Math.random()<0.3) for(let j=0;j<8;j++) addEnemyBullet(j*Math.PI/4, '#ff3a5c', '#ff0000', 'redDash', bs*0.8);
+                        (e.type==='boss' ? [-0.6,-0.3,0.3,0.6] : [-0.3,0.3]).forEach(a => addEnemyBullet(shootAngle+a, e.type==='boss'?'#ff3a5c':'#ff66ff', e.type==='boss'?'#ff0000':'#ff00ff', 'redDash', bs*1.05));
+                        if(e.type==='boss'&&Math.random()<0.3) for(let j=0;j<8;j++) addEnemyBullet(j*Math.PI/4, '#ff3a5c', '#ff0000', 'redDash', bs*0.9);
                     }
                 }
             }
@@ -859,7 +939,13 @@ function gameLoop(timestamp){
                         const drop=getEnemyDrop(game.chapter,game.level,e.type);
                         if(drop)spawnPickup(e.x,e.y,drop);
                         if(game.chapter>1&&Math.random()<0.05)spawnPickup(e.x,e.y,Math.random()<0.5?'speedBoost':'shield');
-                        if(game.mission&&game.mission.id==='kill_count')game.missionProgress++;
+                        if(game.mission&&(game.mission.id==='kill_count'||game.mission.id==='time_kill'))game.missionProgress++;
+                        // ★ RULE ENFORCEMENT: Pacifist — instant fail on any kill
+                        if(game.mission&&game.mission.id==='pacifist'){
+                            showToast('❌ RULE BROKEN — You killed an enemy! Mission failed.');
+                            game.mission = null; // prevent re-trigger
+                            triggerGameOver();
+                        }
                         spawnCoinFloat(e.x-camera.x,e.y-camera.y,coins);
                         releaseEnemy(e);
                         game.enemies.splice(j, 1);
@@ -867,21 +953,32 @@ function gameLoop(timestamp){
                 }
             }
         }else{
-            if(Math.hypot(p.x-b.x,p.y-b.y)<p.radius+(game.shieldActive?15:5)){
+            const prevX = b.x - b.vx, prevY = b.y - b.vy;
+            const hitDist = distToSegment(p.x, p.y, prevX, prevY, b.x, b.y);
+            const hitThreshold = p.radius + (b.size || 5) + (game.shieldActive ? 15 : 4);
+            if(hitDist <= hitThreshold){
                 if(game.shieldActive){
                     game.shieldHits--; screenShake=6;
                     // REFLECTION LOGIC: Rebound fire back at enemies
                     b.ownerType = 'player';
                     b.vx *= -1.4; b.vy *= -1.4; // Reflect with speed boost
                     b.color = '#00eaff'; b.shadow = '#00ffff'; // Shield energy color
-                    b.life = 60; // Reset life
+                    b.life = 90; // Reset life
                     dead = false; // Stay alive to hit enemies
                     spawnHitSpark(b.x, b.y, '#00eaff');
                     audio.play('shoot', 0.3); // "Ping" reflection sound
                 } else {
                     dead=true;
-                    p.hp--; hitFlash=0.45; if(navigator.vibrate)navigator.vibrate(30);
-                    if(game.mission&&game.mission.id==='no_damage')game.noDamageTimer=0;
+                    p.hp--; hitFlash=0.45; screenShake=6;
+                    spawnHitSpark(b.x, b.y, b.color || '#ff3a22');
+                    if(navigator.vibrate)navigator.vibrate(40);
+                    if(window.playCustomSound) playCustomSound('music/shooter_destoyed.ogg', 4, 0.5);
+                    // ★ RULE ENFORCEMENT: Untouchable — instant fail on ANY damage
+                    if(game.mission && game.mission.id==='no_damage'){
+                        showToast('❌ RULE BROKEN — You took damage! Mission failed.');
+                        game.mission = null; // prevent re-trigger
+                        triggerGameOver();
+                    }
                     if(p.hp<=0){spawnExplosion(p.x,p.y,p.color); audio.play('playerDeath', 1.0); triggerGameOver();}
                 }
             }
@@ -930,20 +1027,40 @@ function gameLoop(timestamp){
 
     // ---- Level complete check ----
     let timeUp = false;
-    if (game.mission && (game.mission.id === 'survive_time' || game.mission.id === 'pacifist')) {
-        if (game.missionProgress >= game.mission.target) timeUp = true;
+    if (game.mission) {
+        if (game.mission.id === 'survive_time' || game.mission.id === 'pacifist') {
+            if (game.missionProgress >= game.mission.target) timeUp = true;
+        } else if (game.mission.id === 'no_damage') {
+            if (game.noDamageTimer >= game.mission.target) timeUp = true;
+        } else if (game.mission.id === 'time_kill') {
+            if (game.missionProgress >= game.mission.target) timeUp = true;
+        } else if (game.mission.id === 'kill_count') {
+            if (game.missionProgress >= game.mission.target && currentECount === 0) timeUp = true;
+        }
     }
 
     if((currentECount===0 && game.enemiesPending<=0 && game.safeTimer<=0) || timeUp){
         // Check mission complete
-        let missionComplete=true;
+        let missionComplete = true;
         if(game.mission){
-            if(game.mission.id==='kill_count'&&game.missionProgress<game.mission.target)missionComplete=false;
-            if(game.mission.id==='survive_time'&&game.missionProgress<game.mission.target)missionComplete=false;
-            if(game.mission.id==='no_damage'&&game.missionProgress<game.mission.target)missionComplete=false;
-            if(game.mission.id==='time_kill'&&game.missionProgress<game.mission.target)missionComplete=false;
-            if(game.mission.id==='pacifist'&&game.missionProgress<game.mission.target)missionComplete=false;
-            if(missionComplete){const bonus=20*game.chapter;addCoins(bonus);game.coinsEarned+=bonus;}
+            if(game.mission.id==='kill_count' && game.missionProgress < game.mission.target) missionComplete = false;
+            if(game.mission.id==='survive_time' && game.missionProgress < game.mission.target) missionComplete = false;
+            if(game.mission.id==='no_damage' && game.noDamageTimer < game.mission.target) missionComplete = false;
+            if(game.mission.id==='time_kill' && game.missionProgress < game.mission.target) missionComplete = false;
+            if(game.mission.id==='pacifist' && game.missionProgress < game.mission.target) missionComplete = false;
+        }
+
+        if(!missionComplete){
+            showToast('❌ RULE BROKEN — Mission objective failed! Game Over.');
+            game.mission = null;
+            triggerGameOver();
+            return;
+        }
+
+        if(game.mission){
+            const bonus = 20 * game.chapter;
+            addCoins(bonus);
+            game.coinsEarned += bonus;
         }
         triggerLevelComplete();
     }
