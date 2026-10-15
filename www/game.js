@@ -474,7 +474,6 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     <div class="lb-my-name-row">
                         <span class="lb-my-name">${escapeHtml(pilotName)}</span>
                         <span class="lb-me-tag">YOU</span>
-                        <button class="lb-my-edit-link" onclick="openEditPilotPopup()" title="Edit Callsign"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>EDIT</button>
                     </div>
                     <div class="lb-my-sub">CH.${playerChapter} • ${playerScore > 0 ? 'ACTIVE ACE' : 'RECRUIT'}</div>
                 </div>
@@ -527,7 +526,6 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     <div class="lb-my-name-row">
                         <span class="lb-my-name">${escapeHtml(pilotName)}</span>
                         <span class="lb-me-tag">YOU</span>
-                        <button class="lb-my-edit-link" onclick="openEditPilotPopup()" title="Edit Callsign"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>EDIT</button>
                     </div>
                     <div class="lb-my-sub">${history.length} BATTLES • ${wins} VICTORIES</div>
                 </div>
