@@ -243,24 +243,14 @@
                 </div>
             </div>
 
-            <!-- Controls Popup (Unified, Device-Aware) -->
+            <!-- Controls Popup (Device-Only: Auto-detects PC or Mobile) -->
             <div id="controls-popup" class="popup-overlay hidden">
                 <div class="popup-box popup-box-large controls-modal-box">
                     <button class="popup-close" onclick="closePopup('controls-popup')"></button>
                     <div class="ctrl-modal-header">
-                        <span class="ctrl-modal-badge">🎮</span>
-                        <h3 class="ctrl-modal-title">BATTLE CONTROLS</h3>
-                        <p class="ctrl-modal-sub">Master your spacecraft navigation & weaponry</p>
-                        
-                        <!-- Device Switcher Tabs -->
-                        <div class="ctrl-tabs">
-                            <button id="ctrl-tab-pc" class="ctrl-tab-btn active" onclick="switchControlsTab('pc')">
-                                💻 PC / KEYBOARD
-                            </button>
-                            <button id="ctrl-tab-mob" class="ctrl-tab-btn" onclick="switchControlsTab('mobile')">
-                                📱 MOBILE / TOUCH
-                            </button>
-                        </div>
+                        <span id="ctrl-modal-badge" class="ctrl-modal-badge">⌨️</span>
+                        <h3 id="ctrl-modal-title" class="ctrl-modal-title">PC CONTROLS</h3>
+                        <p id="ctrl-modal-sub" class="ctrl-modal-sub">Keyboard & Mouse Navigation</p>
                     </div>
 
                     <!-- PC Controls View -->
@@ -321,14 +311,14 @@
                                             <div class="mob-ctrl-joy-knob"></div>
                                         </div>
                                     </div>
-                                    <div class="mob-ctrl-zone-label">🕹️ JOYSTICK<br><span>Drag left side to fly & aim</span></div>
+                                    <div class="mob-ctrl-zone-label">🕹️ VIRTUAL JOYSTICK<br><span>Drag left side to fly & steer 360°</span></div>
                                 </div>
                                 <div class="mob-ctrl-zone-wrap">
                                     <div class="mob-ctrl-powerup-row">
                                         <div class="mob-ctrl-mini-btn mob-ctrl-shield-demo">🛡️</div>
                                         <div class="mob-ctrl-mini-btn mob-ctrl-double-demo">⚡</div>
                                     </div>
-                                    <div class="mob-ctrl-zone-label">POWERUPS<br><span>Tap to activate shield / double fire</span></div>
+                                    <div class="mob-ctrl-zone-label">DEFENSE & CANNONS<br><span>Tap Shield or Double Fire</span></div>
                                 </div>
                             </div>
 
@@ -339,25 +329,23 @@
                                 <div class="mob-ctrl-zone-wrap">
                                     <div class="mob-ctrl-fire-demo">
                                         <div class="mob-ctrl-fire-ring">🔥</div>
-                                        <div class="mob-ctrl-fire-pulse"></div>
                                     </div>
-                                    <div class="mob-ctrl-zone-label">🔥 FIRE BUTTON<br><span>Hold down for rapid autofire</span></div>
+                                    <div class="mob-ctrl-zone-label">🔥 RAPID FIRE<br><span>Hold button for laser autofire</span></div>
                                 </div>
                                 <div class="mob-ctrl-zone-wrap">
                                     <div class="mob-ctrl-mini-btn mob-ctrl-missile-demo">🚀</div>
-                                    <div class="mob-ctrl-zone-label">🚀 MISSILE BUTTON<br><span>Tap to wipe all enemies</span></div>
+                                    <div class="mob-ctrl-zone-label">🚀 TACTICAL MISSILE<br><span>Tap to wipe all enemies</span></div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mob-ctrl-tip">
-                            👆 <strong>Direct Touch</strong>: Touch & drag anywhere on screen to maneuver smoothly!
+                            💡 <strong>Smooth Control</strong>: Virtual joystick responds dynamically wherever your thumb touches on the left!
                         </div>
                     </div>
 
                     <div class="ctrl-modal-footer">
                         <button class="btn primary ctrl-confirm-btn" onclick="closePopup('controls-popup')">
-                            <span class="play-shine"></span>
                             🚀 UNDERSTOOD
                         </button>
                     </div>
@@ -540,8 +528,15 @@
         <div id="leaderboard-popup" class="popup-overlay hidden">
             <div class="popup-box popup-box-large leaderboard-box">
                 <button class="popup-close" onclick="closePopup('leaderboard-popup')"></button>
-                <div class="lb-header">
-                    <span class="lb-trophy">🏆</span>
+                    <div class="lb-trophy-badge">
+                        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/>
+                            <path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/>
+                            <path d="M4 22h16"/>
+                            <path d="M10 14.66V17c0 .55-.45 1-1 1H7c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-1c0-.55-.45-1-1-1h-2c-.55 0-1-.45-1-1v-2.34"/>
+                            <path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/>
+                        </svg>
+                    </div>
                     <h3>GALACTIC LEADERBOARD</h3>
                     <p class="lb-subtitle">Top Cyberpunk Pilots Across the Galaxy</p>
 

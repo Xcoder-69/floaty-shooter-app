@@ -194,31 +194,37 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     if (window._isDesktop) document.documentElement.classList.add('is-desktop');
     else document.documentElement.classList.remove('is-desktop');
 
-    // ---- CONTROLS TAB SWITCHER ----
-    window.switchControlsTab = function(tab) {
-        const pcTab = document.getElementById('ctrl-tab-pc');
-        const mobTab = document.getElementById('ctrl-tab-mob');
-        const pcView = document.getElementById('ctrl-view-pc');
-        const mobView = document.getElementById('ctrl-view-mobile');
-        const isPc = (tab === 'pc');
-        if (pcTab) pcTab.classList.toggle('active', isPc);
-        if (mobTab) mobTab.classList.toggle('active', !isPc);
-        if (pcView) pcView.classList.toggle('hidden', !isPc);
-        if (mobView) mobView.classList.toggle('hidden', isPc);
-    };
-
     window.toggleSettings = function(){const p=document.getElementById('settings-panel'); if(p)p.classList.toggle('hidden');};
 
+    // ---- CONTROLS: Show device-specific controls only (No Tabs, No Flash) ----
     window.showControls = function() {
-        // Block during active mission popup
         if (window.game && window.game.state === 'mission_popup') {
             if (window.showToast) window.showToast('⚠️ Read the mission first!');
             return;
         }
         window.closeAllPopups();
-        // Automatically detect device and display corresponding controls tab
+
         const isMob = window.isMobileDevice();
-        window.switchControlsTab(isMob ? 'mobile' : 'pc');
+        const badge = document.getElementById('ctrl-modal-badge');
+        const title = document.getElementById('ctrl-modal-title');
+        const sub = document.getElementById('ctrl-modal-sub');
+        const pcView = document.getElementById('ctrl-view-pc');
+        const mobView = document.getElementById('ctrl-view-mobile');
+
+        if (isMob) {
+            if (badge) badge.textContent = '📱';
+            if (title) title.textContent = 'MOBILE CONTROLS';
+            if (sub) sub.textContent = 'Virtual Joystick & Tactical Touch Buttons';
+            if (pcView) pcView.classList.add('hidden');
+            if (mobView) mobView.classList.remove('hidden');
+        } else {
+            if (badge) badge.textContent = '⌨️';
+            if (title) title.textContent = 'PC CONTROLS';
+            if (sub) sub.textContent = 'Keyboard & Mouse Navigation';
+            if (pcView) pcView.classList.remove('hidden');
+            if (mobView) mobView.classList.add('hidden');
+        }
+
         const p = document.getElementById('controls-popup');
         if (p) p.classList.remove('hidden');
     };
@@ -382,7 +388,6 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     <div class="history-empty-title">NO BATTLES RECORDED YET</div>
                     <div class="history-empty-sub">Play missions to log your scores on the Leaderboard!</div>
                     <button class="history-empty-btn" onclick="historyPlayRedirect()">
-                        <span class="play-shine"></span>
                         ▶ PLAY NOW
                     </button>
                 </div>
@@ -1943,61 +1948,136 @@ window.addEventListener('mouseup',e=>{if(e.button===0)isShooting=false;});
 // MOBILE CONTROLS
 // =====================================================================
 function setupMobileControls(){
-    const mc=document.getElementById('mobile-controls');
-    mc.classList.remove('hidden'); // Always show — game is mobile/tablet only
-    const jZone=document.getElementById('joystick-zone'),jBase=document.getElementById('joystick-base'),jHandle=document.getElementById('joystick-handle');
-    const btnFire=document.getElementById('btn-fire'),btnMissile=document.getElementById('btn-missile-mobile');
-    const canvas=document.getElementById('gameCanvas');
-    const MAX=33;let jId=null;
-    
-    // DRAG SYSTEM STATE
-    let dragId=null;
-    let lastTouchX=0, lastTouchY=0;
+    if (window._mobileControlsInitialized) return;
+    window._mobileControlsInitialized = true;
 
-    function moveJ(cx,cy){const r=jBase.getBoundingClientRect(),bx=r.left+r.width/2,by=r.top+r.height/2;const dx=cx-bx,dy=cy-by;const dist=Math.min(Math.hypot(dx,dy),MAX),ang=Math.atan2(dy,dx);const ox=Math.cos(ang)*dist,oy=Math.sin(ang)*dist;jHandle.style.transform=`translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`;const t=0.3;keys.a=ox/MAX<-t;keys.d=ox/MAX>t;keys.w=oy/MAX<-t;keys.s=oy/MAX>t;mouse.aimAngle=ang;mouse.useMobileAim=true;}
-    function resetJ(){jHandle.style.transform='translate(-50%,-50%)';keys.a=keys.d=keys.w=keys.s=false;mouse.useMobileAim=false;}
-    
-    jZone.addEventListener('touchstart',e=>{e.preventDefault();jId=e.changedTouches[0].identifier;moveJ(e.changedTouches[0].clientX,e.changedTouches[0].clientY);},{passive:false});
-    jZone.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches)if(t.identifier===jId)moveJ(t.clientX,t.clientY);},{passive:false});
-    jZone.addEventListener('touchend',e=>{e.preventDefault();resetJ();},{passive:false});
-    
-    // TOUCH DRAG SYSTEM (Direct Movement)
-    canvas.addEventListener('touchstart', e => {
-        if (!isPlaying || jId !== null) return;
-        const t = e.changedTouches[0];
-        dragId = t.identifier;
-        lastTouchX = t.clientX;
-        lastTouchY = t.clientY;
-    }, {passive:true});
+    const mc = document.getElementById('mobile-controls');
+    const btnFire = document.getElementById('btn-fire');
+    const btnMissile = document.getElementById('btn-missile-mobile');
+    const btnShield = document.getElementById('btn-shield-mobile');
+    const btnDouble = document.getElementById('btn-double-mobile');
+    const jZone = document.getElementById('joystick-zone');
+    const jBase = document.getElementById('joystick-base');
+    const jHandle = document.getElementById('joystick-handle');
+    const canvas = document.getElementById('gameCanvas');
 
-    canvas.addEventListener('touchmove', e => {
-        if (!isPlaying || dragId === null) return;
-        for (const t of e.changedTouches) {
-            if (t.identifier === dragId) {
-                const dx = t.clientX - lastTouchX;
-                const dy = t.clientY - lastTouchY;
-                if (game.player) {
-                    game.player.x += dx;
-                    game.player.y += dy;
-                    // Keep in bounds
-                    if (game.player.x < 20) game.player.x = 20;
-                    if (game.player.x > MAP_W - 20) game.player.x = MAP_W - 20;
-                    if (game.player.y < 20) game.player.y = 20;
-                    if (game.player.y > MAP_H - 20) game.player.y = MAP_H - 20;
-                }
-                lastTouchX = t.clientX;
-                lastTouchY = t.clientY;
-            }
+    if(window._isDesktop) {
+        // Desktop: show combat buttons for mouse clicks, joystick hidden via CSS
+        if(mc) mc.classList.remove('hidden');
+        if(btnFire) {
+            btnFire.addEventListener('mousedown', e => { e.preventDefault(); isShooting = true; });
+            btnFire.addEventListener('mouseup',   e => { e.preventDefault(); isShooting = false; });
+            btnFire.addEventListener('mouseleave',e => { isShooting = false; });
         }
-    }, {passive:true});
+        return;
+    }
 
-    canvas.addEventListener('touchend', e => {
-        for (const t of e.changedTouches) if (t.identifier === dragId) dragId = null;
-    }, {passive:true});
+    // --- MOBILE SETUP ---
+    if(mc) mc.classList.remove('hidden');
+    const MAX = 36;
+    let jId = null;
 
-    btnFire.addEventListener('touchstart',e=>{e.preventDefault();isShooting=true;},{passive:false});
-    btnFire.addEventListener('touchend',e=>{e.preventDefault();isShooting=false;},{passive:false});
-    if(btnMissile){btnMissile.addEventListener('touchstart',e=>{e.preventDefault();useMissile();},{passive:false});}
+    function moveJ(cx, cy) {
+        if (!jBase || !jHandle) return;
+        const r = jBase.getBoundingClientRect();
+        const bx = r.left + r.width / 2;
+        const by = r.top + r.height / 2;
+        const dx = cx - bx;
+        const dy = cy - by;
+        const dist = Math.min(Math.hypot(dx, dy), MAX);
+        const ang = Math.atan2(dy, dx);
+        const ox = Math.cos(ang) * dist;
+        const oy = Math.sin(ang) * dist;
+        jHandle.style.transform = `translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`;
+
+        const deadZone = 6;
+        keys.a = ox < -deadZone;
+        keys.d = ox > deadZone;
+        keys.w = oy < -deadZone;
+        keys.s = oy > deadZone;
+
+        mouse.aimAngle = ang;
+        mouse.useMobileAim = true;
+    }
+
+    function resetJ() {
+        if (jHandle) jHandle.style.transform = 'translate(-50%, -50%)';
+        keys.a = keys.d = keys.w = keys.s = false;
+        mouse.useMobileAim = false;
+        jId = null;
+    }
+
+    if (jZone) {
+        jZone.addEventListener('touchstart', e => {
+            e.preventDefault();
+            jId = e.changedTouches[0].identifier;
+            moveJ(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        }, {passive: false});
+
+        jZone.addEventListener('touchmove', e => {
+            e.preventDefault();
+            for (const t of e.changedTouches) {
+                if (t.identifier === jId) moveJ(t.clientX, t.clientY);
+            }
+        }, {passive: false});
+
+        jZone.addEventListener('touchend', e => {
+            e.preventDefault();
+            resetJ();
+        }, {passive: false});
+
+        jZone.addEventListener('touchcancel', e => {
+            e.preventDefault();
+            resetJ();
+        }, {passive: false});
+    }
+
+    // Touch screen aiming (touch right half of screen to aim cannons)
+    if (canvas) {
+        canvas.addEventListener('touchstart', e => {
+            if (!isPlaying || !game.player) return;
+            for (const t of e.changedTouches) {
+                if (t.clientX > window.innerWidth * 0.35 && t.identifier !== jId) {
+                    const scx = game.player.x - camera.x;
+                    const scy = game.player.y - camera.y;
+                    mouse.aimAngle = Math.atan2(t.clientY - scy, t.clientX - scx);
+                    mouse.useMobileAim = true;
+                }
+            }
+        }, {passive: true});
+
+        canvas.addEventListener('touchmove', e => {
+            if (!isPlaying || !game.player) return;
+            for (const t of e.changedTouches) {
+                if (t.clientX > window.innerWidth * 0.35 && t.identifier !== jId) {
+                    const scx = game.player.x - camera.x;
+                    const scy = game.player.y - camera.y;
+                    mouse.aimAngle = Math.atan2(t.clientY - scy, t.clientX - scx);
+                    mouse.useMobileAim = true;
+                }
+            }
+        }, {passive: true});
+    }
+
+    // Rapid Fire Button
+    if (btnFire) {
+        btnFire.addEventListener('touchstart', e => { e.preventDefault(); isShooting = true; }, {passive: false});
+        btnFire.addEventListener('touchend', e => { e.preventDefault(); isShooting = false; }, {passive: false});
+        btnFire.addEventListener('touchcancel', e => { e.preventDefault(); isShooting = false; }, {passive: false});
+    }
+
+    // Tactical Missile Button
+    if (btnMissile) {
+        btnMissile.addEventListener('touchstart', e => { e.preventDefault(); useMissile(); }, {passive: false});
+    }
+
+    // Powerup Buttons
+    if (btnShield) {
+        btnShield.addEventListener('touchstart', e => { e.preventDefault(); useShield(); }, {passive: false});
+    }
+    if (btnDouble) {
+        btnDouble.addEventListener('touchstart', e => { e.preventDefault(); useDoubleFire(); }, {passive: false});
+    }
 }
 
 // =====================================================================
