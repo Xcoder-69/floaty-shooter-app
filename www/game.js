@@ -175,39 +175,275 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         window.goToMainMenu();
     };
 
+    // ---- DEVICE DETECTION: Auto-detect PC Browser vs Mobile Browser ----
+    window.isMobileDevice = function() {
+        // 1. Explicit user agent check
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(ua)) return true;
+        // 2. Touch screen + iPadOS desktop UA spoof check
+        if (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /Macintosh/.test(ua)) return true;
+        // 3. Pointer & screen check: coarse pointer without hover
+        const isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        const isHoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches;
+        if (isCoarse && isHoverNone) return true;
+        // 4. Capacitor native mobile runtime
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return true;
+        return false;
+    };
+    window._isDesktop = !window.isMobileDevice();
+    if (window._isDesktop) document.documentElement.classList.add('is-desktop');
+    else document.documentElement.classList.remove('is-desktop');
+
+    // ---- CONTROLS TAB SWITCHER ----
+    window.switchControlsTab = function(tab) {
+        const pcTab = document.getElementById('ctrl-tab-pc');
+        const mobTab = document.getElementById('ctrl-tab-mob');
+        const pcView = document.getElementById('ctrl-view-pc');
+        const mobView = document.getElementById('ctrl-view-mobile');
+        const isPc = (tab === 'pc');
+        if (pcTab) pcTab.classList.toggle('active', isPc);
+        if (mobTab) mobTab.classList.toggle('active', !isPc);
+        if (pcView) pcView.classList.toggle('hidden', !isPc);
+        if (mobView) mobView.classList.toggle('hidden', isPc);
+    };
+
     window.toggleSettings = function(){const p=document.getElementById('settings-panel'); if(p)p.classList.toggle('hidden');};
-    window.showControls = function(){window.closeAllPopups();document.getElementById('controls-popup').classList.remove('hidden');};
-    window.showHistory = function(){window.closeAllPopups();window.renderHistoryUI();document.getElementById('history-popup').classList.remove('hidden');};
-    window.showStats = function(){window.closeAllPopups();window.renderStatsUI();document.getElementById('stats-popup').classList.remove('hidden');};
-    window.showPrivacy = function(){window.closeAllPopups();document.getElementById('privacy-popup').classList.remove('hidden');};
-    window.openLeaderboard = function(){
+
+    window.showControls = function() {
+        // Block during active mission popup
+        if (window.game && window.game.state === 'mission_popup') {
+            if (window.showToast) window.showToast('⚠️ Read the mission first!');
+            return;
+        }
         window.closeAllPopups();
-        const p = document.getElementById('leaderboard-popup');
-        if (p) {
-            p.classList.remove('hidden');
-            const list = document.getElementById('leaderboard-list');
-            if (list) {
-                const history = window.getHistory ? window.getHistory() : [];
-                const playerName = localStorage.getItem('floaty_player_name') || 'PILOT';
-                const sorted = [...history].sort((a,b) => (b.score||0) - (a.score||0)).slice(0, 10);
-                if (sorted.length === 0) {
-                    list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-dim);font-family:var(--font-head);font-size:0.85rem;">NO MISSIONS RECORDED YET<br><span style="font-size:0.75rem;color:var(--cyan);">Play campaign levels to set high scores!</span></div>`;
-                } else {
-                    list.innerHTML = sorted.map((h, i) => `
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0.8rem;background:rgba(255,255,255,0.03);border:1px solid rgba(0,234,255,0.15);border-radius:8px;margin-bottom:0.4rem;font-family:var(--font-head);">
-                            <span style="color:var(--cyan);font-weight:700;font-size:0.85rem;">#${i+1} ${playerName}</span>
-                            <span style="font-size:0.8rem;color:var(--text-dim);">CH.${h.chapter} LVL.${h.level}</span>
-                            <span style="color:#ffcc00;font-weight:700;font-size:0.85rem;">★ ${h.score||0}</span>
-                        </div>
-                    `).join('');
-                }
-            }
+        // Automatically detect device and display corresponding controls tab
+        const isMob = window.isMobileDevice();
+        window.switchControlsTab(isMob ? 'mobile' : 'pc');
+        const p = document.getElementById('controls-popup');
+        if (p) p.classList.remove('hidden');
+    };
+
+    window.showHistory = function() {
+        if (window.game && window.game.state === 'mission_popup') {
+            if (window.showToast) window.showToast('⚠️ Read the mission first!');
+            return;
+        }
+        window.closeAllPopups();
+        window.renderHistoryUI();
+        const p = document.getElementById('history-popup');
+        if (p) p.classList.remove('hidden');
+    };
+
+    window.historyPlayRedirect = function() {
+        window.closePopup('history-popup');
+        window.closePopup('leaderboard-popup');
+        const startScreen = document.getElementById('screen-start');
+        if (startScreen && startScreen.classList.contains('active')) {
+            if (typeof handlePlayButton === 'function') handlePlayButton();
+            return;
+        }
+        const levelScreen = document.getElementById('screen-levels');
+        if (levelScreen && levelScreen.classList.contains('active')) {
+            const ch = (window.game && window.game.chapter) || 1;
+            const sd = window.getSaveData ? window.getSaveData() : {};
+            const prog = (sd.chapterProgress && sd.chapterProgress[ch]) || 0;
+            const lvl = Math.min(prog + 1, (typeof CHAPTERS !== 'undefined' && CHAPTERS[ch-1] ? CHAPTERS[ch-1].levels : 12));
+            if (typeof startLevel === 'function') startLevel(ch, lvl);
+            return;
+        }
+        const chScreen = document.getElementById('screen-chapters');
+        if (chScreen && chScreen.classList.contains('active')) {
+            if (typeof openLevelPath === 'function') openLevelPath(1);
+            return;
+        }
+        if (window.isPlaying && window.isPaused) {
+            if (typeof togglePause === 'function') togglePause();
+        } else {
+            if (typeof handlePlayButton === 'function') handlePlayButton();
         }
     };
+
+    function escapeHtml(str) {
+        return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ---- LEADERBOARD: Universal for CrazyGames and Google Play Store ----
+    window.openLeaderboard = function() {
+        if (window.game && window.game.state === 'mission_popup') {
+            if (window.showToast) window.showToast('⚠️ Read the mission first!');
+            return;
+        }
+        window.closeAllPopups();
+        const p = document.getElementById('leaderboard-popup');
+        if (!p) return;
+        p.classList.remove('hidden');
+
+        // Sync player name from CrazyGames SDK or local storage
+        let pilotName = localStorage.getItem('floaty_player_name');
+        if (!pilotName) {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.user) {
+                try {
+                    window.CrazyGames.SDK.user.getUser().then(u => {
+                        if (u && u.username) {
+                            localStorage.setItem('floaty_player_name', u.username);
+                            const el = document.getElementById('lb-pilot-name');
+                            if (el) el.textContent = u.username;
+                        }
+                    }).catch(()=>{});
+                } catch(e) {}
+            }
+            pilotName = 'CYBER_PILOT';
+        }
+        const nameEl = document.getElementById('lb-pilot-name');
+        if (nameEl) nameEl.textContent = pilotName;
+
+        window.switchLeaderboardTab('global');
+    };
+
+    window.switchLeaderboardTab = function(tab) {
+        const gTab = document.getElementById('lb-tab-global');
+        const rTab = document.getElementById('lb-tab-runs');
+        if (gTab && rTab) {
+            gTab.classList.toggle('active', tab === 'global');
+            rTab.classList.toggle('active', tab === 'runs');
+        }
+        if (tab === 'global') window.renderLeaderboardGlobal();
+        else window.renderLeaderboardRuns();
+    };
+
+    window.renderLeaderboardGlobal = function() {
+        const list = document.getElementById('leaderboard-list');
+        if (!list) return;
+
+        const pilotName = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
+        const sd = (typeof window.getSaveData === 'function') ? window.getSaveData() : { stats: {}, chapterProgress: {} };
+        const history = (typeof window.getHistory === 'function') ? window.getHistory() : [];
+        const bestRunScore = history.reduce((max, h) => Math.max(max, h.score || 0), 0);
+        const playerScore = Math.max(bestRunScore, (sd.stats && sd.stats.totalScore) || 0);
+        const playerChapter = Math.min(6, (sd.stats && sd.stats.chaptersCompleted) || 1);
+
+        const baseRoster = [
+            { name: 'CYBER_VALKYRIE', score: 148500, chapter: 6, tag: 'ACE' },
+            { name: 'NEON_PHANTOM',  score: 122800, chapter: 5, tag: 'ELITE' },
+            { name: 'VOID_REAPER',   score: 98400,  chapter: 5, tag: 'HUNTER' },
+            { name: 'CHROME_BLADE',  score: 82100,  chapter: 4, tag: 'ACE' },
+            { name: 'APEX_GUNNER',   score: 69500,  chapter: 4, tag: 'VET' },
+            { name: 'GLITCH_RUNNER', score: 56200,  chapter: 3, tag: 'PILOT' },
+            { name: 'SOLAR_PULSE',   score: 44800,  chapter: 3, tag: 'CADET' },
+            { name: 'ZERO_COOL',     score: 35900,  chapter: 2, tag: 'PILOT' },
+            { name: 'BYTE_HAWK',     score: 26400,  chapter: 2, tag: 'CADET' },
+            { name: 'TURBO_FALCON',  score: 18200,  chapter: 1, tag: 'ROOKIE' },
+            { name: 'AERO_BLAST',    score: 12500,  chapter: 1, tag: 'ROOKIE' },
+            { name: 'NOVA_STORM',    score: 7400,   chapter: 1, tag: 'TRAINEE' }
+        ];
+
+        const playerEntry = {
+            name: pilotName,
+            score: playerScore,
+            chapter: playerChapter,
+            tag: 'YOU',
+            isPlayer: true
+        };
+
+        const all = [...baseRoster, playerEntry].sort((a, b) => b.score - a.score);
+
+        list.innerHTML = all.map((entry, idx) => {
+            const rank = idx + 1;
+            const isMe = entry.isPlayer;
+            let rankBadge = `#${rank}`;
+            let rowClass = 'lb-row';
+            if (rank === 1) { rankBadge = '🥇'; rowClass += ' lb-top1'; }
+            else if (rank === 2) { rankBadge = '🥈'; rowClass += ' lb-top2'; }
+            else if (rank === 3) { rankBadge = '🥉'; rowClass += ' lb-top3'; }
+            if (isMe) rowClass += ' lb-me';
+
+            return `
+                <div class="${rowClass}">
+                    <div class="lb-rank">${rankBadge}</div>
+                    <div class="lb-pilot-info">
+                        <span class="lb-name">${escapeHtml(entry.name)} ${isMe ? '<span class="lb-me-tag">YOU</span>' : ''}</span>
+                        <span class="lb-ch">CH.${entry.chapter} • ${entry.tag}</span>
+                    </div>
+                    <div class="lb-score">★ ${entry.score.toLocaleString()}</div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    window.renderLeaderboardRuns = function() {
+        const list = document.getElementById('leaderboard-list');
+        if (!list) return;
+
+        const history = (typeof window.getHistory === 'function') ? window.getHistory() : [];
+        if (!history.length) {
+            list.innerHTML = `
+                <div class="history-empty">
+                    <div class="history-empty-icon">🚀</div>
+                    <div class="history-empty-title">NO BATTLES RECORDED YET</div>
+                    <div class="history-empty-sub">Play missions to log your scores on the Leaderboard!</div>
+                    <button class="history-empty-btn" onclick="historyPlayRedirect()">
+                        <span class="play-shine"></span>
+                        ▶ PLAY NOW
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = history.map((r, i) => {
+            const isWin = r.result === 'VICTORY';
+            return `
+                <div class="lb-row ${isWin ? 'lb-win' : 'lb-loss'}">
+                    <div class="lb-rank">#${i+1}</div>
+                    <div class="lb-pilot-info">
+                        <span class="lb-name" style="color:${isWin ? 'var(--gold)' : 'var(--red)'}; font-weight:800;">
+                            ${isWin ? '🏆 VICTORY' : '💥 DEFEAT'}
+                        </span>
+                        <span class="lb-ch">CH.${r.chapter} LVL.${r.level} • ${r.date || ''}</span>
+                    </div>
+                    <div class="lb-score">★ ${(r.score || 0).toLocaleString()}</div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    window.editLeaderboardCallsign = function() {
+        const current = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
+        const next = prompt('Enter your Callsign (max 16 chars):', current);
+        if (next && next.trim()) {
+            const cleaned = next.trim().slice(0, 16).toUpperCase();
+            localStorage.setItem('floaty_player_name', cleaned);
+            const el = document.getElementById('lb-pilot-name');
+            if (el) el.textContent = cleaned;
+            window.renderLeaderboardGlobal();
+            if (window.showToast) window.showToast(`Callsign updated: ${cleaned}`);
+        }
+    };
+
+    window.showStats = function() {
+        if (window.game && window.game.state === 'mission_popup') {
+            if (window.showToast) window.showToast('⚠️ Read the mission first!');
+            return;
+        }
+        window.closeAllPopups();
+        window.renderStatsUI();
+        document.getElementById('stats-popup').classList.remove('hidden');
+    };
+    window.showPrivacy = function(){window.closeAllPopups();document.getElementById('privacy-popup').classList.remove('hidden');};
+
     window.openPopup = function(id){window.closeAllPopups();document.getElementById(id).classList.remove('hidden');};
-    window.closePopup = function(id){document.getElementById(id).classList.add('hidden');};
+    window.closePopup = function(id){
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+        if (id === 'controls-popup' && (window._pcControlsOnDone || window._mobControlsOnDone)) {
+            if (typeof window.closeControlsPopup === 'function') window.closeControlsPopup();
+        }
+    };
     window.closeAllPopups = function(){
-        ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','fun-level-popup','trial-popup','leaderboard-popup'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
+        const safeToCloseFunLevel = !(window.game && window.game.state === 'mission_popup');
+        const list = ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','trial-popup','leaderboard-popup','collection-popup','daily-reward-popup'];
+        if (safeToCloseFunLevel) list.push('fun-level-popup');
+        list.forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
         if(document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
     };
     window.openStore = function(){
@@ -426,10 +662,48 @@ function openLevelPath(chapterId){
 }
 
 function renderHistoryUI(){
-    const list=document.getElementById('history-list');const history=getHistory();list.innerHTML='';
-    if(!history.length){list.innerHTML='<div style="text-align:center;opacity:.4;padding:20px;font-size:.8em">No matches yet.</div>';return;}
-    history.forEach(r=>{const row=document.createElement('div');row.className='history-row';const c=r.result==='VICTORY'?'var(--gold)':'var(--red)';row.innerHTML=`<div><div class="result" style="color:${c}">${r.result}</div><div class="date">${r.date||''}</div></div><div class="detail">Ch.${r.chapter} Lv.${r.level}<br>Score:${r.score||0}</div>`;list.appendChild(row);});
+    const list = document.getElementById('history-list');
+    const clearBtn = document.getElementById('btn-clear-history');
+    if (!list) return;
+    const history = (typeof getHistory === 'function') ? getHistory() : [];
+    list.innerHTML = '';
+
+    if (!history || !history.length) {
+        if (clearBtn) clearBtn.style.display = 'none';
+        list.innerHTML = `
+            <div class="history-empty">
+                <div class="history-empty-icon">🚀</div>
+                <div class="history-empty-title">NO BATTLE LOGS YET</div>
+                <div class="history-empty-desc">Your combat record is clear. Take flight and defeat enemy squadrons to record your stats!</div>
+                <button class="history-empty-btn" onclick="historyPlayRedirect()">
+                    <span>▶</span> PLAY NOW
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
+    history.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'history-row';
+        const isWin = r.result === 'VICTORY';
+        const c = isWin ? 'var(--gold)' : 'var(--red)';
+        const icon = isWin ? '🏆' : '💀';
+        row.innerHTML = `
+            <div>
+                <div class="result" style="color:${c}">${icon} ${r.result}</div>
+                <div class="date">${r.date || ''}</div>
+            </div>
+            <div class="detail">
+                Ch.${r.chapter} Lv.${r.level}<br>
+                Score: <strong>${(r.score || 0).toLocaleString()}</strong>
+            </div>
+        `;
+        list.appendChild(row);
+    });
 }
+window.renderHistoryUI = renderHistoryUI;
 function renderStatsUI(){
     const s=window.getSaveData().stats;const el=document.getElementById('stats-content');
     const items=[['💀',s.totalKills,'Total Kills'],['💥',s.totalDeaths,'Deaths'],['<img src="image/coin.png" class="ui-icon">',s.totalCoins,'Coins Earned'],['⭐',s.totalScore,'Total Score'],['🎖️',s.chaptersCompleted,'Chapters Done'],['📊',s.levelsCompleted,'Levels Done']];
@@ -636,16 +910,45 @@ function spawnPickup(x,y,type){
     document.getElementById('chapter-complete-overlay').classList.add('hidden');
     camera.x=game.player.x-canvas.width/2;camera.y=game.player.y-canvas.height/2;
     setupMobileControls();
-    // Mission popup (Bypass for Level 1 to prevent stalling)
-    if(game.level > 1 && game.mission){
-        game.state='mission_popup';
-        document.getElementById('fun-level-title').textContent = 'LEVEL ' + game.level + ' MISSION';
-        document.getElementById('fun-level-objective').textContent=game.mission.displayText;
-        document.getElementById('fun-level-popup').classList.remove('hidden');
-        updateMissionHUD();
-        audio.music.pause();
+    const _afterControls = () => {
+        if(game.level > 1 && game.mission){
+            game.state='mission_popup';
+            document.getElementById('fun-level-title').textContent = 'LEVEL ' + game.level + ' MISSION';
+            document.getElementById('fun-level-objective').textContent=game.mission.displayText;
+            const flPop = document.getElementById('fun-level-popup');
+            if(flPop) flPop.classList.remove('hidden');
+            updateMissionHUD();
+            audio.music.pause();
+        } else {
+            game.mission = null;
+            game.state='playing';
+            const flPop = document.getElementById('fun-level-popup');
+            if(flPop) flPop.classList.add('hidden');
+            if(audio.musicEnabled && audio.music) audio.music.play().catch(()=>{});
+            updateMissionHUD();
+            showLevelIntro(game.chapter, game.level);
+        }
+    };
+
+    const isMob = typeof window.isMobileDevice === 'function' ? window.isMobileDevice() : !window._isDesktop;
+    const seenKey = isMob ? 'fs_mob_ctrl_seen' : 'fs_pc_ctrl_seen';
+    const alreadySeen = (localStorage.getItem(seenKey) === '1');
+
+    if (!alreadySeen && !window._controlsShownThisSession) {
+        window._controlsShownThisSession = true;
+        window._pcControlsShown = true;
+        window._mobControlsShown = true;
+        game.state = 'pc_controls';
+        window._pcControlsOnDone = _afterControls;
+        window._mobControlsOnDone = _afterControls;
+        if (typeof window.showControls === 'function') {
+            window.showControls();
+        } else {
+            const cp = document.getElementById('controls-popup');
+            if (cp) cp.classList.remove('hidden');
+        }
     } else {
-        showLevelIntro(game.chapter, game.level);
+        _afterControls();
     }
     requestAnimationFrame(gameLoop);
 }
@@ -2003,6 +2306,40 @@ function updatePowerupTimers() {
         val.textContent = Math.ceil(p.timer / 1000) + 's';
     });
 }
+
+// =====================================================================
+// UNIFIED CONTROLS POPUP — Logic (PC & Mobile)
+// =====================================================================
+function closeControlsPopup() {
+    const pop = document.getElementById('controls-popup');
+    if (pop) pop.classList.add('hidden');
+    const pcPop = document.getElementById('pc-controls-popup');
+    if (pcPop) pcPop.classList.add('hidden');
+    const mobPop = document.getElementById('mobile-controls-popup');
+    if (mobPop) mobPop.classList.add('hidden');
+
+    const isMob = typeof window.isMobileDevice === 'function' ? window.isMobileDevice() : !window._isDesktop;
+    window._pcControlsShown = true;
+    window._mobControlsShown = true;
+    try {
+        localStorage.setItem(isMob ? 'fs_mob_ctrl_seen' : 'fs_pc_ctrl_seen', '1');
+    } catch(e) {}
+
+    const fn = window._pcControlsOnDone || window._mobControlsOnDone;
+    window._pcControlsOnDone = null;
+    window._mobControlsOnDone = null;
+
+    if (fn) {
+        game.state = 'playing';
+        if (audio.musicEnabled && audio.music) audio.music.play().catch(()=>{});
+        fn();
+    } else if (isPlaying && audio.musicEnabled && audio.music) {
+        audio.music.play().catch(()=>{});
+    }
+}
+window.closeControlsPopup = closeControlsPopup;
+window.closePcControls = closeControlsPopup;
+window.closeMobileControls = closeControlsPopup;
 
 window.game = game;
 window.handleTitleTap = handleTitleTap;

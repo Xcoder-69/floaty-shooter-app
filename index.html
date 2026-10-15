@@ -234,34 +234,144 @@
                 <h3>⚙️ SETTINGS</h3>
                 <div class="settings-list">
                     <button class="settings-item" onclick="showControls()">🎮 Controls</button>
+                    <button class="settings-item" onclick="openLeaderboard()">🏆 Leaderboard</button>
                     <button class="settings-item" onclick="showHistory()">📜 History</button>
                     <button class="settings-item" onclick="openPopup('collection-popup');renderCollectionUI();">🚀 Collection</button>
                     <button class="settings-item" onclick="if(window.showDailyReward) window.showDailyReward();">🎁 Daily Reward</button>
                     <button id="music-toggle-btn" class="settings-item" onclick="toggleMusic()">🎵 Music: ON</button>
                     <button class="settings-item" onclick="showStats()">📊 Stats</button>
-
                 </div>
             </div>
 
-            <!-- Controls Popup -->
+            <!-- Controls Popup (Unified, Device-Aware) -->
             <div id="controls-popup" class="popup-overlay hidden">
-                <div class="popup-box">
+                <div class="popup-box popup-box-large controls-modal-box">
                     <button class="popup-close" onclick="closePopup('controls-popup')"></button>
-                    <h3>🎮 Controls</h3>
-                    <ul class="controls-list">
-                        <li>🕹️ Left Joystick → Move & Aim</li>
-                        <li>🔥 Fire Button → Shoot</li>
-                        <li>🚀 Missile Button → Launch Missile</li>
-                        <li>⏸ Pause Button → Pause Game</li>
-                    </ul>
+                    <div class="ctrl-modal-header">
+                        <span class="ctrl-modal-badge">🎮</span>
+                        <h3 class="ctrl-modal-title">BATTLE CONTROLS</h3>
+                        <p class="ctrl-modal-sub">Master your spacecraft navigation & weaponry</p>
+                        
+                        <!-- Device Switcher Tabs -->
+                        <div class="ctrl-tabs">
+                            <button id="ctrl-tab-pc" class="ctrl-tab-btn active" onclick="switchControlsTab('pc')">
+                                💻 PC / KEYBOARD
+                            </button>
+                            <button id="ctrl-tab-mob" class="ctrl-tab-btn" onclick="switchControlsTab('mobile')">
+                                📱 MOBILE / TOUCH
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PC Controls View -->
+                    <div id="ctrl-view-pc" class="ctrl-view-content">
+                        <div class="pc-ctrl-grid">
+                            <!-- MOVE -->
+                            <div class="pc-ctrl-item">
+                                <div class="pc-key-wasd">
+                                    <div class="pc-key-row-single"><div class="pc-key">W</div></div>
+                                    <div class="pc-key-row"><div class="pc-key">A</div><div class="pc-key">S</div><div class="pc-key">D</div></div>
+                                </div>
+                                <div class="pc-ctrl-label">MOVE / STEER</div>
+                            </div>
+                            <!-- FIRE -->
+                            <div class="pc-ctrl-item">
+                                <div class="pc-key pc-key-space">SPACE / L-CLICK</div>
+                                <div class="pc-ctrl-label">🔥 PRIMARY FIRE</div>
+                            </div>
+                            <!-- DOUBLE FIRE -->
+                            <div class="pc-ctrl-item">
+                                <div class="pc-key pc-key-gold">Q</div>
+                                <div class="pc-ctrl-label">⚡ DOUBLE FIRE</div>
+                            </div>
+                            <!-- SHIELD -->
+                            <div class="pc-ctrl-item">
+                                <div class="pc-key pc-key-blue">R</div>
+                                <div class="pc-ctrl-label">🛡️ SHIELD</div>
+                            </div>
+                            <!-- MISSILE -->
+                            <div class="pc-ctrl-item">
+                                <div class="pc-key-combo">
+                                    <div class="pc-key pc-key-red">SHIFT</div>
+                                    <span class="pc-key-or">or</span>
+                                    <div class="pc-key pc-key-red">L</div>
+                                </div>
+                                <div class="pc-ctrl-label">🚀 MISSILE STRIKE</div>
+                            </div>
+                            <!-- PAUSE -->
+                            <div class="pc-ctrl-item">
+                                <div class="pc-key">P / ESC</div>
+                                <div class="pc-ctrl-label">⏸️ PAUSE</div>
+                            </div>
+                        </div>
+
+                        <div class="pc-ctrl-mouse-tip">
+                            🖱️ <strong>Mouse Aiming</strong> → Steer and aim your ship anywhere on screen
+                        </div>
+                    </div>
+
+                    <!-- Mobile Controls View -->
+                    <div id="ctrl-view-mobile" class="ctrl-view-content hidden">
+                        <div class="mob-ctrl-diagram">
+                            <!-- LEFT: Joystick + Powerups -->
+                            <div class="mob-ctrl-side mob-ctrl-left">
+                                <div class="mob-ctrl-zone-wrap">
+                                    <div class="mob-ctrl-joystick-demo">
+                                        <div class="mob-ctrl-joy-ring">
+                                            <div class="mob-ctrl-joy-knob"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mob-ctrl-zone-label">🕹️ JOYSTICK<br><span>Drag left side to fly & aim</span></div>
+                                </div>
+                                <div class="mob-ctrl-zone-wrap">
+                                    <div class="mob-ctrl-powerup-row">
+                                        <div class="mob-ctrl-mini-btn mob-ctrl-shield-demo">🛡️</div>
+                                        <div class="mob-ctrl-mini-btn mob-ctrl-double-demo">⚡</div>
+                                    </div>
+                                    <div class="mob-ctrl-zone-label">POWERUPS<br><span>Tap to activate shield / double fire</span></div>
+                                </div>
+                            </div>
+
+                            <div class="mob-ctrl-divider"></div>
+
+                            <!-- RIGHT: Fire + Missile -->
+                            <div class="mob-ctrl-side mob-ctrl-right">
+                                <div class="mob-ctrl-zone-wrap">
+                                    <div class="mob-ctrl-fire-demo">
+                                        <div class="mob-ctrl-fire-ring">🔥</div>
+                                        <div class="mob-ctrl-fire-pulse"></div>
+                                    </div>
+                                    <div class="mob-ctrl-zone-label">🔥 FIRE BUTTON<br><span>Hold down for rapid autofire</span></div>
+                                </div>
+                                <div class="mob-ctrl-zone-wrap">
+                                    <div class="mob-ctrl-mini-btn mob-ctrl-missile-demo">🚀</div>
+                                    <div class="mob-ctrl-zone-label">🚀 MISSILE BUTTON<br><span>Tap to wipe all enemies</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mob-ctrl-tip">
+                            👆 <strong>Direct Touch</strong>: Touch & drag anywhere on screen to maneuver smoothly!
+                        </div>
+                    </div>
+
+                    <div class="ctrl-modal-footer">
+                        <button class="btn primary ctrl-confirm-btn" onclick="closePopup('controls-popup')">
+                            <span class="play-shine"></span>
+                            🚀 UNDERSTOOD
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- History Popup -->
             <div id="history-popup" class="popup-overlay hidden">
-                <div class="popup-box">
+                <div class="popup-box history-box">
                     <button class="popup-close" onclick="closePopup('history-popup')"></button>
-                    <h3>📜 Match History</h3>
+                    <div class="history-header">
+                        <h3>📜 Match History</h3>
+                        <button id="btn-clear-history" class="btn-clear-history" onclick="clearHistory()" title="Clear match history">🗑️ Clear</button>
+                    </div>
                     <div id="history-list" class="history-list"></div>
                 </div>
             </div>
@@ -432,9 +542,23 @@
                 <button class="popup-close" onclick="closePopup('leaderboard-popup')"></button>
                 <div class="lb-header">
                     <span class="lb-trophy">🏆</span>
-                    <h3>LEADERBOARD</h3>
-                    <p class="lb-subtitle">Top 20 Pilots</p>
+                    <h3>GALACTIC LEADERBOARD</h3>
+                    <p class="lb-subtitle">Top Cyberpunk Pilots Across the Galaxy</p>
+
+                    <!-- Pilot Callsign Banner -->
+                    <div class="lb-pilot-bar">
+                        <span class="lb-pilot-label">PILOT:</span>
+                        <span id="lb-pilot-name" class="lb-pilot-name">CYBER_PILOT</span>
+                        <button class="lb-edit-btn" onclick="editLeaderboardCallsign()" title="Change callsign">✏️ EDIT</button>
+                    </div>
+
+                    <!-- Tab Switcher -->
+                    <div class="lb-tabs">
+                        <button id="lb-tab-global" class="lb-tab active" onclick="switchLeaderboardTab('global')">🌐 GLOBAL ACES</button>
+                        <button id="lb-tab-runs" class="lb-tab" onclick="switchLeaderboardTab('runs')">📜 MY RUNS</button>
+                    </div>
                 </div>
+
                 <div id="leaderboard-list" class="leaderboard-list"></div>
             </div>
         </div>
@@ -755,138 +879,7 @@
                 </div>
             </div>
 
-            <!-- ========== PC CONTROLS POPUP (Desktop Only) ========== -->
-            <div id="pc-controls-popup" class="big-overlay hidden">
-                <div class="big-overlay-box pc-controls-box">
-                    <button class="popup-close pc-ctrl-close" onclick="closePcControls()"></button>
 
-                    <div class="pc-ctrl-header">
-                        <span class="pc-ctrl-badge">⌨️</span>
-                        <h2 class="pc-ctrl-title">KEYBOARD CONTROLS</h2>
-                        <p class="pc-ctrl-sub">Master these to dominate the battlefield</p>
-                    </div>
-
-                    <div class="pc-ctrl-grid">
-                        <!-- MOVE -->
-                        <div class="pc-ctrl-item">
-                            <div class="pc-key-wasd">
-                                <div class="pc-key-row-single"><div class="pc-key">W</div></div>
-                                <div class="pc-key-row"><div class="pc-key">A</div><div class="pc-key">S</div><div class="pc-key">D</div></div>
-                            </div>
-                            <div class="pc-ctrl-label">MOVE / AIM</div>
-                        </div>
-                        <!-- FIRE -->
-                        <div class="pc-ctrl-item">
-                            <div class="pc-key pc-key-space">SPACE</div>
-                            <div class="pc-ctrl-label">🔥 FIRE</div>
-                        </div>
-                        <!-- DOUBLE FIRE -->
-                        <div class="pc-ctrl-item">
-                            <div class="pc-key pc-key-gold">Q</div>
-                            <div class="pc-ctrl-label">? DOUBLE FIRE</div>
-                        </div>
-                        <!-- SHIELD -->
-                        <div class="pc-ctrl-item">
-                            <div class="pc-key pc-key-blue">R</div>
-                            <div class="pc-ctrl-label">🛡️ SHIELD</div>
-                        </div>
-                        <!-- MISSILE -->
-                        <div class="pc-ctrl-item">
-                            <div class="pc-key-combo">
-                                <div class="pc-key pc-key-red">SHIFT</div>
-                                <span class="pc-key-or">or</span>
-                                <div class="pc-key pc-key-red">L</div>
-                            </div>
-                            <div class="pc-ctrl-label">🚀 MISSILE</div>
-                        </div>
-                        <!-- PAUSE -->
-                        <div class="pc-ctrl-item">
-                            <div class="pc-key">P</div>
-                            <div class="pc-ctrl-label">? PAUSE</div>
-                        </div>
-                    </div>
-
-                    <div class="pc-ctrl-mouse-tip">
-                        🖱️ <strong>Mouse</strong> → Aim your ship anywhere on screen
-                    </div>
-
-                    <div class="pc-ctrl-footer">
-                        <label class="pc-ctrl-checkbox-label">
-                            <input type="checkbox" id="pc-ctrl-no-show">
-                            <span>Don't show again</span>
-                        </label>
-                        <button class="btn primary pc-ctrl-go-btn" onclick="closePcControls()">
-                            <img src="image/play_icon.png" class="ui-icon" alt=""> LET'S GO!
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ========== MOBILE CONTROLS POPUP (Mobile Only) ========== -->
-            <div id="mobile-controls-popup" class="big-overlay hidden">
-                <div class="big-overlay-box mob-ctrl-box">
-
-                    <div class="mob-ctrl-header">
-                        <span class="mob-ctrl-badge">👆</span>
-                        <h2 class="mob-ctrl-title">TOUCH CONTROLS</h2>
-                        <p class="mob-ctrl-sub">Tap, drag &amp; unleash destruction</p>
-                    </div>
-
-                    <div class="mob-ctrl-diagram">
-
-                        <!-- LEFT: Joystick + Powerups -->
-                        <div class="mob-ctrl-side mob-ctrl-left">
-                            <div class="mob-ctrl-zone-wrap">
-                                <div class="mob-ctrl-joystick-demo">
-                                    <div class="mob-ctrl-joy-ring">
-                                        <div class="mob-ctrl-joy-knob"></div>
-                                    </div>
-                                </div>
-                                <div class="mob-ctrl-zone-label">🕹️ JOYSTICK<br><span>Drag to move &amp; aim your ship</span></div>
-                            </div>
-                            <div class="mob-ctrl-zone-wrap">
-                                <div class="mob-ctrl-powerup-row">
-                                    <div class="mob-ctrl-mini-btn mob-ctrl-shield-demo">🛡️</div>
-                                    <div class="mob-ctrl-mini-btn mob-ctrl-double-demo">⚡</div>
-                                </div>
-                                <div class="mob-ctrl-zone-label">POWERUPS<br><span>Tap to activate shield / double fire</span></div>
-                            </div>
-                        </div>
-
-                        <div class="mob-ctrl-divider"></div>
-
-                        <!-- RIGHT: Fire + Missile -->
-                        <div class="mob-ctrl-side mob-ctrl-right">
-                            <div class="mob-ctrl-zone-wrap">
-                                <div class="mob-ctrl-fire-demo">
-                                    <div class="mob-ctrl-fire-ring">🔥</div>
-                                    <div class="mob-ctrl-fire-pulse"></div>
-                                </div>
-                                <div class="mob-ctrl-zone-label">🔥 FIRE BUTTON<br><span>Hold down to shoot continuously</span></div>
-                            </div>
-                            <div class="mob-ctrl-zone-wrap">
-                                <div class="mob-ctrl-mini-btn mob-ctrl-missile-demo">⌨️</div>
-                                <div class="mob-ctrl-zone-label">🚀 MISSILE<br><span>Tap to launch a deadly strike</span></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mob-ctrl-tip">
-                        👆 <strong>Drag</strong> anywhere on screen to move your ship instantly
-                    </div>
-
-                    <div class="mob-ctrl-footer">
-                        <label class="pc-ctrl-checkbox-label">
-                            <input type="checkbox" id="mob-ctrl-no-show">
-                            <span>Don't show again</span>
-                        </label>
-                        <button class="btn primary mob-ctrl-go-btn" onclick="closeMobileControls()">
-                            <img src="image/play_icon.png" class="ui-icon" alt=""> LET'S GO!
-                        </button>
-                    </div>
-
-                </div>
-            </div>
 
             <!-- Debug Indicator -->
             <div id="debug-indicator" style="position:fixed; top:10px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:white; padding:4px 12px; border-radius:4px; font-family:var(--font-head); font-size:10px; z-index:10000; pointer-events:none; display:none; letter-spacing:1px; box-shadow:0 0 15px rgba(255,0,0,0.5);">??? TEST MODE ACTIVE</div>

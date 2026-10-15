@@ -297,6 +297,12 @@
         if (saveData.history.length > 20) saveData.history.pop();
         saveSave(saveData);
     };
+    window.clearHistory = function() {
+        saveData.history = [];
+        saveSave(saveData);
+        if (window.renderHistoryUI) window.renderHistoryUI();
+        if (window.showToast) window.showToast('🗑️ History cleared!');
+    };
 
     window.addKill = () => { saveData.stats.totalKills++; saveSave(saveData); };
     window.addDeath = () => { saveData.stats.totalDeaths++; saveSave(saveData); };
