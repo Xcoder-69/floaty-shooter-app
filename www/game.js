@@ -210,7 +210,16 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','fun-level-popup','trial-popup','leaderboard-popup'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
         if(document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
     };
-    window.openStore = function(){document.getElementById('store-overlay').classList.remove('hidden');document.getElementById('store-coins-display').textContent=window.getSaveData().coins;window.updateStoreUI();};
+    window.openStore = function(){
+        document.getElementById('store-overlay').classList.remove('hidden');
+        const coins = window.getSaveData().coins;
+        if (window.setLastStoreCoins) {
+            window.setLastStoreCoins(coins);
+        }
+        const disp = document.getElementById('store-coins-display');
+        if (disp) disp.textContent = coins;
+        window.updateStoreUI();
+    };
     window.closeStore = function(){document.getElementById('store-overlay').classList.add('hidden');};
 
 // Close popups on outside click

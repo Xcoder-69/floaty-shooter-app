@@ -134,11 +134,88 @@
         return false;
     };
 
+    function playPurchaseChime() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = window._storeAudioCtx || (window._storeAudioCtx = new AudioCtx());
+            if (ctx.state === 'suspended') ctx.resume();
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(987.77, now);
+            osc.frequency.setValueAtTime(1318.51, now + 0.08);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.36);
+        } catch(e) {}
+    }
+
+    window.spawnStorePlusAnimation = function(targetEl, count = 1, itemType) {
+        let x = window.innerWidth / 2;
+        let y = window.innerHeight / 2;
+        if (targetEl) {
+            const rect = targetEl.getBoundingClientRect();
+            x = rect.left + rect.width / 2;
+            y = rect.top + rect.height / 2;
+            targetEl.classList.remove('btn-purchase-success');
+            void targetEl.offsetWidth;
+            targetEl.classList.add('btn-purchase-success');
+        }
+
+        if (itemType) {
+            const cardId = 'store-card-' + (itemType === 'doubleBullet' ? 'double' : itemType);
+            const card = document.getElementById(cardId);
+            if (card) {
+                card.classList.remove('store-card-success');
+                void card.offsetWidth;
+                card.classList.add('store-card-success');
+            }
+        }
+
+        const floatEl = document.createElement('div');
+        floatEl.className = 'store-buy-plus-float';
+        floatEl.textContent = `+${count}`;
+        floatEl.style.left = `${x}px`;
+        floatEl.style.top = `${y}px`;
+        document.body.appendChild(floatEl);
+
+        setTimeout(() => {
+            if (floatEl.parentNode) floatEl.parentNode.removeChild(floatEl);
+        }, 900);
+    };
+
     window.buyItem = function(itemType) {
         const price = STORE_PRICES[itemType];
         if (price && window.spendCoins(price)) {
-            window.addItem(itemType);
+            window.addItem(itemType, 1);
+
+            const btnId = 'buy-' + (itemType === 'doubleBullet' ? 'double' : itemType);
+            const btn = document.getElementById(btnId);
+            window.spawnStorePlusAnimation(btn, 1, itemType);
+
+            const tag = document.getElementById('owned-tag-' + itemType);
+            if (tag) {
+                tag.classList.remove('bounce');
+                void tag.offsetWidth;
+                tag.classList.add('bounce');
+            }
+
+            playPurchaseChime();
             return true;
+        } else {
+            const btnId = 'buy-' + (itemType === 'doubleBullet' ? 'double' : itemType);
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.classList.remove('shake');
+                void btn.offsetWidth;
+                btn.classList.add('shake');
+            }
+            if (window.showToast) window.showToast('🪙 Not enough coins!');
         }
         return false;
     };
@@ -206,10 +283,81 @@
         window.updateHudInventory();
     };
 
+    let _lastStoreCoins = null;
+    let _coinAnimId = null;
+
+    window.setLastStoreCoins = function(coins) {
+        _lastStoreCoins = coins;
+    };
+
+    function animateCoinChange(targetCoins) {
+        const el = document.getElementById('store-coins-display');
+        if (!el) return;
+
+        const currentVal = _lastStoreCoins !== null ? _lastStoreCoins : (parseInt(el.textContent) || targetCoins);
+        const diff = targetCoins - currentVal;
+
+        if (diff === 0) {
+            if (!_coinAnimId) {
+                el.textContent = targetCoins;
+            }
+            return;
+        }
+
+        const delta = Math.abs(diff);
+        const isDecrease = diff < 0;
+        _lastStoreCoins = targetCoins;
+
+        // Visual coin container pulse & floating delta badge
+        const container = el.closest('.store-coins');
+        if (container) {
+            container.classList.remove('coin-spend-pulse');
+            void container.offsetWidth;
+            container.classList.add('coin-spend-pulse');
+
+            // Floating delta badge: -50 or +50
+            const deltaBadge = document.createElement('span');
+            deltaBadge.className = 'coin-delta-float ' + (isDecrease ? 'coin-delta-minus' : 'coin-delta-plus');
+            deltaBadge.textContent = (isDecrease ? '-' : '+') + delta;
+            container.appendChild(deltaBadge);
+            setTimeout(() => {
+                if (deltaBadge.parentNode) deltaBadge.parentNode.removeChild(deltaBadge);
+            }, 800);
+        }
+
+        // Smooth number countdown
+        if (_coinAnimId) cancelAnimationFrame(_coinAnimId);
+        const startTime = performance.now();
+        const duration = 450;
+
+        function step(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            const current = Math.round(currentVal + (targetCoins - currentVal) * ease);
+            el.textContent = current;
+            if (progress < 1) {
+                _coinAnimId = requestAnimationFrame(step);
+            } else {
+                el.textContent = targetCoins;
+                _coinAnimId = null;
+            }
+        }
+        _coinAnimId = requestAnimationFrame(step);
+    }
+
     window.updateStoreUI = function() {
+        animateCoinChange(saveData.coins);
+
         ['missile', 'shield', 'doubleBullet'].forEach(it => {
-            const btn = document.getElementById('buy-' + it);
+            const btnId = 'buy-' + (it === 'doubleBullet' ? 'double' : it);
+            const btn = document.getElementById(btnId);
             if (btn) btn.disabled = saveData.coins < STORE_PRICES[it];
+
+            const ownedEl = document.getElementById('store-owned-' + it);
+            if (ownedEl) {
+                const count = it === 'missile' ? saveData.missiles : it === 'shield' ? saveData.shields : saveData.doubleBullets;
+                ownedEl.textContent = count;
+            }
         });
         const adM = document.getElementById('ad-missile');
         if (adM) {
@@ -270,11 +418,32 @@
                     clearInterval(interval);
                     overlay.classList.add('hidden');
                     if (itemType === 'missile') saveData.missileAdTimestamps.push(Date.now());
-                    window.addItem(itemType);
+                    window.addItem(itemType, 1);
+                    const adBtn = document.getElementById('ad-' + (itemType === 'doubleBullet' ? 'double' : itemType));
+                    window.spawnStorePlusAnimation(adBtn, 1, itemType);
+                    const tag = document.getElementById('owned-tag-' + itemType);
+                    if (tag) {
+                        tag.classList.remove('bounce');
+                        void tag.offsetWidth;
+                        tag.classList.add('bounce');
+                    }
+                    playPurchaseChime();
                     if (cb) cb(true);
                 }
             }, 1000);
-        } else { window.addItem(itemType); if (cb) cb(true); }
+        } else {
+            window.addItem(itemType, 1);
+            const adBtn = document.getElementById('ad-' + (itemType === 'doubleBullet' ? 'double' : itemType));
+            window.spawnStorePlusAnimation(adBtn, 1, itemType);
+            const tag = document.getElementById('owned-tag-' + itemType);
+            if (tag) {
+                tag.classList.remove('bounce');
+                void tag.offsetWidth;
+                tag.classList.add('bounce');
+            }
+            playPurchaseChime();
+            if (cb) cb(true);
+        }
     };
 
     window.showRespawnAd = function(cb) {

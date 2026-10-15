@@ -276,7 +276,12 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             return;
         }
         document.getElementById('store-overlay').classList.remove('hidden');
-        document.getElementById('store-coins-display').textContent=window.getSaveData().coins;
+        const coins = window.getSaveData().coins;
+        if (window.setLastStoreCoins) {
+            window.setLastStoreCoins(coins);
+        }
+        const disp = document.getElementById('store-coins-display');
+        if (disp) disp.textContent = coins;
         window.updateStoreUI();
     };
     window.closeStore = function(){document.getElementById('store-overlay').classList.add('hidden');};
