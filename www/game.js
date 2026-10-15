@@ -52,7 +52,7 @@ class AudioEngine {
         this.musicEnabled = !this.musicEnabled;
         this.sfxEnabled = this.musicEnabled;
         if (this.music) {
-            if (this.musicEnabled) { if(typeof isPlaying !== 'undefined' && !isPlaying) this.music.play().catch(()=>{}); }
+            if (this.musicEnabled) { this.music.play().catch(()=>{}); } // always play when music is enabled
             else { this.music.pause(); }
         }
         const b1 = document.getElementById('music-toggle-btn');
@@ -95,9 +95,27 @@ window.addEventListener('load', () => {
     gameAssets.loadImg('shield', 'image/shield.png');
     gameAssets.loadImg('missile', 'image/missile.png');
     gameAssets.loadImg('fullHp', 'image/full_hp.png');
+    
+    // Initialize CrazyGames SDK for audio muting
+    if (window.CrazyGames && window.CrazyGames.SDK) {
+        window.CrazyGames.SDK.init().then(() => {
+            window.CrazyGames.SDK.game.on('audio', (muted) => {
+                if (muted && audio.musicEnabled) {
+                    audio.toggleMusic(); // Mute
+                } else if (!muted && !audio.musicEnabled) {
+                    audio.toggleMusic(); // Unmute
+                }
+            });
+        }).catch(e => console.error("CrazyGames SDK init failed", e));
+    }
 });
 
-window.playCustomSound = (filename, max, vol) => audio.load(filename, 'game music/' + filename.replace(' (2)', '_2')).then(() => audio.play(filename, vol));
+window.playCustomSound = (filename, max, vol) => {
+    // Strip any leading 'music/' prefix so we never build 'music/music/...' paths
+    const cleanName = filename.replace(/^(\.\/)?music\//, '');
+    const url = 'music/' + cleanName;
+    return audio.load(cleanName, url).then(() => audio.play(cleanName, vol));
+};
 const musicEnabled = () => audio.musicEnabled;
 const sfxEnabled = () => audio.sfxEnabled;
 window.toggleMusic = () => audio.toggleMusic();
@@ -109,9 +127,9 @@ function tryPlayBg() {
         audio.music.play().catch(()=>{});
     }
 }
-['mousedown','touchstart','keydown'].forEach(e => window.addEventListener(e, tryPlayBg, {capture:true, once:true}));
-// If audio was already unlocked by startup script before game.js loaded
-if (window._audioUnlocked) { window.addEventListener('load', ()=>{ setTimeout(tryPlayBg, 200); }); }
+// Interaction-based unlock — NO {once:true} so every new interaction keeps music running.
+// tryPlayBg() is safe to call multiple times (guarded by audio.music.paused check internally).
+['mousedown','touchstart','keydown'].forEach(e => window.addEventListener(e, tryPlayBg, {capture:true}));
 
 
 // -------- MATRIX BACKGROUND --------
@@ -124,6 +142,9 @@ initBg();(function bgLoop(){drawBg();requestAnimationFrame(bgLoop)})();
 // -------- CANVAS & STATE --------
 let canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d');
 let isPlaying=false,isPaused=false;
+let gameLoopRunning=false;
+let gameLoopRafId=null; // track the rAF ID so we can cancel if needed
+ // Prevents duplicate game loops on level transitions
 let particles=[];      // Active particles
 let particlePool=[];   // Inactive recycled particles
 const camera={x:0,y:0},keys={w:false,a:false,s:false,d:false};
@@ -175,13 +196,22 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         window.goToMainMenu();
     };
 
+    window.toggleSettings = function(){
+        // Don't open settings while mission popup is active (would interfere with game state)
+        if (window.game && window.game.state === 'mission_popup') {
+            if (window.showToast) window.showToast('⚠️ Read the mission first!');
+            return;
+        }
+        const p=document.getElementById('settings-panel');
+        if(p) p.classList.toggle('hidden');
+    };
     // ---- DEVICE DETECTION: Auto-detect PC Browser vs Mobile Browser ----
     window.isMobileDevice = function() {
-        // 1. Explicit user agent check
-        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(ua)) return true;
-        // 2. Touch screen + iPadOS desktop UA spoof check
-        if (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /Macintosh/.test(ua)) return true;
+        // 1. User Agent checks for phones / tablets
+        const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent);
+        if (mobileUA) return true;
+        // 2. Modern iPad desktop spoofing
+        if (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1) return true;
         // 3. Pointer & screen check: coarse pointer without hover
         const isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
         const isHoverNone = window.matchMedia && window.matchMedia('(hover: none)').matches;
@@ -193,8 +223,6 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     window._isDesktop = !window.isMobileDevice();
     if (window._isDesktop) document.documentElement.classList.add('is-desktop');
     else document.documentElement.classList.remove('is-desktop');
-
-    window.toggleSettings = function(){const p=document.getElementById('settings-panel'); if(p)p.classList.toggle('hidden');};
 
     // ---- CONTROLS: Show device-specific controls only (No Tabs, No Flash) ----
     window.showControls = function() {
@@ -251,15 +279,13 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         const levelScreen = document.getElementById('screen-levels');
         if (levelScreen && levelScreen.classList.contains('active')) {
             const ch = (window.game && window.game.chapter) || 1;
-            const sd = window.getSaveData ? window.getSaveData() : {};
-            const prog = (sd.chapterProgress && sd.chapterProgress[ch]) || 0;
-            const lvl = Math.min(prog + 1, (typeof CHAPTERS !== 'undefined' && CHAPTERS[ch-1] ? CHAPTERS[ch-1].levels : 12));
+            const lvl = (typeof window.getCurrentLevel === 'function') ? window.getCurrentLevel(ch) : 1;
             if (typeof startLevel === 'function') startLevel(ch, lvl);
             return;
         }
         const chScreen = document.getElementById('screen-chapters');
         if (chScreen && chScreen.classList.contains('active')) {
-            if (typeof openLevelPath === 'function') openLevelPath(1);
+            if (typeof selectChapter === 'function') selectChapter(1);
             return;
         }
         if (window.isPlaying && window.isPaused) {
@@ -274,19 +300,17 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     }
 
     // ---- LEADERBOARD: Universal for CrazyGames and Google Play Store ----
-    window.openLeaderboard = function() {
-        if (window.game && window.game.state === 'mission_popup') {
-            if (window.showToast) window.showToast('⚠️ Read the mission first!');
-            return;
-        }
-        window.closeAllPopups();
-        const p = document.getElementById('leaderboard-popup');
-        if (!p) return;
-        p.classList.remove('hidden');
-
-        // Sync player name from CrazyGames SDK or local storage
-        let pilotName = localStorage.getItem('floaty_player_name');
-        if (!pilotName) {
+    window.LeaderboardAPI = {
+        // Plug-and-play Cloud Configuration
+        config: {
+            // Dreamlo is 100% free with zero backend setup (http://dreamlo.com)
+            // Enter your keys here to enable live cross-platform cloud sync:
+            dreamloPublicKey: '', // Public code (safe in frontend, e.g. "65a...")
+            dreamloPrivateKey: '', // Private code for score posting
+            // Or Firebase Realtime Database endpoint:
+            firebaseUrl: '' // e.g. "https://YOUR-APP-default-rtdb.firebaseio.com"
+        },
+        syncCrazyGamesUser: function() {
             if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.user) {
                 try {
                     window.CrazyGames.SDK.user.getUser().then(u => {
@@ -298,8 +322,66 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     }).catch(()=>{});
                 } catch(e) {}
             }
-            pilotName = 'CYBER_PILOT';
+        },
+        submitScore: function(score, chapter) {
+            const pilotName = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
+            if (!score || score <= 0) return;
+
+            // Submit to Dreamlo REST if configured
+            if (this.config.dreamloPrivateKey) {
+                try {
+                    const url = `https://dreamlo.com/lb/${this.config.dreamloPrivateKey}/add/${encodeURIComponent(pilotName)}/${score}/${chapter || 1}`;
+                    fetch(url, { mode: 'no-cors' }).catch(()=>{});
+                } catch(e) {}
+            }
+
+            // Submit to Firebase REST if configured
+            if (this.config.firebaseUrl) {
+                try {
+                    fetch(`${this.config.firebaseUrl}/scores/${encodeURIComponent(pilotName)}.json`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: pilotName, score: score, chapter: chapter || 1, timestamp: Date.now() })
+                    }).catch(()=>{});
+                } catch(e) {}
+            }
+        },
+        fetchScores: async function() {
+            if (this.config.dreamloPublicKey) {
+                try {
+                    const res = await fetch(`https://dreamlo.com/lb/${this.config.dreamloPublicKey}/json`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        let entries = data && data.dreamlo && data.dreamlo.leaderboard && data.dreamlo.leaderboard.entry;
+                        if (entries) {
+                            if (!Array.isArray(entries)) entries = [entries];
+                            return entries.map(e => ({
+                                name: e.name,
+                                score: parseInt(e.score, 10) || 0,
+                                chapter: parseInt(e.seconds, 10) || 1,
+                                tag: 'ACE'
+                            }));
+                        }
+                    }
+                } catch(e) {}
+            }
+            return null;
         }
+    };
+
+    window.openLeaderboard = function() {
+        if (window.game && window.game.state === 'mission_popup') {
+            if (window.showToast) window.showToast('⚠️ Read the mission first!');
+            return;
+        }
+        window.closeAllPopups();
+        const p = document.getElementById('leaderboard-popup');
+        if (!p) return;
+        p.classList.remove('hidden');
+
+        // Sync player name from CrazyGames SDK or local storage
+        if (window.LeaderboardAPI) window.LeaderboardAPI.syncCrazyGamesUser();
+        let pilotName = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
         const nameEl = document.getElementById('lb-pilot-name');
         if (nameEl) nameEl.textContent = pilotName;
 
@@ -317,7 +399,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         else window.renderLeaderboardRuns();
     };
 
-    window.renderLeaderboardGlobal = function() {
+    window.renderLeaderboardGlobal = async function() {
         const list = document.getElementById('leaderboard-list');
         if (!list) return;
 
@@ -328,7 +410,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         const playerScore = Math.max(bestRunScore, (sd.stats && sd.stats.totalScore) || 0);
         const playerChapter = Math.min(6, (sd.stats && sd.stats.chaptersCompleted) || 1);
 
-        const baseRoster = [
+        let roster = [
             { name: 'CYBER_VALKYRIE', score: 148500, chapter: 6, tag: 'ACE' },
             { name: 'NEON_PHANTOM',  score: 122800, chapter: 5, tag: 'ELITE' },
             { name: 'VOID_REAPER',   score: 98400,  chapter: 5, tag: 'HUNTER' },
@@ -343,6 +425,15 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             { name: 'NOVA_STORM',    score: 7400,   chapter: 1, tag: 'TRAINEE' }
         ];
 
+        if (window.LeaderboardAPI) {
+            try {
+                const cloudScores = await window.LeaderboardAPI.fetchScores();
+                if (cloudScores && cloudScores.length) {
+                    roster = cloudScores;
+                }
+            } catch(e) {}
+        }
+
         const playerEntry = {
             name: pilotName,
             score: playerScore,
@@ -351,11 +442,14 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             isPlayer: true
         };
 
-        const all = [...baseRoster, playerEntry].sort((a, b) => b.score - a.score);
+        // Filter out duplicate if player already exists in roster
+        roster = roster.filter(e => e.name.toUpperCase() !== pilotName.toUpperCase());
+
+        const all = [...roster, playerEntry].sort((a, b) => b.score - a.score);
 
         list.innerHTML = all.map((entry, idx) => {
             const rank = idx + 1;
-            const isMe = entry.isPlayer;
+            const isMe = entry.isPlayer || (entry.name.toUpperCase() === pilotName.toUpperCase());
             let rankBadge = `#${rank}`;
             let rowClass = 'lb-row';
             if (rank === 1) { rankBadge = '🥇'; rowClass += ' lb-top1'; }
@@ -368,9 +462,9 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     <div class="lb-rank">${rankBadge}</div>
                     <div class="lb-pilot-info">
                         <span class="lb-name">${escapeHtml(entry.name)} ${isMe ? '<span class="lb-me-tag">YOU</span>' : ''}</span>
-                        <span class="lb-ch">CH.${entry.chapter} • ${entry.tag}</span>
+                        <span class="lb-ch">CH.${entry.chapter || 1} • ${entry.tag || 'ACE'}</span>
                     </div>
-                    <div class="lb-score">★ ${entry.score.toLocaleString()}</div>
+                    <div class="lb-score">★ ${(entry.score || 0).toLocaleString()}</div>
                 </div>
             `;
         }).join('');
@@ -441,10 +535,11 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
         if (id === 'controls-popup' && (window._pcControlsOnDone || window._mobControlsOnDone)) {
-            if (typeof window.closeControlsPopup === 'function') window.closeControlsPopup();
+            if (typeof window.closePcControls === 'function') window.closePcControls();
         }
     };
     window.closeAllPopups = function(){
+        // Do NOT forcibly close fun-level-popup if game is in mission_popup state
         const safeToCloseFunLevel = !(window.game && window.game.state === 'mission_popup');
         const list = ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','trial-popup','leaderboard-popup','collection-popup','daily-reward-popup'];
         if (safeToCloseFunLevel) list.push('fun-level-popup');
@@ -452,6 +547,11 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         if(document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');
     };
     window.openStore = function(){
+        // Block store during active mission popup
+        if (window.game && window.game.state === 'mission_popup') {
+            if (window.showToast) window.showToast('⚠️ Read the mission first!');
+            return;
+        }
         document.getElementById('store-overlay').classList.remove('hidden');
         const coins = window.getSaveData().coins;
         if (window.setLastStoreCoins) {
@@ -462,6 +562,35 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         window.updateStoreUI();
     };
     window.closeStore = function(){document.getElementById('store-overlay').classList.add('hidden');};
+    
+    // ---- ACTION HANDLERS ----
+    window.useDoubleFire = function() {
+        if (window.DEBUG_MODE || useItem('doubleBullet')) {
+            game.doubleBulletTimer = POWERUP_CONFIG.doubleBullet.duration;
+            playCustomSound('music/double_fire.ogg', 3, 0.8);
+            if (window.showToast) window.showToast("\uD83D\uDD25 DOUBLE FIRE ACTIVATED!");
+            window.updateHUD();
+        } else {
+            // No item — offer to watch ad
+            window.showInGameAdPrompt('doubleBullet');
+        }
+    };
+    
+    // ---- DEBUG LOGGING & AUTO-UNLOCK ----
+    document.addEventListener('mousedown', (e) => {
+        if(window.DEBUG_MODE) {
+            const path = e.target.id || e.target.className || 'unknown';
+            const onclick = e.target.getAttribute('onclick');
+            console.log(`[DEBUG CLICK] Element: ${path} | Action: ${onclick || 'none'}`);
+            if(onclick && !window[onclick.split('(')[0]]) {
+                console.warn(`[DEBUG WARNING] Unresponsive Button: ${path} points to missing function ${onclick}`);
+                e.target.style.outline = '2px solid red';
+            }
+        }
+    });
+    window.onerror = function(msg, url, line) {
+        console.error(`[CRITICAL ERROR] ${msg} at ${line} in ${url}`);
+    };
 
 // Close popups on outside click
 document.addEventListener('click', (e) => {
@@ -476,6 +605,15 @@ document.addEventListener('click', (e) => {
     if (e.target.closest('[onclick^="openPopup"]') || e.target.closest('[onclick^="show"]') || e.target.closest('[onclick^="openTrial"]')) return;
     
     closeAllPopups();
+});
+
+// Initialization of Debug UI
+window.addEventListener('load', () => {
+    if(window.DEBUG_MODE) {
+       const ind = document.getElementById('debug-indicator');
+       if(ind) ind.style.display = 'block';
+       console.log('%c [TEST MODE ACTIVE] — Unlocks enabled, God Mode on, Resources infinite. ', 'background: #f00; color: #fff; font-size: 14px; font-weight: bold;');
+    }
 });
 
 // -------- CHAPTER SELECT SCREEN --------
@@ -506,7 +644,7 @@ function renderChapterCards(){
         inner+=`<div class="cs-stage-sub">${ch.name}</div>`;
 
         if(unlocked && pct>0){
-            inner+=`<div class="cs-stage-stars"><span class="cs-stage-star earned">⭐</span></div>`;
+            inner+=`<div class="cs-stage-stars"><span class="cs-stage-star earned"><img src="image/star-removebg.png" class="ui-icon"></span></div>`;
             inner+=`<div class="cs-stage-progress-text">${pct}% · ${progress}/${ch.levels}</div>`;
         } else if(unlocked){
             inner+=`<div class="cs-stage-progress-text" style="color:var(--cyan);">${ch.levels} LEVELS</div>`;
@@ -711,7 +849,7 @@ function renderHistoryUI(){
 window.renderHistoryUI = renderHistoryUI;
 function renderStatsUI(){
     const s=window.getSaveData().stats;const el=document.getElementById('stats-content');
-    const items=[['💀',s.totalKills,'Total Kills'],['💥',s.totalDeaths,'Deaths'],['<img src="image/coin.png" class="ui-icon">',s.totalCoins,'Coins Earned'],['⭐',s.totalScore,'Total Score'],['🎖️',s.chaptersCompleted,'Chapters Done'],['📊',s.levelsCompleted,'Levels Done']];
+    const items=[['💀',s.totalKills,'Total Kills'],['💥',s.totalDeaths,'Deaths'],['<img src="image/coin.png" class="ui-icon">',s.totalCoins,'Coins Earned'],['<img src="image/star-removebg.png" class="ui-icon">',s.totalScore,'Total Score'],['🎖️',s.chaptersCompleted,'Chapters Done'],['📊',s.levelsCompleted,'Levels Done']];
     el.innerHTML=items.map(([i,v,l])=>`<div class="stat-item"><div class="stat-value">${i} ${v}</div><div class="stat-label">${l}</div></div>`).join('');
 }
 
@@ -730,7 +868,6 @@ let game={
     doubleBulletTimer:0,speedBoostTimer:0,speedBoostAmount:0,
     shieldActive:false,shieldHits:0,shieldTimer:0,
     levelStartTime:0,lastTime:0,
-    trialShipId: null, // Session-only trial ship ID
     isQrActive: false, // Flag to prevent multiple QR popups
     activeMissileStrike: null // Track cinematic missile strike
 };
@@ -877,6 +1014,13 @@ function spawnPickup(x,y,type){
         game.mission=getMissionForLevel(chapter,level);game.missionProgress=0;game.missionTimer=0;game.noDamageTimer=0;
         game.activeMissileStrike = null;
         
+        // ── Never run missions on Level 1 of any chapter ──
+        // The mission popup is bypassed on lv1, so the player would never see
+        // the objective — leading to invisible missions and infinite enemy spawns.
+        if(game.level === 1) {
+            game.mission = null;
+        }
+        
         const cfg=getEnemyConfig(chapter,level);    game.enemiesPending = cfg.count;
     game.enemiesConfig = cfg;
     
@@ -915,26 +1059,36 @@ function spawnPickup(x,y,type){
     document.getElementById('chapter-complete-overlay').classList.add('hidden');
     camera.x=game.player.x-canvas.width/2;camera.y=game.player.y-canvas.height/2;
     setupMobileControls();
-    const _afterControls = () => {
+    // Controls Popup — PC gets keyboard guide, Mobile gets touch guide (each shown once)
+    const _afterControls = function() {
+        // Mission popup — only show on level > 1 (level 1 has no mission)
         if(game.level > 1 && game.mission){
+            // Force-hide first to reset any stale state from previous level
+            const flPop = document.getElementById('fun-level-popup');
+            flPop.classList.add('hidden');
+            void flPop.offsetWidth; // force DOM reflow before showing
             game.state='mission_popup';
             document.getElementById('fun-level-title').textContent = 'LEVEL ' + game.level + ' MISSION';
             document.getElementById('fun-level-objective').textContent=game.mission.displayText;
-            const flPop = document.getElementById('fun-level-popup');
-            if(flPop) flPop.classList.remove('hidden');
+            flPop.classList.remove('hidden');
             updateMissionHUD();
             audio.music.pause();
+            // ⚠️ CRITICAL: Always ensure the loop is alive after showing the popup.
+            // Cancel any stale rAF and force a fresh one so RESUME always works.
+            gameLoopRunning = true;
+            if(gameLoopRafId) cancelAnimationFrame(gameLoopRafId);
+            gameLoopRafId = requestAnimationFrame(gameLoop);
         } else {
             game.mission = null;
             game.state='playing';
+            // Force-hide the fun-level popup in case it was open from a prior level
             const flPop = document.getElementById('fun-level-popup');
             if(flPop) flPop.classList.add('hidden');
-            if(audio.musicEnabled && audio.music) audio.music.play().catch(()=>{});
+            tryPlayBg();
             updateMissionHUD();
             showLevelIntro(game.chapter, game.level);
         }
     };
-
     const isMob = typeof window.isMobileDevice === 'function' ? window.isMobileDevice() : !window._isDesktop;
     const seenKey = isMob ? 'fs_mob_ctrl_seen' : 'fs_pc_ctrl_seen';
     const alreadySeen = (localStorage.getItem(seenKey) === '1');
@@ -955,7 +1109,13 @@ function spawnPickup(x,y,type){
     } else {
         _afterControls();
     }
-    requestAnimationFrame(gameLoop);
+    // Start loop if not running. Note: if mission_popup was shown above,
+    // _afterControls already restarted the loop with a fresh rAF.
+    if (!gameLoopRunning) {
+        gameLoopRunning = true;
+        if(gameLoopRafId) cancelAnimationFrame(gameLoopRafId);
+        gameLoopRafId = requestAnimationFrame(gameLoop);
+    }
 }
 
 function showLevelIntro(ch, lv) {
@@ -970,14 +1130,62 @@ function showLevelIntro(ch, lv) {
 }
 
 function resumeFromFunLevel(){
-    document.getElementById('fun-level-popup').classList.add('hidden');
+    if (game.state !== 'mission_popup') return; // guard against double-call
+    const flPop = document.getElementById('fun-level-popup');
+    if(flPop) flPop.classList.add('hidden');
     game.state='playing';
+    isPaused = false; // Safety: clear any accidental pause state set during mission_popup
+    tryPlayBg();
+    updateMissionHUD();
     showLevelIntro(game.chapter, game.level);
-    if(audio.musicEnabled) audio.music.play().catch(()=>{});
+    // Always restart the loop — defensive safety net
+    gameLoopRunning = true;
+    if(gameLoopRafId) cancelAnimationFrame(gameLoopRafId);
+    gameLoopRafId = requestAnimationFrame(gameLoop);
 }
 function retryLevel(){startLevel(game.chapter,game.level);}
-function exitToMenu(){isPlaying=false;isPaused=false;audio.music.pause();document.getElementById('hud').classList.add('hidden');canvas.style.display='none';document.querySelectorAll('.big-overlay').forEach(o=>o.classList.add('hidden'));goToMainMenu();}
-function togglePause(){if(game.state==='gameOver')return;isPaused=!isPaused;document.getElementById('pause-overlay').classList.toggle('hidden',!isPaused);}
+function exitToMenu(){isPlaying=false;isPaused=false;gameLoopRunning=false;if(gameLoopRafId){cancelAnimationFrame(gameLoopRafId);gameLoopRafId=null;}audio.music.pause();document.getElementById('hud').classList.add('hidden');canvas.style.display='none';document.querySelectorAll('.big-overlay').forEach(o=>o.classList.add('hidden'));goToMainMenu();}
+function togglePause(){
+    // Cannot pause/unpause during mission popup or game over
+    if(game.state==='gameOver' || game.state==='mission_popup' || game.state==='pc_controls') return;
+    isPaused=!isPaused;
+    document.getElementById('pause-overlay').classList.toggle('hidden',!isPaused);
+}
+
+// =====================================================================
+// IN-GAME "WATCH AD TO GET ITEM" PROMPT
+// =====================================================================
+const ITEM_LABELS = { missile: { icon:'🚀', name:'Missile' }, shield: { icon:'🛡️', name:'Shield' }, doubleBullet: { icon:'⚡', name:'Double Fire' } };
+window.showInGameAdPrompt = function(itemType) {
+    const info = ITEM_LABELS[itemType] || { icon:'🎁', name: itemType };
+    const popup = document.getElementById('ingame-ad-prompt');
+    if (!popup) return;
+    document.getElementById('ingame-ad-icon').textContent = info.icon;
+    document.getElementById('ingame-ad-name').textContent = info.name;
+    document.getElementById('ingame-ad-watch-btn').onclick = function() {
+        window.closeInGameAdPrompt();
+        if (window.showRewardAd) {
+            window.showRewardAd(itemType, function(ok) {
+                if (ok) {
+                    // Item granted — now use it immediately
+                    if (itemType === 'missile') useMissile();
+                    else if (itemType === 'shield') useShield();
+                    else if (itemType === 'doubleBullet' && window.useDoubleFire) window.useDoubleFire();
+                }
+            });
+        }
+    };
+    // Pause game while prompt is open
+    if (!isPaused && game.state === 'playing') { isPaused = true; window._adPromptPaused = true; }
+    popup.classList.remove('hidden');
+};
+window.closeInGameAdPrompt = function() {
+    const popup = document.getElementById('ingame-ad-prompt');
+    if (popup) popup.classList.add('hidden');
+    // Resume game if we paused it
+    if (window._adPromptPaused) { isPaused = false; window._adPromptPaused = false; }
+};
+window.closeInGameAdPrompt = window.closeInGameAdPrompt;
 function watchAdToRespawn(){
     if (window.adManager && typeof window.adManager.showRetryReward === 'function') {
         window.adManager.showRetryReward(ok => {
@@ -1002,9 +1210,33 @@ function watchAdToRespawn(){
     }
 }
 
+function launchMissile() {
+    if (window.DEBUG_MODE || useItem('missile')) {
+        const p = game.player;
+        spawnExplosion(p.x, p.y - 100, '#ff4400');
+        // Actual missile Logic (simplified)
+        for(let i=0; i<8; i++){
+           spawnParticle(p.x, p.y-20, '#ffcc00', 8, Math.random()*Math.PI*2, 10+Math.random()*15);
+        }
+    }
+}
+window.launchMissile = launchMissile;
+// NO COOLDOWN DEBUG HOOK
+setInterval(() => {
+    if(window.DEBUG_MODE && isPlaying && !isPaused && game.player) {
+        if(keys.w || keys.a || keys.s || keys.d || isShooting) {
+             // In debug, we can force fire faster
+        }
+    }
+}, 50);
+
 function useMissile(){
     if(game.activeMissileStrike) return;
-    if(!useItem('missile'))return;
+    if(!useItem('missile')){
+        // No missile — offer to watch ad
+        window.showInGameAdPrompt('missile');
+        return;
+    }
     
     // Start 2-second cinematic strike
     game.activeMissileStrike = {
@@ -1013,7 +1245,7 @@ function useMissile(){
         missiles: []
     };
     
-    if(window.showToast) window.showToast("🚀 MISSILE STRIKE INITIALIZED!");
+    if(window.showToast) window.showToast("\uD83D\uDE80 MISSILE STRIKE INITIALIZED!");
     screenShake=20;
     updateHudInventory();
 }
@@ -1037,7 +1269,7 @@ function processMissileStrike(now) {
     // Progressively destroy enemies as waves pass
     for(let i = game.enemies.length - 1; i >= 0; i--) {
         const e = game.enemies[i];
-        // If enemy is "behind" the strike progress
+        // If enemy is "behind" the strike progress (simplified 2D scanline)
         const screenX = e.x - camera.x;
         const scanline = (progress * 1.5 - 0.25) * canvas.width;
         if(screenX < scanline) {
@@ -1063,28 +1295,35 @@ function processMissileStrike(now) {
         game.activeMissileStrike = null;
     }
 }
-
 function useShield(){
     if(game.shieldActive)return;
-    if(!useItem('shield'))return;
+    if(!useItem('shield')){
+        // No shield — offer to watch ad
+        window.showInGameAdPrompt('shield');
+        return;
+    }
     game.shieldActive=true;game.shieldHits=3;game.shieldTimer=15000;
-    if(window.showToast) window.showToast("🛡️ SHIELD ACTIVATED (15 SECS)");
+    if(window.showToast) window.showToast("\uD83D\uDEE1\uFE0F SHIELD ACTIVATED (15 SECS)");
 }
 
 // =====================================================================
 // GAME LOOP
 // =====================================================================
 function gameLoop(timestamp){
-    if(!isPlaying)return;
-    if(game.lastTime===0){game.lastTime=timestamp;requestAnimationFrame(gameLoop);return;}
-    const rawDt=(timestamp-game.lastTime)/1000;
-    let dt=Math.min(rawDt,0.05); // Base clamp
-    if (rawDt > 0.15) dt = 0.016; // Anti-Speedhack hook
+    gameLoopRafId = null; // clear stored ID — this rAF has now fired
+    if(!isPlaying){ gameLoopRunning=false; return; }
+    if(isPaused){ gameLoopRafId=requestAnimationFrame(gameLoop); return; }
+    const rawDt=(timestamp-(game.lastTime||timestamp))/1000;
+    let dt=Math.min(rawDt, 0.05); if(dt<0)dt=0;
+    if(rawDt > 0.15) dt = 0.016; 
     game.lastTime=timestamp;
     if(game.activeMissileStrike) processMissileStrike(timestamp);
-    if(isPaused||game.state==='mission_popup'||game.state==='gameOver'||game.state==='levelComplete'){
-        renderFrame(dt,timestamp);requestAnimationFrame(gameLoop);return;}
+
+    if(isPaused||game.state==='mission_popup'||game.state==='gameOver'||game.state==='levelComplete'||game.state==='pc_controls'){
+        renderFrame(dt,timestamp);gameLoopRafId=requestAnimationFrame(gameLoop);return;
+    }
     const p=game.player;
+    if(window.DEBUG_MODE && p) { p.hp = p.maxHp; }
     // ---- Player Movement ----
     const spdMult=game.speedBoostTimer>0?1+game.speedBoostAmount:1;
     const maxSpd=MAX_SPEED*spdMult;const accel=ACCEL*dt;
@@ -1100,13 +1339,6 @@ function gameLoop(timestamp){
     if(nx<p.radius||nx>MAP_W-p.radius)p.vx*=-0.35;
     if(ny<p.radius||ny>MAP_H-p.radius)p.vy*=-0.35;
     
-    // ---- Integrity Check ----
-    if(p.hp !== p._hpM) {
-        console.error("HP Integrity failure.");
-        p.hp = 0; p._hpM = 0;
-        triggerGameOver();
-    }
-    p._hpM = p.hp; // Keep shadow updated
     
     p.x=Math.max(p.radius,Math.min(MAP_W-p.radius,p.x+p.vx*dt*60));
     p.y=Math.max(p.radius,Math.min(MAP_H-p.radius,p.y+p.vy*dt*60));
@@ -1133,16 +1365,16 @@ function gameLoop(timestamp){
         if(game.mission.id==='survive_time'){game.missionTimer+=dt;game.missionProgress=Math.floor(game.missionTimer);}
         if(game.mission.id==='no_damage'){game.noDamageTimer+=dt;game.missionProgress=Math.floor(game.noDamageTimer);}
         // ★ RULE ENFORCEMENT: Time Attack — fail if 60s passes without hitting kill target
+        // NOTE: No 'return' here — this is top-level in gameLoop; returning skips the rAF call.
         if(game.mission.id==='time_kill'){
             game.missionTimer+=dt;
             if(game.missionTimer>=60 && game.missionProgress<game.mission.target && !game.mission._failed){
-                game.mission._failed = true;
-                showToast("❌ TIME'S UP — Kill target not reached! Mission failed.");
-                game.mission = null;
-                triggerGameOver();
+                game.mission._failed = true; // prevent double-trigger
+                showToast('\u274c TIME\'S UP \u2014 Kill target not reached! Mission failed.');
+                triggerGameOver(); // direct call, no return, loop continues in gameOver state
             }
         }
-        // ★ Pacifist timer tracks time (for progress HUD) — kill fail handled at kill site
+        // ★ Pacifist timer still tracks time (for progress HUD) — kill fail handled at kill site
         if(game.mission.id==='pacifist'){game.missionTimer+=dt;game.missionProgress=Math.floor(game.missionTimer);}
     }
     // Camera
@@ -1167,7 +1399,7 @@ function gameLoop(timestamp){
             e.vx -= nvx * 250; e.vy -= nvy * 250; 
             p.vx += nvx * 250; p.vy += nvy * 250;
             if(!game.shieldActive){
-                p.hp--; hitFlash=0.45; screenShake=8;
+                p.hp--; p._hpM=p.hp; hitFlash=0.45; screenShake=8;
                 spawnHitSpark(p.x, p.y, '#ff3a22');
                 if(game.mission && game.mission.id==='no_damage'){
                     showToast('❌ RULE BROKEN — Enemy rammed into you! Mission failed.');
@@ -1250,7 +1482,7 @@ function gameLoop(timestamp){
                         const hpGain=getHpOnKill(game.chapter,game.level,e.type);
                         game.coinsEarned+=coins;addCoins(coins);game.score+=score;addScore(score);
                         game.levelKills++;game.totalKills++;addKill();
-                        p.hp=Math.min(p.hp+hpGain,p.maxHp);
+                        p.hp=Math.min(p.hp+hpGain,p.maxHp); p._hpM=p.hp; // sync shadow after kill-HP gain
                         game.combo.count++;game.combo.timer=COMBO_CONFIG.timeWindow;
                         const ct=COMBO_CONFIG.thresholds;for(let t=ct.length-1;t>=0;t--){if(game.combo.count>=ct[t].combo){game.combo.multiplier=ct[t].multiplier;break;}}
                         const drop=getEnemyDrop(game.chapter,game.level,e.type);
@@ -1258,6 +1490,8 @@ function gameLoop(timestamp){
                         if(game.chapter>1&&Math.random()<0.05)spawnPickup(e.x,e.y,Math.random()<0.5?'speedBoost':'shield');
                         if(game.mission&&(game.mission.id==='kill_count'||game.mission.id==='time_kill'))game.missionProgress++;
                         // ★ RULE ENFORCEMENT: Pacifist — instant fail on any kill
+                        // NOTE: No 'return' here — returning from inside the bullet loop
+                        // would break the requestAnimationFrame chain, freezing the game.
                         if(game.mission&&game.mission.id==='pacifist'){
                             showToast('❌ RULE BROKEN — You killed an enemy! Mission failed.');
                             game.mission = null; // prevent re-trigger
@@ -1286,11 +1520,13 @@ function gameLoop(timestamp){
                     audio.play('shoot', 0.3); // "Ping" reflection sound
                 } else {
                     dead=true;
-                    p.hp--; hitFlash=0.45; screenShake=6;
+                    p.hp--; p._hpM=p.hp; // sync shadow immediately after taking damage
+                    hitFlash=0.45; screenShake=6;
                     spawnHitSpark(b.x, b.y, b.color || '#ff3a22');
                     if(navigator.vibrate)navigator.vibrate(40);
                     if(window.playCustomSound) playCustomSound('music/shooter_destoyed.ogg', 4, 0.5);
                     // ★ RULE ENFORCEMENT: Untouchable — instant fail on ANY damage
+                    // NOTE: No 'return' here — returning inside the bullet loop kills the rAF chain.
                     if(game.mission && game.mission.id==='no_damage'){
                         showToast('❌ RULE BROKEN — You took damage! Mission failed.');
                         game.mission = null; // prevent re-trigger
@@ -1310,7 +1546,7 @@ function gameLoop(timestamp){
             // Collect
             switch(pk.type){
                 case'doubleBullet':game.doubleBulletTimer=POWERUP_CONFIG.doubleBullet.duration; playCustomSound('music/double_fire.ogg', 3, 0.8); break;
-                case'fullHp':p.hp=p.maxHp;break;
+                case'fullHp':p.hp=p.maxHp; p._hpM=p.hp; break; // sync shadow after full restore
                 case'missile':addItem('missile');break;
                 case'speedBoost':game.speedBoostTimer=POWERUP_CONFIG.speedBoost.duration;game.speedBoostAmount=POWERUP_CONFIG.speedBoost.boostMin+Math.random()*(POWERUP_CONFIG.speedBoost.boostMax-POWERUP_CONFIG.speedBoost.boostMin);break;
                 case'shield':game.shieldActive=true;game.shieldHits=POWERUP_CONFIG.shield.hits;game.shieldTimer=POWERUP_CONFIG.shield.duration;break;
@@ -1382,7 +1618,7 @@ function gameLoop(timestamp){
         triggerLevelComplete();
     }
 
-    updateHUD();renderFrame(dt,timestamp);requestAnimationFrame(gameLoop);
+    updateHUD();renderFrame(dt,timestamp);gameLoopRafId=requestAnimationFrame(gameLoop);
 }
 
 // =====================================================================
@@ -1391,8 +1627,9 @@ function gameLoop(timestamp){
 function triggerLevelComplete(){
     game.state='levelComplete';completeLevel(game.chapter,game.level);
     addToHistory({chapter:game.chapter,level:game.level,score:game.score,kills:game.levelKills,result:'VICTORY',coins:game.coinsEarned});
+    if (window.LeaderboardAPI) window.LeaderboardAPI.submitScore(game.score, game.chapter);
     const ch=CHAPTERS[game.chapter-1];const isChapterDone=game.level>=ch.levels;
-    document.getElementById('level-complete-title').textContent = '⭐ LEVEL '+game.level+' COMPLETE!';
+    document.getElementById('level-complete-title').innerHTML = '<img src="image/star-removebg.png" class="ui-icon"> LEVEL ' + game.level + ' COMPLETE!';
     document.getElementById('level-complete-score').textContent='Score: '+game.score;
     document.getElementById('level-complete-coins').textContent='Coins: +'+game.coinsEarned;
     if(isChapterDone){
@@ -1412,6 +1649,7 @@ function triggerGameOver(){
     game.state='gameOver';addDeath();
     setTimeout(() => playCustomSound('music/game_over.ogg', 1, 1.0), 900);
     addToHistory({chapter:game.chapter,level:game.level,score:game.score,kills:game.levelKills,result:'DEFEAT',coins:game.coinsEarned});
+    if (window.LeaderboardAPI) window.LeaderboardAPI.submitScore(game.score, game.chapter);
     document.getElementById('go-chapter').textContent=game.chapter;
     document.getElementById('go-level').textContent=game.level;
     document.getElementById('go-score').textContent=game.score;
@@ -1424,6 +1662,7 @@ function triggerGameOver(){
 // =====================================================================
 function updateHUD(){
     const p=game.player;if(!p)return;
+    const _sd = window.getSaveData();
     const pct=Math.max(0,p.hp/p.maxHp)*100;
     document.getElementById('hp-bar').style.width=pct+'%';
     document.getElementById('hp-text').textContent=Math.max(0,p.hp)+'/'+p.maxHp;
@@ -1437,28 +1676,42 @@ function updateHUD(){
     if(game.combo.count>=2){cd.classList.remove('hidden');document.getElementById('combo-text').textContent='x'+game.combo.multiplier;}else{cd.classList.add('hidden');}
     // Mission
     updateMissionHUD();
-    // Missile btn
-    const mb = document.getElementById('hud-missile-btn');
-    const _sd = window.getSaveData();
-    if (_sd.missiles > 0) {
-        mb.classList.remove('hidden');
-        mb.querySelector('.missile-count').textContent = _sd.missiles;
-        const img = mb.querySelector('img');
-        if (img) img.src = 'image/missile.png';
-    } else {
-        mb.classList.add('hidden');
-    }
-    const mmb = document.getElementById('btn-missile-mobile');
-    if (mmb) {
-        if (_sd.missiles > 0) mmb.classList.remove('hidden');
-        else mmb.classList.add('hidden');
-    }
+    // Tactical Buttons (Mobile)
+    const tacticalButtons = [
+        { id: 'btn-missile-mobile', type: 'missile' },
+        { id: 'btn-shield-mobile', type: 'shield' },
+        { id: 'btn-double-mobile', type: 'doubleBullet' }
+    ];
+
+    tacticalButtons.forEach(btnInfo => {
+        const btn = document.getElementById(btnInfo.id);
+        if (!btn) return;
+
+        const count = _sd[`${btnInfo.type === 'doubleBullet' ? 'doubleBullets' : btnInfo.type + 's'}`] || 0;
+        
+        // Final count logic (Handle pluralization)
+        let finalCount = count;
+        if (btnInfo.type === 'doubleBullet') finalCount = _sd.doubleBullets;
+        else if (btnInfo.type === 'missile') finalCount = _sd.missiles;
+        else if (btnInfo.type === 'shield') finalCount = _sd.shields;
+
+        if (window.DEBUG_MODE) finalCount = 99;
+
+        // Visibility
+        if (window.DEBUG_MODE || finalCount > 0) btn.classList.remove('hidden');
+        else btn.classList.add('hidden');
+
+        // Update Count Badge
+        const badge = btn.querySelector('.btn-count');
+        if (badge) badge.textContent = finalCount;
+    });
 }
+
 function updateMissionHUD(){
     const md=document.getElementById('mission-display');
     if(!game.mission){md.classList.add('hidden');return;}
     md.classList.remove('hidden');
-    document.getElementById('mission-icon').textContent=game.mission.icon;
+    document.getElementById('mission-icon').innerHTML = `<img src="${game.mission.image}" class="ui-icon-large">`;
     document.getElementById('mission-text').textContent=game.mission.displayText;
     
     const mp=document.getElementById('mission-progress');
@@ -1478,6 +1731,7 @@ function renderFrame(dt,now){
     ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();
     ctx.translate(canvas.width/2,canvas.height/2);ctx.scale(currentZoom,currentZoom);ctx.translate(-canvas.width/2,-canvas.height/2);
     if(screenShake>0.5){ctx.translate((Math.random()-0.5)*screenShake,(Math.random()-0.5)*screenShake);screenShake*=0.87;}
+    updatePowerupTimers();
     // Map tint
     const ch=CHAPTERS[game.chapter-1];ctx.fillStyle=ch.mapTint;ctx.fillRect(-camera.x,-camera.y,MAP_W,MAP_H);
     // Border
@@ -1497,19 +1751,39 @@ function renderFrame(dt,now){
     }
     // Enemies
     for(const eid in game.enemies){const e=game.enemies[eid];drawShip(e.x-camera.x,e.y-camera.y,e.angle,e.radius,e.bodyColor,false,true,e.type);drawHPBar(e.x-camera.x,e.y-camera.y,e.hp,e.maxHp,e.radius,false,e.type);}
+    
+    // ---- Draw Missile Strike Visuals ----
+    if(game.activeMissileStrike) {
+        game.activeMissileStrike.missiles.forEach(m => {
+            const elap = now - m.startTime;
+            const prog = Math.min(1, elap / 500); // Missile flies across screen in 0.5s
+            const curX = m.x + (m.tx - m.x) * prog;
+            const curY = m.y + (m.ty - m.y) * prog;
+            
+            ctx.save();
+            ctx.translate(curX, curY);
+            ctx.rotate(Math.atan2(m.ty - m.y, m.tx - m.x));
+            // Missile Body
+            ctx.fillStyle = '#ff4400'; ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(-10, 8); ctx.lineTo(-10, -8); ctx.closePath(); ctx.fill();
+            // Engine Trail
+            ctx.shadowBlur = 15; ctx.shadowColor = '#ffaa00';
+            ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(-12, 0, 4 + Math.random() * 4, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        });
+    }
     // Pickups
     for(const pk of game.pickups){
-        const dx=pk.x-camera.x,dy=pk.y-camera.y;const bounce=Math.sin(now*PICKUP_BOUNCE_SPEED)*4;
-        ctx.save();ctx.shadowBlur=PICKUP_GLOW_SIZE;ctx.shadowColor=pk.color;
-        
-        // Try to draw image first
-        const img = gameAssets.images[pk.type];
-        if (img && img.complete) {
-            ctx.drawImage(img, dx - 18, dy - 18 + bounce, 36, 36);
+        const dx=pk.x-camera.x,dy=pk.y-camera.y;
+        const bounce=Math.sin(now*PICKUP_BOUNCE_SPEED)*4;
+        const imgKey = pk.type === 'doubleBullet' ? 'double_fire' : pk.type;
+        const img = gameAssets.images[imgKey];
+        if (img) {
+            ctx.drawImage(img, dx-16, dy+bounce-16, 32, 32); 
         } else {
+            ctx.save();ctx.shadowBlur=PICKUP_GLOW_SIZE;ctx.shadowColor=pk.color;
             ctx.font='1.2rem sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pk.icon,dx,dy+bounce);
+            ctx.restore();
         }
-        ctx.restore();
     }
     // Bullets
     for(const b of game.bullets){
@@ -1572,6 +1846,13 @@ function renderFrame(dt,now){
 
     if (window.location.search.includes('show=all')) {
         ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = '#fff'; ctx.font = '30px var(--font-head)'; ctx.textAlign='center'; ctx.fillText('THE CYBERPUNK SHOWCASE', canvas.width/2, 60);
+        for(let i=1; i<=6; i++) {
+            let chConfig = CHAPTERS[i-1];
+            window.overrideCh = i;
+            drawShip(100 + i*(canvas.width-200)/6, 250, -Math.PI/2, 25, chConfig.shooterColor, true, false, 'player', i);
+            ctx.font='16px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText('CH '+i+' SHIP', 100 + i*(canvas.width-200)/6, 330);
+        }
         window.overrideCh = null;
         drawShip(canvas.width*0.2, 530, Math.PI/2, 30, '#ff2222', false, true, 'basic');
         ctx.fillText('NORMAL ENEMY', canvas.width*0.2, 620);
@@ -1581,56 +1862,6 @@ function renderFrame(dt,now){
         ctx.fillText('SHADOW GOLIATH', canvas.width*0.6, 620);
         drawShip(canvas.width*0.8, 530, Math.PI/2, 55, '#ff2200', false, true, 'bossTankA');
         ctx.fillText('COLOSSUS RING BOSS', canvas.width*0.8, 620);
-        ctx.restore();
-    }
-
-    // --- NEW: Powerup Timers & Missile Strike Visuals ---
-    updatePowerupTimers();
-
-    if(game.activeMissileStrike) {
-        const strike = game.activeMissileStrike;
-        const progress = Math.min(1, (now - strike.startTime) / strike.duration);
-        
-        ctx.save();
-        // Render Scanline
-        const scanX = (progress * 1.5 - 0.25) * canvas.width;
-        const grad = ctx.createLinearGradient(scanX - 100, 0, scanX, 0);
-        grad.addColorStop(0, 'rgba(0, 234, 255, 0)');
-        grad.addColorStop(1, 'rgba(0, 234, 255, 0.4)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, scanX, canvas.height);
-        
-        ctx.strokeStyle = '#00eaff';
-        ctx.lineWidth = 4;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#00eaff';
-        ctx.beginPath();
-        ctx.moveTo(scanX, 0);
-        ctx.lineTo(scanX, canvas.height);
-        ctx.stroke();
-        
-        // Render Strike Missiles
-        strike.missiles.forEach(m => {
-            const mProg = Math.min(1, (now - m.startTime) / 800);
-            const curX = m.x + (m.tx - m.x) * mProg;
-            const curY = m.y + (m.ty - m.y) * mProg;
-            
-            ctx.save();
-            ctx.translate(curX, curY);
-            ctx.rotate(Math.atan2(m.ty - m.y, m.tx - m.x));
-            
-            // Missile trail
-            const trailGrad = ctx.createLinearGradient(-40, 0, 0, 0);
-            trailGrad.addColorStop(0, 'rgba(255, 100, 0, 0)');
-            trailGrad.addColorStop(1, 'rgba(255, 200, 0, 0.6)');
-            ctx.fillStyle = trailGrad;
-            ctx.fillRect(-60, -2, 60, 4);
-            
-            // Missile body
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-10, 6); ctx.lineTo(-10, -6); ctx.closePath(); ctx.fill();
-            ctx.restore();
-        });
         ctx.restore();
     }
 }
@@ -1854,37 +2085,90 @@ function drawHPBar(x,y,hp,maxHp,radius,isMe,type){
         ctx.restore();
     }
 }
+
+function updatePowerupTimers() {
+    const container = document.getElementById('hud-powerup-timers');
+    if (!container) return;
+
+    const activePowerups = [];
+    if (game.doubleBulletTimer > 0) {
+        activePowerups.push({
+            id: 'double-fire',
+            name: 'DOUBLE FIRE',
+            timer: game.doubleBulletTimer,
+            max: (POWERUP_CONFIG.doubleBullet && POWERUP_CONFIG.doubleBullet.duration) || 10000,
+            icon: 'image/double_fire.png',
+            color: '#ff6600'
+        });
+    }
+    if (game.shieldActive && game.shieldTimer > 0) {
+        activePowerups.push({
+            id: 'shield',
+            name: 'SHIELD',
+            timer: game.shieldTimer,
+            max: 15000,
+            icon: 'image/shield.png',
+            color: '#00eaff'
+        });
+    }
+
+    // Stable DOM management
+    const currentItems = Array.from(container.querySelectorAll('.hud-timer-item'));
+    const activeIds = activePowerups.map(p => p.id);
+
+    // Remove expired
+    currentItems.forEach(el => {
+        if (!activeIds.includes(el.dataset.id)) el.remove();
+    });
+
+    // Add or Update
+    activePowerups.forEach(p => {
+        let el = container.querySelector(`[data-id="${p.id}"]`);
+        if (!el) {
+            el = document.createElement('div');
+            el.className = 'hud-timer-item';
+            el.dataset.id = p.id;
+            el.innerHTML = `
+                <div class="hud-timer-icon-wrap"><img src="${p.icon}"></div>
+                <div class="hud-timer-bar-wrap">
+                    <div class="hud-timer-bar" style="background:${p.color}"></div>
+                </div>
+                <span class="hud-timer-val">0s</span>
+            `;
+            container.appendChild(el);
+        }
+        const bar = el.querySelector('.hud-timer-bar');
+        const val = el.querySelector('.hud-timer-val');
+        const pct = (p.timer / p.max) * 100;
+        bar.style.width = pct + '%';
+        val.textContent = Math.ceil(p.timer / 1000) + 's';
+    });
+}
+
 function drawShield(x,y,radius,now){
     ctx.save();
-    ctx.translate(x,y);
+    // Main pulsing shell
+    ctx.strokeStyle='rgba(0,220,255,0.4)';ctx.lineWidth=2;ctx.shadowBlur=15;ctx.shadowColor='#00ddff';
+    ctx.beginPath();ctx.arc(x,y,radius+18+Math.sin(now*0.006)*2,0,Math.PI*2);ctx.stroke();
     
-    // Orbital Arcs
-    const rot = now * 0.002;
+    // Rotating 360 orbits
+    const rot = now * 0.008;
     for(let i=0; i<3; i++) {
         ctx.save();
+        ctx.translate(x, y);
         ctx.rotate(rot + (i * Math.PI * 2 / 3));
-        ctx.strokeStyle = `rgba(0, 234, 255, ${0.4 + Math.sin(now*0.005 + i)*0.2})`;
+        ctx.strokeStyle = `rgba(0, 234, 255, ${0.3 + i*0.2})`;
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(0, 0, radius + 22, 0, Math.PI * 0.6);
+        ctx.arc(0, 0, radius + 22, 0, Math.PI * 0.4);
         ctx.stroke();
-        
         // Orbital spark
         ctx.fillStyle = '#fff';
         ctx.beginPath();
-        ctx.arc(radius + 22, 0, 2, 0, Math.PI*2);
+        ctx.arc(radius + 22, 0, 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
-    
-    // Main Pulse
-    ctx.strokeStyle = 'rgba(0, 220, 255, 0.4)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 10]);
-    ctx.beginPath();
-    ctx.arc(0, 0, radius + 15 + Math.sin(now * 0.01) * 3, 0, Math.PI * 2);
-    ctx.stroke();
-    
     ctx.restore();
 }
 
@@ -1925,7 +2209,15 @@ function updateParticles(dt){
         if(p.life<=0){ releaseParticle(p); particles.splice(i,1); }
     }
 }
-function spawnCoinFloat(sx,sy,amount){const el=document.createElement('div');el.className='coin-float';el.innerHTML='+'+amount+' <img src="image/coin.png" style="width:18px; height:18px; vertical-align:middle; margin-left:2px; filter:drop-shadow(0 0 5px gold);">';el.style.left=sx+'px';el.style.top=sy+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),1000);}
+function spawnCoinFloat(sx,sy,amount){
+    const el=document.createElement('div');
+    el.className='coin-float';
+    el.innerHTML=`+${amount} <img src="image/coin.png" style="width:20px; height:20px; vertical-align:middle; margin-left:4px; filter:drop-shadow(0 0 5px gold);">`;
+    el.style.left=sx+'px';
+    el.style.top=sy+'px';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1000);
+}
 
 // =====================================================================
 // INPUT
@@ -1936,7 +2228,13 @@ window.addEventListener('keydown',e=>{
     if(k==='w'||k==='arrowup')keys.w=true;if(k==='a'||k==='arrowleft')keys.a=true;
     if(k==='s'||k==='arrowdown')keys.s=true;if(k==='d'||k==='arrowright')keys.d=true;
     if(k==='p'&&isPlaying)togglePause();
-    if(k==='m'&&isPlaying)useMissile();
+    // Missile: M, Shift, or L
+    if((k==='m'||k==='l'||(e.code==='ShiftLeft'||e.code==='ShiftRight'))&&isPlaying&&game.state==='playing'){e.preventDefault();useMissile();}
+    // Shield: R (when playing)
+    if(k==='r'&&isPlaying&&game.state==='playing'){e.preventDefault();useShield();}
+    // Double Fire: Q
+    if(k==='q'&&isPlaying&&game.state==='playing'){e.preventDefault();if(window.useDoubleFire)window.useDoubleFire();}
+    // Retry on game over
     if(k==='r'&&game.state==='gameOver')retryLevel();
 });
 window.addEventListener('keyup',e=>{if(e.code==='Space')isShooting=false;const k=e.key.toLowerCase();if(k==='w'||k==='arrowup')keys.w=false;if(k==='a'||k==='arrowleft')keys.a=false;if(k==='s'||k==='arrowdown')keys.s=false;if(k==='d'||k==='arrowright')keys.d=false;});
@@ -2081,130 +2379,87 @@ function setupMobileControls(){
 }
 
 // =====================================================================
+// UNIFIED CONTROLS POPUP — Logic (PC & Mobile)
+// =====================================================================
+function closeControlsPopup() {
+    const pop = document.getElementById('controls-popup');
+    if (pop) pop.classList.add('hidden');
+    const pcPop = document.getElementById('pc-controls-popup');
+    if (pcPop) pcPop.classList.add('hidden');
+    const mobPop = document.getElementById('mobile-controls-popup');
+    if (mobPop) mobPop.classList.add('hidden');
+
+    const isMob = typeof window.isMobileDevice === 'function' ? window.isMobileDevice() : !window._isDesktop;
+    window._pcControlsShown = true;
+    window._mobControlsShown = true;
+    try {
+        localStorage.setItem(isMob ? 'fs_mob_ctrl_seen' : 'fs_pc_ctrl_seen', '1');
+    } catch(e) {}
+
+    const fn = window._pcControlsOnDone || window._mobControlsOnDone;
+    window._pcControlsOnDone = null;
+    window._mobControlsOnDone = null;
+
+    if (fn) {
+        game.state = 'playing';
+        if (audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
+        fn();
+    } else if (isPlaying && audio.musicEnabled && typeof tryPlayBg === 'function') {
+        tryPlayBg();
+    }
+}
+window.closeControlsPopup = closeControlsPopup;
+window.closePcControls = closeControlsPopup;
+window.closeMobileControls = closeControlsPopup;
+
+// =====================================================================
 // INIT
 // =====================================================================
 const sd = window.getSaveData();
-musicEnabled = sd.musicEnabled !== false;
-if(!musicEnabled){const b=document.getElementById('music-toggle-btn');if(b)b.textContent='🔇 Music: OFF';}
+// Initialize PC controls shown flag (true = don't show popup)
+window._pcControlsShown = (localStorage.getItem('fs_pc_ctrl_seen') === '1') || !window._isDesktop;
+// Initialize Mobile controls shown flag (true = don't show popup)
+window._mobControlsShown = (localStorage.getItem('fs_mob_ctrl_seen') === '1') || window._isDesktop;
+
+// Correctly sync saved music state using the audio engine method
+if (sd.musicEnabled === false && window._gameAudioEngine.musicEnabled) {
+    window._gameAudioEngine.toggleMusic();
+}
 updateInventoryUI();
 
 // =====================================================================
-// INTRO & LOADING LOGIC
+// LOADING LOGIC (Intro video removed — goes straight to loading screen)
 // =====================================================================
 function initIntroLogic() {
-    console.log("Initializing Intro Logic...");
-    const introObj = document.getElementById('intro-video-overlay');
-    const vid = document.getElementById('intro-video');
     const loader = document.getElementById('loading-overlay');
-    
-    if(!introObj || !vid){
-        console.log("Intro elements not found, bypassing.");
-        if(loader){loader.style.opacity='0';setTimeout(()=>loader.remove(),500);}
+    if (!loader) {
+        // No loader either — just start music and go
+        if (audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
         return;
     }
-
-    let transitioned = false;
-    function transitionToLoader() {
-        if (transitioned) return;
-        transitioned = true;
-        console.log("Action: Transitioning to loader...");
-
-        // KILL VIDEO AUDIO
-        try {
-            vid.pause();
-            vid.src = "";
-            vid.load();
-        } catch(e) { console.error("Error stopping video:", e); }
-
-        // Remove the prompt
-        const p = document.querySelector('.intro-tap-prompt');
-        if(p) p.remove();
-
-        // Fade out intro
-        introObj.style.opacity = '0';
-        introObj.style.pointerEvents = 'none';
-
-        setTimeout(() => {
-            introObj.style.display = 'none';
-            introObj.remove();
-            console.log("Intro overlay removed.");
-
-            if(loader) {
-                loader.style.display = 'flex';
-                loader.style.opacity = '1';
-                const bar = loader.querySelector('.loader-bar');
-                if(bar) {
-                    bar.style.transition = 'width 1.2s ease-out';
-                    bar.style.width = '100%';
-                }
-                
-                setTimeout(() => {
-                    loader.style.opacity = '0';
-                    setTimeout(() => {
-                        loader.remove();
-                        console.log("Loader removed. Game starting.");
-                        if(audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
-                    }, 500);
-                }, 1300);
-            } else {
-                if(audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
-            }
-        }, 800);
+    // Show loading bar, then fade out and start
+    loader.style.display = 'flex';
+    loader.style.opacity = '1';
+    const bar = loader.querySelector('.loader-bar');
+    if (bar) {
+        bar.style.transition = 'width 0.8s ease-out';
+        bar.style.width = '100%';
     }
-
-    vid.addEventListener('ended', transitionToLoader);
-    vid.addEventListener('error', (e) => {
-        console.error("Video Error:", e);
-        transitionToLoader();
-    });
-
-    // TAP TO AUDIO PROMPT
-    function showIntroTapPrompt() {
-        if(document.querySelector('.intro-tap-prompt')) return;
-        const prompt = document.createElement('div');
-        prompt.className = "intro-tap-prompt";
-        prompt.style.cssText = "position:fixed; inset:0; z-index:10001; display:flex; align-items:center; justify-content:center; color:#fff; font-family:var(--font-head); text-shadow:0 0 10px #00eaff; cursor:pointer;";
-        prompt.innerHTML = "<div style='background:rgba(0,0,0,0.6); padding:20px; border:1px solid #00eaff; border-radius:8px;'>NEURAL LINK ESTABLISHED<br>TAP TO INITIALIZE</div>";
-        prompt.onclick = (e) => {
-            e.stopPropagation();
-            vid.muted = false;
-            vid.play().catch(() => {});
-            prompt.remove();
-        };
-        document.body.appendChild(prompt);
-    }
-
-    // Try starting the video
-    vid.play().then(() => {
-        showIntroTapPrompt();
-    }).catch(e => {
-        console.warn("Autoplay blocked:", e);
-        showIntroTapPrompt();
-        // If it's completely stuck, move on after 2s
-        setTimeout(() => { if(!transitioned && vid.paused) transitionToLoader(); }, 2000);
-    });
-
-    // Safety timeout - bypass no matter what after 4s
     setTimeout(() => {
-        if(!transitioned) {
-            console.log("Safety bypass triggered.");
-            transitionToLoader();
-        }
-    }, 4000);
-
-    // Clicking the background skips too
-    introObj.onclick = () => {
-        console.log("Overlay background clicked.");
-        transitionToLoader();
-    };
+        loader.style.opacity = '0';
+        setTimeout(() => {
+            loader.remove();
+            if (audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
+        }, 400);
+    }, 900); // Total: ~1.3s instead of 4s+ for the video
 }
 
-// Run intro logic as soon as DOM is ready, don't wait for 'load' (which waits for all images/fonts)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initIntroLogic);
 } else {
     initIntroLogic();
 }
+
 
 // ======================== TRIAL SYSTEM JS ========================
 window.openTrialPopup = function() {
@@ -2264,16 +2519,16 @@ window.renderTrialGrid = function() {
             if (!tCtx) return;
             tCtx.clearRect(0, 0, 100, 100);
             
-            // Temporarily replace the global context as the drawShip function expects it
+            // Standardizing context for drawShip
             const origCtx = ctx;
             ctx = tCtx;
             const oldOverride = window.overrideCh;
             window.overrideCh = ch.id;
             
             try {
-                drawShip(50, 55, -Math.PI/2, 22, ch.shooterColor, true, false, null);
+                drawShip(50, 55, -Math.PI/2, 22, ch.shooterColor, true, false, 'player');
             } catch (e) {
-                console.error("Error drawing ship in trial:", e);
+                console.error("Error drawing ship in trial grid:", e);
             }
             
             window.overrideCh = oldOverride;
@@ -2328,102 +2583,16 @@ function handleTitleTap() {
     }
 }
 
-function updatePowerupTimers() {
-    const container = document.getElementById('hud-powerup-timers');
-    if (!container) return;
-
-    const activePowerups = [];
-    if (game.doubleBulletTimer > 0) {
-        activePowerups.push({
-            id: 'double-fire',
-            name: 'DOUBLE FIRE',
-            timer: game.doubleBulletTimer,
-            max: (POWERUP_CONFIG.doubleBullet && POWERUP_CONFIG.doubleBullet.duration) || 10000,
-            icon: 'image/double_fire.png',
-            color: '#ff6600'
-        });
-    }
-    if (game.shieldActive && game.shieldTimer > 0) {
-        activePowerups.push({
-            id: 'shield',
-            name: 'SHIELD',
-            timer: game.shieldTimer,
-            max: 15000,
-            icon: 'image/shield.png',
-            color: '#00eaff'
-        });
-    }
-
-    // Stable DOM management
-    const currentItems = Array.from(container.querySelectorAll('.hud-timer-item'));
-    const activeIds = activePowerups.map(p => p.id);
-
-    // Remove expired
-    currentItems.forEach(el => {
-        if (!activeIds.includes(el.dataset.id)) el.remove();
-    });
-
-    // Add or Update
-    activePowerups.forEach(p => {
-        let el = container.querySelector(`[data-id="${p.id}"]`);
-        if (!el) {
-            el = document.createElement('div');
-            el.className = 'hud-timer-item';
-            el.dataset.id = p.id;
-            el.innerHTML = `
-                <div class="hud-timer-icon-wrap"><img src="${p.icon}"></div>
-                <div class="hud-timer-bar-wrap">
-                    <div class="hud-timer-bar" style="background:${p.color}"></div>
-                </div>
-                <span class="hud-timer-val">0s</span>
-            `;
-            container.appendChild(el);
-        }
-        const bar = el.querySelector('.hud-timer-bar');
-        const val = el.querySelector('.hud-timer-val');
-        const pct = (p.timer / p.max) * 100;
-        bar.style.width = pct + '%';
-        val.textContent = Math.ceil(p.timer / 1000) + 's';
-    });
-}
-
-// =====================================================================
-// UNIFIED CONTROLS POPUP — Logic (PC & Mobile)
-// =====================================================================
-function closeControlsPopup() {
-    const pop = document.getElementById('controls-popup');
-    if (pop) pop.classList.add('hidden');
-    const pcPop = document.getElementById('pc-controls-popup');
-    if (pcPop) pcPop.classList.add('hidden');
-    const mobPop = document.getElementById('mobile-controls-popup');
-    if (mobPop) mobPop.classList.add('hidden');
-
-    const isMob = typeof window.isMobileDevice === 'function' ? window.isMobileDevice() : !window._isDesktop;
-    window._pcControlsShown = true;
-    window._mobControlsShown = true;
-    try {
-        localStorage.setItem(isMob ? 'fs_mob_ctrl_seen' : 'fs_pc_ctrl_seen', '1');
-    } catch(e) {}
-
-    const fn = window._pcControlsOnDone || window._mobControlsOnDone;
-    window._pcControlsOnDone = null;
-    window._mobControlsOnDone = null;
-
-    if (fn) {
-        game.state = 'playing';
-        if (audio.musicEnabled && audio.music) audio.music.play().catch(()=>{});
-        fn();
-    } else if (isPlaying && audio.musicEnabled && audio.music) {
-        audio.music.play().catch(()=>{});
-    }
-}
-window.closeControlsPopup = closeControlsPopup;
-window.closePcControls = closeControlsPopup;
-window.closeMobileControls = closeControlsPopup;
-
 window.game = game;
 window.handleTitleTap = handleTitleTap;
 window.showToast = showToast;
+window.retryLevel = retryLevel;
+window.exitToMenu = exitToMenu;
+window.watchAdToRespawn = watchAdToRespawn;
+window.togglePause = togglePause;
+window.resumeFromFunLevel = resumeFromFunLevel;
+window.useMissile = useMissile;
+window.useShield = useShield;
 
 // BATTERY & CPU OPTIMIZATION: Pause on background
 document.addEventListener('visibilitychange', () => {

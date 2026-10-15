@@ -300,19 +300,17 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     }
 
     // ---- LEADERBOARD: Universal for CrazyGames and Google Play Store ----
-    window.openLeaderboard = function() {
-        if (window.game && window.game.state === 'mission_popup') {
-            if (window.showToast) window.showToast('⚠️ Read the mission first!');
-            return;
-        }
-        window.closeAllPopups();
-        const p = document.getElementById('leaderboard-popup');
-        if (!p) return;
-        p.classList.remove('hidden');
-
-        // Sync player name from CrazyGames SDK or local storage
-        let pilotName = localStorage.getItem('floaty_player_name');
-        if (!pilotName) {
+    window.LeaderboardAPI = {
+        // Plug-and-play Cloud Configuration
+        config: {
+            // Dreamlo is 100% free with zero backend setup (http://dreamlo.com)
+            // Enter your keys here to enable live cross-platform cloud sync:
+            dreamloPublicKey: '', // Public code (safe in frontend, e.g. "65a...")
+            dreamloPrivateKey: '', // Private code for score posting
+            // Or Firebase Realtime Database endpoint:
+            firebaseUrl: '' // e.g. "https://YOUR-APP-default-rtdb.firebaseio.com"
+        },
+        syncCrazyGamesUser: function() {
             if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.user) {
                 try {
                     window.CrazyGames.SDK.user.getUser().then(u => {
@@ -324,8 +322,66 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     }).catch(()=>{});
                 } catch(e) {}
             }
-            pilotName = 'CYBER_PILOT';
+        },
+        submitScore: function(score, chapter) {
+            const pilotName = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
+            if (!score || score <= 0) return;
+
+            // Submit to Dreamlo REST if configured
+            if (this.config.dreamloPrivateKey) {
+                try {
+                    const url = `https://dreamlo.com/lb/${this.config.dreamloPrivateKey}/add/${encodeURIComponent(pilotName)}/${score}/${chapter || 1}`;
+                    fetch(url, { mode: 'no-cors' }).catch(()=>{});
+                } catch(e) {}
+            }
+
+            // Submit to Firebase REST if configured
+            if (this.config.firebaseUrl) {
+                try {
+                    fetch(`${this.config.firebaseUrl}/scores/${encodeURIComponent(pilotName)}.json`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: pilotName, score: score, chapter: chapter || 1, timestamp: Date.now() })
+                    }).catch(()=>{});
+                } catch(e) {}
+            }
+        },
+        fetchScores: async function() {
+            if (this.config.dreamloPublicKey) {
+                try {
+                    const res = await fetch(`https://dreamlo.com/lb/${this.config.dreamloPublicKey}/json`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        let entries = data && data.dreamlo && data.dreamlo.leaderboard && data.dreamlo.leaderboard.entry;
+                        if (entries) {
+                            if (!Array.isArray(entries)) entries = [entries];
+                            return entries.map(e => ({
+                                name: e.name,
+                                score: parseInt(e.score, 10) || 0,
+                                chapter: parseInt(e.seconds, 10) || 1,
+                                tag: 'ACE'
+                            }));
+                        }
+                    }
+                } catch(e) {}
+            }
+            return null;
         }
+    };
+
+    window.openLeaderboard = function() {
+        if (window.game && window.game.state === 'mission_popup') {
+            if (window.showToast) window.showToast('⚠️ Read the mission first!');
+            return;
+        }
+        window.closeAllPopups();
+        const p = document.getElementById('leaderboard-popup');
+        if (!p) return;
+        p.classList.remove('hidden');
+
+        // Sync player name from CrazyGames SDK or local storage
+        if (window.LeaderboardAPI) window.LeaderboardAPI.syncCrazyGamesUser();
+        let pilotName = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
         const nameEl = document.getElementById('lb-pilot-name');
         if (nameEl) nameEl.textContent = pilotName;
 
@@ -343,7 +399,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         else window.renderLeaderboardRuns();
     };
 
-    window.renderLeaderboardGlobal = function() {
+    window.renderLeaderboardGlobal = async function() {
         const list = document.getElementById('leaderboard-list');
         if (!list) return;
 
@@ -354,7 +410,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         const playerScore = Math.max(bestRunScore, (sd.stats && sd.stats.totalScore) || 0);
         const playerChapter = Math.min(6, (sd.stats && sd.stats.chaptersCompleted) || 1);
 
-        const baseRoster = [
+        let roster = [
             { name: 'CYBER_VALKYRIE', score: 148500, chapter: 6, tag: 'ACE' },
             { name: 'NEON_PHANTOM',  score: 122800, chapter: 5, tag: 'ELITE' },
             { name: 'VOID_REAPER',   score: 98400,  chapter: 5, tag: 'HUNTER' },
@@ -369,6 +425,15 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             { name: 'NOVA_STORM',    score: 7400,   chapter: 1, tag: 'TRAINEE' }
         ];
 
+        if (window.LeaderboardAPI) {
+            try {
+                const cloudScores = await window.LeaderboardAPI.fetchScores();
+                if (cloudScores && cloudScores.length) {
+                    roster = cloudScores;
+                }
+            } catch(e) {}
+        }
+
         const playerEntry = {
             name: pilotName,
             score: playerScore,
@@ -377,11 +442,14 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             isPlayer: true
         };
 
-        const all = [...baseRoster, playerEntry].sort((a, b) => b.score - a.score);
+        // Filter out duplicate if player already exists in roster
+        roster = roster.filter(e => e.name.toUpperCase() !== pilotName.toUpperCase());
+
+        const all = [...roster, playerEntry].sort((a, b) => b.score - a.score);
 
         list.innerHTML = all.map((entry, idx) => {
             const rank = idx + 1;
-            const isMe = entry.isPlayer;
+            const isMe = entry.isPlayer || (entry.name.toUpperCase() === pilotName.toUpperCase());
             let rankBadge = `#${rank}`;
             let rowClass = 'lb-row';
             if (rank === 1) { rankBadge = '🥇'; rowClass += ' lb-top1'; }
@@ -394,9 +462,9 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     <div class="lb-rank">${rankBadge}</div>
                     <div class="lb-pilot-info">
                         <span class="lb-name">${escapeHtml(entry.name)} ${isMe ? '<span class="lb-me-tag">YOU</span>' : ''}</span>
-                        <span class="lb-ch">CH.${entry.chapter} • ${entry.tag}</span>
+                        <span class="lb-ch">CH.${entry.chapter || 1} • ${entry.tag || 'ACE'}</span>
                     </div>
-                    <div class="lb-score">★ ${entry.score.toLocaleString()}</div>
+                    <div class="lb-score">★ ${(entry.score || 0).toLocaleString()}</div>
                 </div>
             `;
         }).join('');
@@ -1559,6 +1627,7 @@ function gameLoop(timestamp){
 function triggerLevelComplete(){
     game.state='levelComplete';completeLevel(game.chapter,game.level);
     addToHistory({chapter:game.chapter,level:game.level,score:game.score,kills:game.levelKills,result:'VICTORY',coins:game.coinsEarned});
+    if (window.LeaderboardAPI) window.LeaderboardAPI.submitScore(game.score, game.chapter);
     const ch=CHAPTERS[game.chapter-1];const isChapterDone=game.level>=ch.levels;
     document.getElementById('level-complete-title').innerHTML = '<img src="image/star-removebg.png" class="ui-icon"> LEVEL ' + game.level + ' COMPLETE!';
     document.getElementById('level-complete-score').textContent='Score: '+game.score;
@@ -1580,6 +1649,7 @@ function triggerGameOver(){
     game.state='gameOver';addDeath();
     setTimeout(() => playCustomSound('music/game_over.ogg', 1, 1.0), 900);
     addToHistory({chapter:game.chapter,level:game.level,score:game.score,kills:game.levelKills,result:'DEFEAT',coins:game.coinsEarned});
+    if (window.LeaderboardAPI) window.LeaderboardAPI.submitScore(game.score, game.chapter);
     document.getElementById('go-chapter').textContent=game.chapter;
     document.getElementById('go-level').textContent=game.level;
     document.getElementById('go-score').textContent=game.score;

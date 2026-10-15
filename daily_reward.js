@@ -1,8 +1,9 @@
 // =====================================================================
-// DAILY LOGIN REWARD SYSTEM  v2 — Floaty Shooter
+// DAILY LOGIN REWARD SYSTEM  v3 — Floaty Shooter
 // =====================================================================
 (function () {
     var DR_KEY = 'fs_daily_reward_v1';
+    var _countdownTimerId = null;
 
     // ── Cycle 1: Fixed 7-day schedule ────────────────────────────────────
     var DAILY_REWARDS = [
@@ -15,7 +16,7 @@
         { day: 7, type: 'mystery', icon: '🎁', label: 'MYSTERY BOX',   value: 0   }
     ];
 
-    // Mystery box prizes (Cycle 1 Day 7 + Cycle 1 mystery)
+    // Mystery box prizes (Cycle 1 Day 7)
     var MYSTERY_PRIZES = [
         { type: 'coins',   icon: '🪙', label: '500 Coins',     value: 500  },
         { type: 'missile', icon: '🚀', label: '3 Missiles',    value: 3    },
@@ -58,18 +59,16 @@
 
     // Returns the 7-reward array for the current week
     function getActiveRewards(state) {
-        var cycle = Math.floor((state.streak || 0) / 7); // 0 = first week
+        var cycle = Math.floor((state.streak || 0) / 7);
         if (cycle === 0) return DAILY_REWARDS;
 
-        // Bonus week: generate random rewards seeded by week number
-        var weekNum = cycle; // unique per week
+        var weekNum = cycle;
         var rewards = [];
         for (var i = 0; i < 6; i++) {
             var idx = Math.floor(seededRand(weekNum * 13 + i) * BONUS_POOL.length);
             var base = BONUS_POOL[idx];
             rewards.push({ day: i + 1, type: base.type, icon: base.icon, label: base.label, value: base.value });
         }
-        // Day 7 always a grand mystery box in bonus weeks
         rewards.push({ day: 7, type: 'mystery', icon: '🎁', label: 'GRAND BOX', value: 0 });
         return rewards;
     }
@@ -110,12 +109,43 @@
         return (today - last) / 86400000 > 1;
     }
 
+    // ── Live Countdown Timer ─────────────────────────────────────────────
+    function startCountdownTimer(nextDayNum, nextRewardLabel) {
+        stopCountdownTimer();
+        updateCountdownDisplay(nextDayNum, nextRewardLabel);
+        _countdownTimerId = setInterval(function () {
+            updateCountdownDisplay(nextDayNum, nextRewardLabel);
+        }, 1000);
+    }
+
+    function stopCountdownTimer() {
+        if (_countdownTimerId) {
+            clearInterval(_countdownTimerId);
+            _countdownTimerId = null;
+        }
+    }
+
+    function updateCountdownDisplay(nextDayNum, nextRewardLabel) {
+        var el = document.getElementById('dr-countdown-time');
+        var now = new Date();
+        var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+        var diff = Math.max(0, midnight - now);
+        var h = Math.floor(diff / 3600000);
+        var m = Math.floor((diff % 3600000) / 60000);
+        var s = Math.floor((diff % 60000) / 1000);
+        var str = (h < 10 ? '0' : '') + h + 'h ' + (m < 10 ? '0' : '') + m + 'm ' + (s < 10 ? '0' : '') + s + 's';
+        if (el) el.textContent = str;
+
+        var subEl = document.getElementById('dr-tomorrow-sub');
+        if (subEl && nextDayNum) {
+            subEl.textContent = 'Come back tomorrow to unlock Day ' + nextDayNum + (nextRewardLabel ? ' (' + nextRewardLabel + ')' : '') + '!';
+        }
+    }
 
     // ── Public API ──────────────────────────────────────────────────────
 
     window.checkDailyRewardOnLoad = function () {
         var state = getDRState();
-        // Only auto-pop if today's reward hasn't been claimed yet
         if (!hasClaimedToday(state)) {
             setTimeout(function () { window.showDailyReward(); }, 1200);
         }
@@ -130,19 +160,15 @@
         var sp = document.getElementById('settings-panel');
         if (sp) sp.classList.add('hidden');
 
-        // If already claimed today and we have the last reward saved, skip the
-        // grid and jump straight to the reward reveal view.
-        if (hasClaimedToday(state) && state.lastReward) {
-            _showClaimedView(state);
-        } else {
-            renderDailyRewardUI(state);
-        }
+        // Always render the complete 7-day progression view
+        renderDailyRewardUI(state);
     };
 
     window.closeDailyReward = function () {
         var popup = document.getElementById('daily-reward-popup');
         if (popup) popup.classList.add('hidden');
-        // Reset any visibility overrides so the popup is clean next time it opens
+        stopCountdownTimer();
+
         var cratesEl = document.getElementById('dr-crates');
         if (cratesEl) cratesEl.style.display = '';
         var claimBtn = document.getElementById('dr-claim-btn');
@@ -151,12 +177,11 @@
         if (streakEl) streakEl.style.display = '';
     };
 
-    // Called when user clicks the today's crate (box-opening flow)
+    // Called when user clicks today's crate or claim button
     window.openDailyRewardBox = function () {
         var state = getDRState();
         if (hasClaimedToday(state)) return;
 
-        // Start the box-opening animation FIRST, then grant reward after
         var btn = document.getElementById('dr-claim-btn');
         if (btn) btn.disabled = true;
 
@@ -165,10 +190,9 @@
             todayCard.classList.add('opening');
         }
 
-        // After box-open animation completes, grant and reveal
         setTimeout(function () {
             _grantAndReveal(state);
-        }, 700);
+        }, 650);
     };
 
     function _grantAndReveal(state) {
@@ -179,7 +203,7 @@
         var reward = activeRewards[dayIndex];
         var actual = reward;
 
-        // Mystery box — pick a random prize from appropriate pool
+        // Mystery box
         if (reward.type === 'mystery') {
             var pool = getMysteryPrizes(state);
             actual = pool[Math.floor(Math.random() * pool.length)];
@@ -191,227 +215,171 @@
         else if (actual.type === 'shield'  && window.addItem) window.addItem('shield', actual.value);
         else if (actual.type === 'double'  && window.addItem) window.addItem('doubleBullet', actual.value);
 
-        // Persist — also save the actual reward so we can re-show it later
+        // Persist
         state.lastClaimed = getTodayStr();
         state.streak = (state.streak || 0) + 1;
         state.lastReward = { type: actual.type, icon: actual.icon, label: actual.label, value: actual.value };
         saveDRState(state);
 
-        // Switch to reveal-only view: hide grid and button, show only the reward
-        _switchToRevealView(state, actual);
+        // Celebration particles
+        spawnRewardParticles(actual.icon);
 
-        // Toast
-        if (window.showToast) window.showToast('🎁 Daily Reward: +' + actual.label + '!');
+        // Missile reveal overlay if missile
+        if (actual.type === 'missile') {
+            showMissileReveal(actual);
+        }
+
+        // Toast feedback
+        if (window.showToast) window.showToast('🎁 Daily Reward Claimed: +' + actual.label + '!');
 
         // Update inventory HUD
         if (window.updateInventoryUI) window.updateInventoryUI();
+
+        // Immediately update card to show claimed status and preview upcoming rewards!
+        renderDailyRewardUI(state);
     }
 
-    // ─── Switch popup to reveal-only view (used after claiming AND when reopening) ─
-    function _switchToRevealView(state, actual) {
-        // Hide the crates grid and claim button — show only the reward
-        var cratesEl = document.getElementById('dr-crates');
-        if (cratesEl) cratesEl.style.display = 'none';
-
-        var claimBtn = document.getElementById('dr-claim-btn');
-        if (claimBtn) claimBtn.style.display = 'none';
-
-        // Hide the streak-info row (no duplicate lines)
-        var streakEl = document.getElementById('dr-streak-info');
-        if (streakEl) streakEl.style.display = 'none';
-
-        // Set subtitle to streak message — one clean line
-        var subtitleEl = document.querySelector('.dr-subtitle');
-        if (subtitleEl) subtitleEl.textContent = '🔥 DAY ' + (state.streak || 1) + ' STREAK — COME BACK TOMORROW!';
-
-        // Show the reward reveal
-        if (actual.type === 'missile') {
-            showMissileReveal(actual);
-        } else {
-            showNormalReveal(actual);
-        }
-
-        // Show close button
-        var closeBtn = document.getElementById('dr-close-btn');
-        if (closeBtn) closeBtn.style.display = 'block';
-    }
-
-    // ─── Show "already claimed" view (opened from Settings after today's claim) ──
-    function _showClaimedView(state) {
-        _switchToRevealView(state, state.lastReward);
-    }
-
-    // ─── Normal reward reveal ──────────────────────────────────────────
-    function showNormalReveal(actual) {
-        var reveal = document.getElementById('dr-reveal');
-        var iconEl = document.getElementById('dr-reveal-icon');
-        var textEl = document.getElementById('dr-reveal-text');
-        if (!reveal || !iconEl || !textEl) return;
-
-        iconEl.textContent = actual.icon;
-        textEl.textContent = '+' + actual.label.toUpperCase();
-        reveal.classList.remove('hidden');
-        reveal.classList.remove('dr-reveal-animate');
-        void reveal.offsetWidth; // force reflow
-        reveal.classList.add('dr-reveal-animate');
-
-        // Particle burst
-        spawnRewardParticles(actual.icon);
-    }
-
-    // ─── Missile MEGA reveal ───────────────────────────────────────────
-    function showMissileReveal(actual) {
-        // Show the big missile congratulation overlay
-        var overlay = document.getElementById('dr-missile-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'dr-missile-overlay';
-            overlay.className = 'dr-missile-overlay';
-            overlay.innerHTML =
-                '<div class="dr-missile-bg-flash"></div>' +
-                '<div class="dr-missile-inner">' +
-                    '<div class="dr-missile-stars">★ ★ ★ ★ ★</div>' +
-                    '<div class="dr-missile-emoji">🚀</div>' +
-                    '<div class="dr-missile-title">MISSILES!</div>' +
-                    '<div class="dr-missile-count">+' + actual.value + '</div>' +
-                    '<div class="dr-missile-congrats">CONGRATULATIONS!</div>' +
-                    '<div class="dr-missile-sub">INCOMING MISSILES LAUNCHED!</div>' +
-                    '<button class="dr-missile-close" onclick="document.getElementById(\'dr-missile-overlay\').classList.add(\'hidden\')">AWESOME! 🔥</button>' +
-                '</div>';
-            document.body.appendChild(overlay);
-        } else {
-            // Update count
-            var countEl = overlay.querySelector('.dr-missile-count');
-            if (countEl) countEl.textContent = '+' + actual.value;
-            overlay.classList.remove('hidden');
-        }
-
-        overlay.classList.remove('hidden');
-        overlay.classList.remove('dr-missile-animate');
-        void overlay.offsetWidth;
-        overlay.classList.add('dr-missile-animate');
-
-        // Extra particles
-        spawnMissileParticles();
-
-        // Also show the normal reveal area
-        showNormalReveal(actual);
-    }
-
-    // ── Internal helpers ────────────────────────────────────────────────
-
+    // ─── Render Daily Reward Cards ───────────────────────────────────────
     function renderDailyRewardUI(state) {
         var container = document.getElementById('dr-crates');
         if (!container) return;
-        var claimed  = hasClaimedToday(state);
+        var claimed = hasClaimedToday(state);
 
-        // When claimed today: point to the day JUST claimed (streak-1)
-        // When not yet claimed: point to the day TO claim today (streak%7)
         var streak = state.streak || 0;
         var todayIdx = claimed
             ? Math.max(0, (streak - 1)) % 7
             : getDayIndex(state);
 
-        container.innerHTML = '';
-
-        // Update streak info
-        var streakEl = document.getElementById('dr-streak-info');
-        if (streakEl) {
-            if (claimed) {
-                streakEl.textContent = '🔥 DAY ' + streak + ' STREAK — COME BACK TOMORROW!';
-            } else {
-                streakEl.textContent = '🎁 TAP THE GLOWING BOX TO REVEAL YOUR REWARD!';
-            }
-        }
-
         var activeRewards = getActiveRewards(state);
         var bonus = isBonus(state);
         var weekNum = getWeekNum(state);
 
-        // Toggle bonus-week visual theme on the popup box
+        var nextDayIdx = (todayIdx + 1) % 7;
+        var nextDayNum = nextDayIdx + 1;
+        var nextReward = activeRewards[nextDayIdx];
+
+        container.innerHTML = '';
+
+        // Streak status header
+        var streakEl = document.getElementById('dr-streak-info');
+        if (streakEl) {
+            if (claimed) {
+                streakEl.textContent = '🔥 DAY ' + streak + ' STREAK • NEXT SUPPLY CRATE TOMORROW';
+            } else {
+                streakEl.textContent = '🎁 DAY ' + (todayIdx + 1) + ' READY • TAP TODAY\'S BOX TO OPEN!';
+            }
+        }
+
+        // Toggle bonus theme
         var popupBox = document.querySelector('.daily-reward-box');
         if (popupBox) popupBox.classList.toggle('bonus-week', bonus);
 
-        // Update header title + subtitle for bonus weeks
         var titleEl = document.querySelector('.dr-title');
         var subtitleEl = document.querySelector('.dr-subtitle');
         if (titleEl) {
-            titleEl.textContent = bonus ? 'BONUS WEEK ' + weekNum : 'DAILY REWARD';
-            titleEl.style.background = bonus
-                ? 'linear-gradient(90deg,#00eaff,#9b59ff,#00eaff)'
-                : 'linear-gradient(90deg,#f39c12,#ffe066,#f39c12)';
-            titleEl.style.backgroundSize = '200%';
-            titleEl.style.webkitBackgroundClip = 'text';
-            titleEl.style.webkitTextFillColor = 'transparent';
+            titleEl.textContent = bonus ? 'BONUS WEEK ' + weekNum : 'DAILY LOGIN REWARD';
         }
         if (subtitleEl) {
-            subtitleEl.textContent = bonus
-                ? '⚡ Bigger randomized rewards — resets every 7 days!'
-                : '🎯 Tap today\'s box to open your reward!';
-            subtitleEl.style.color = bonus ? 'rgba(0,234,255,0.6)' : '';
+            if (claimed) {
+                subtitleEl.textContent = 'Today\'s reward claimed! Remaining supply crates are previewed below.';
+            } else {
+                subtitleEl.textContent = bonus
+                    ? '⚡ Bigger randomized rewards — resets every 7 days!'
+                    : '🎯 Tap today\'s box to unlock your daily supply crate!';
+            }
         }
 
+        // 7 Crates
         activeRewards.forEach(function (reward, i) {
-            var status = (i < todayIdx) ? 'claimed'
-                       : (i === todayIdx) ? (claimed ? 'claimed' : 'today')
-                       : 'locked';
+            var isPast = i < todayIdx;
+            var isToday = i === todayIdx;
+            var isUpcoming = i > todayIdx;
+
+            var status = isPast ? 'claimed'
+                       : (isToday ? (claimed ? 'claimed claimed-today' : 'today')
+                       : 'upcoming');
             var special = (i === 6) ? ' day-7-special' : '';
             var card = document.createElement('div');
             card.className = 'dr-crate type-' + reward.type + ' ' + status + special;
 
-            // For "today" unclaimed: show only a sealed gift box — reward hidden until opened
             var boxContent;
-            if (status === 'today' && !claimed) {
-                // Only show the gift box, NO reward peek
+            var labelText;
+            var tagText = '';
+
+            if (isToday && !claimed) {
+                // Today ready to open
                 boxContent =
                     '<div class="dr-crate-box-wrap">' +
                         '<div class="dr-box-lid">🎁</div>' +
                     '</div>';
-            } else if (status === 'claimed') {
+                labelText = 'TAP!';
+                tagText = '<div class="dr-crate-tag" style="color:var(--gold); font-weight:800;">READY</div>';
+            } else if (isToday && claimed) {
+                // Today claimed
                 boxContent = '<div class="dr-crate-box">' + reward.icon + '</div>';
+                labelText = reward.label;
+                tagText = '<div class="dr-crate-tag" style="color:#2ecc71; font-weight:800;">✓ CLAIMED</div>';
+            } else if (isPast) {
+                // Past claimed
+                boxContent = '<div class="dr-crate-box">' + reward.icon + '</div>';
+                labelText = reward.label;
+                tagText = '<div class="dr-crate-tag" style="color:#2ecc71;">✓ DONE</div>';
             } else {
-                // Locked: show question mark
-                boxContent = '<div class="dr-crate-box dr-box-locked">❓</div>';
+                // Upcoming: reward unlocked and clearly previewed
+                boxContent = '<div class="dr-crate-box">' + reward.icon + '</div>';
+                labelText = reward.label;
+                tagText = '<div class="dr-crate-tag">UPCOMING</div>';
             }
 
             card.innerHTML =
                 '<div class="dr-crate-day">DAY ' + reward.day + '</div>' +
                 boxContent +
-                '<div class="dr-crate-label">' +
-                    (status === 'today' && !claimed ? 'TAP!' :
-                     status === 'locked' ? '???' :
-                     reward.type === 'mystery' ? '???' :
-                     reward.label) +
-                '</div>';
+                '<div class="dr-crate-label">' + labelText + '</div>' +
+                tagText;
 
             // Clickable only for "today" before claiming
-            if (status === 'today' && !claimed) {
+            if (isToday && !claimed) {
                 card.style.cursor = 'pointer';
                 card.onclick = function() { window.openDailyRewardBox(); };
             }
             container.appendChild(card);
         });
 
-        // Update claim button
+        // Banner and Claim Button
+        var banner = document.getElementById('dr-tomorrow-banner');
         var btn = document.getElementById('dr-claim-btn');
         var closeBtn = document.getElementById('dr-close-btn');
-        var reveal = document.getElementById('dr-reveal');
 
-        if (btn) {
-            if (claimed) {
-                btn.disabled = true;
-                btn.innerHTML = '✅ Already Claimed Today';
-                if (closeBtn) closeBtn.style.display = 'block';
-            } else {
-                btn.disabled = false;
-                btn.innerHTML = '<span class="dr-claim-shine"></span>🎁 TAP BOX TO OPEN';
-                if (closeBtn) closeBtn.style.display = 'none';
+        if (claimed) {
+            if (banner) {
+                banner.classList.remove('hidden');
+                banner.style.display = 'flex';
+                startCountdownTimer(nextDayNum, nextReward ? nextReward.label : '');
             }
+            if (btn) {
+                btn.disabled = false;
+                btn.className = 'btn primary dr-claim-btn dr-claimed-btn';
+                btn.innerHTML = '⏰ COME BACK TOMORROW';
+                btn.onclick = function() { window.closeDailyReward(); };
+            }
+            if (closeBtn) closeBtn.style.display = 'block';
+        } else {
+            if (banner) {
+                banner.classList.add('hidden');
+                banner.style.display = 'none';
+                stopCountdownTimer();
+            }
+            if (btn) {
+                btn.disabled = false;
+                btn.className = 'btn primary dr-claim-btn';
+                btn.innerHTML = '🎁 TAP BOX TO OPEN';
+                btn.onclick = function() { window.openDailyRewardBox(); };
+            }
+            if (closeBtn) closeBtn.style.display = 'none';
         }
-        if (reveal) reveal.classList.add('hidden');
     }
 
-    // Kept for backward-compat (settings button "Claim Reward")
+    // Kept for backward-compat
     window.claimDailyReward = function () {
         window.openDailyRewardBox();
     };
@@ -425,7 +393,7 @@
         var cx = rect.left + rect.width  / 2;
         var cy = rect.top  + rect.height / 2;
         var pool = [emoji, '✨', '⭐', '💫', '🌟'];
-        for (var i = 0; i < 20; i++) {
+        for (var i = 0; i < 24; i++) {
             var el = document.createElement('div');
             el.className = 'dr-particle';
             el.textContent = pool[Math.floor(Math.random() * pool.length)];
@@ -442,28 +410,33 @@
         }
     }
 
-    function spawnMissileParticles() {
-        var pool = ['🚀','💥','⭐','✨','🔥','💫','🌟'];
-        for (var i = 0; i < 35; i++) {
-            var el = document.createElement('div');
-            el.className = 'dr-particle';
-            el.textContent = pool[Math.floor(Math.random() * pool.length)];
-            var cx = window.innerWidth / 2;
-            var cy = window.innerHeight / 2;
-            var angle = Math.random() * Math.PI * 2;
-            var dist  = 120 + Math.random() * 280;
-            el.style.left = cx + 'px';
-            el.style.top  = cy + 'px';
-            el.style.setProperty('--tx', (Math.cos(angle) * dist) + 'px');
-            el.style.setProperty('--ty', (Math.sin(angle) * dist - 100) + 'px');
-            el.style.animationDelay = (Math.random() * 0.6) + 's';
-            el.style.fontSize = (1.0 + Math.random() * 2.0) + 'rem';
-            document.body.appendChild(el);
-            setTimeout(function (node) { return function () { node.remove(); }; }(el), 2000);
+    function showMissileReveal(actual) {
+        var overlay = document.getElementById('dr-missile-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'dr-missile-overlay';
+            overlay.className = 'dr-missile-overlay';
+            overlay.innerHTML =
+                '<div class="dr-missile-bg-flash"></div>' +
+                '<div class="dr-missile-inner">' +
+                    '<div class="dr-missile-stars">★ ★ ★ ★ ★</div>' +
+                    '<div class="dr-missile-emoji">🚀</div>' +
+                    '<div class="dr-missile-title">MISSILES!</div>' +
+                    '<div class="dr-missile-count">+' + actual.value + '</div>' +
+                    '<div class="dr-missile-congrats">CONGRATULATIONS!</div>' +
+                    '<div class="dr-missile-sub">INCOMING MISSILES ARMED!</div>' +
+                    '<button class="dr-missile-close" onclick="document.getElementById(\'dr-missile-overlay\').classList.add(\'hidden\')">AWESOME! 🔥</button>' +
+                '</div>';
+            document.body.appendChild(overlay);
+        } else {
+            var countEl = overlay.querySelector('.dr-missile-count');
+            if (countEl) countEl.textContent = '+' + actual.value;
+            overlay.classList.remove('hidden');
         }
-    }
 
-    // NOTE: Do NOT auto-trigger here on page load.
-    // checkDailyRewardOnLoad() is called by goToMainMenu() in game.js,
-    // so the popup only appears AFTER the player reaches the chapter select screen.
+        overlay.classList.remove('hidden');
+        overlay.classList.remove('dr-missile-animate');
+        void overlay.offsetWidth;
+        overlay.classList.add('dr-missile-animate');
+    }
 })();

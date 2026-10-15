@@ -561,15 +561,28 @@
         <!-- ========== DAILY REWARD POPUP ========== -->
         <div id="daily-reward-popup" class="popup-overlay hidden">
             <div class="popup-box popup-box-large daily-reward-box">
-                <button id="dr-close-btn" class="popup-close" onclick="closeDailyReward()"></button>
+                <button id="dr-close-btn" class="popup-close" onclick="closeDailyReward()">✕</button>
                 <div class="dr-header">
                     <h2 class="dr-title">DAILY LOGIN REWARD</h2>
-                    <p class="dr-subtitle">Tap today's box to open your reward!</p>
+                    <p class="dr-subtitle">Tap today's box to unlock your daily supply crate!</p>
                     <div id="dr-streak-info" class="dr-streak-info"></div>
                 </div>
                 <div id="dr-crates" class="dr-crates"></div>
-                <button id="dr-claim-btn" class="btn primary dr-claim-btn" onclick="openDailyRewardBox()" disabled>
-                    <span class="dr-claim-shine"></span>
+
+                <!-- Tomorrow Countdown & Upcoming Reward Banner -->
+                <div id="dr-tomorrow-banner" class="dr-tomorrow-banner hidden">
+                    <div class="dr-tomorrow-icon">⏰</div>
+                    <div class="dr-tomorrow-info">
+                        <div class="dr-tomorrow-badge">TODAY'S REWARD CLAIMED</div>
+                        <div id="dr-tomorrow-sub" class="dr-tomorrow-sub">Come back tomorrow to unlock your next reward!</div>
+                        <div class="dr-tomorrow-timer-wrap">
+                            <span>NEXT DROP IN:</span>
+                            <span id="dr-countdown-time" class="dr-countdown-digits">00h 00m 00s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="dr-claim-btn" class="btn primary dr-claim-btn" onclick="openDailyRewardBox()">
                     🎁 TAP BOX TO OPEN
                 </button>
                 <div id="dr-reveal" class="dr-reveal hidden">

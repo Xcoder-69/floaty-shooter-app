@@ -231,6 +231,7 @@
                     <button class="settings-item" onclick="showControls()">🎮 Controls</button>
                     <button class="settings-item" onclick="openLeaderboard()">🏆 Leaderboard</button>
                     <button class="settings-item" onclick="showHistory()">📜 History</button>
+                    <button class="settings-item" onclick="if(window.showDailyReward) window.showDailyReward();">🎁 Daily Reward</button>
                     <button class="settings-item" onclick="openPopup('collection-popup');renderCollectionUI();">🚀 Collection</button>
                     <button id="music-toggle-btn" class="settings-item" onclick="toggleMusic()">🔊 Music: ON</button>
                     <button class="settings-item" onclick="showStats()">📊 Stats</button>
@@ -554,6 +555,45 @@
             </div>
         </div>
 
+        <!-- ========== DAILY REWARD POPUP ========== -->
+        <div id="daily-reward-popup" class="popup-overlay hidden">
+            <div class="popup-box popup-box-large daily-reward-box">
+                <button id="dr-close-btn" class="popup-close" onclick="closeDailyReward()">✕</button>
+                <div class="dr-header">
+                    <h2 class="dr-title">DAILY LOGIN REWARD</h2>
+                    <p class="dr-subtitle">Tap today's box to unlock your daily supply crate!</p>
+                    <div id="dr-streak-info" class="dr-streak-info"></div>
+                </div>
+                <div id="dr-crates" class="dr-crates"></div>
+
+                <!-- Tomorrow Countdown & Upcoming Reward Banner -->
+                <div id="dr-tomorrow-banner" class="dr-tomorrow-banner hidden">
+                    <div class="dr-tomorrow-icon">⏰</div>
+                    <div class="dr-tomorrow-info">
+                        <div class="dr-tomorrow-badge">TODAY'S REWARD CLAIMED</div>
+                        <div id="dr-tomorrow-sub" class="dr-tomorrow-sub">Come back tomorrow to unlock your next reward!</div>
+                        <div class="dr-tomorrow-timer-wrap">
+                            <span>NEXT DROP IN:</span>
+                            <span id="dr-countdown-time" class="dr-countdown-digits">00h 00m 00s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="dr-claim-btn" class="btn primary dr-claim-btn" onclick="openDailyRewardBox()">
+                    🎁 TAP BOX TO OPEN
+                </button>
+                <div id="dr-reveal" class="dr-reveal hidden">
+                    <div id="dr-reveal-content" class="dr-reveal-content">
+                        <div id="dr-reveal-icon" class="dr-reveal-icon"></div>
+                        <div id="dr-reveal-text" class="dr-reveal-text"></div>
+                    </div>
+                </div>
+                <div id="dr-missile-overlay" class="dr-missile-overlay hidden">
+                    <!-- specialized reveal for missiles -->
+                </div>
+            </div>
+        </div>
+
         <!-- ========== SCREEN 3: LEVEL MAP ========== -->
         <div id="screen-levels" class="screen">
             <!-- NAVBAR -->
@@ -838,6 +878,7 @@
     <canvas id="gameCanvas"></canvas>
 
     <script src="admob-manager.js"></script>
+    <script src="daily_reward.js"></script>
     <script src="data.js"></script>
     <script src="store.js"></script>
     <script src="game.js"></script>
