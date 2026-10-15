@@ -59,7 +59,20 @@
             verifyIntegrity(parsed);
             
             const defaults = getDefaultSave();
-            return { ...defaults, ...parsed, stats: { ...defaults.stats, ...parsed.stats } };
+            const loaded = { ...defaults, ...parsed, stats: { ...defaults.stats, ...parsed.stats } };
+
+            // Clean up starter items for fresh saves that got auto-injected 3 items
+            if (!loaded._starterItemsFixed) {
+                if (loaded.coins === 0 && (!loaded.stats || loaded.stats.totalKills === 0) && loaded.missiles === 3 && loaded.shields === 3 && loaded.doubleBullets === 3) {
+                    loaded.missiles = 0;
+                    loaded.shields = 0;
+                    loaded.doubleBullets = 0;
+                }
+                loaded._starterItemsFixed = true;
+                setTimeout(() => saveSave(loaded), 300);
+            }
+
+            return loaded;
         } catch (e) {
             console.warn('Sync ignored: Using defaults.');
             return getDefaultSave();
@@ -359,10 +372,18 @@
             const btn = document.getElementById(btnId);
             if (btn) btn.disabled = saveData.coins < STORE_PRICES[it];
 
+            const count = it === 'missile' ? saveData.missiles : it === 'shield' ? saveData.shields : saveData.doubleBullets;
             const ownedEl = document.getElementById('store-owned-' + it);
             if (ownedEl) {
-                const count = it === 'missile' ? saveData.missiles : it === 'shield' ? saveData.shields : saveData.doubleBullets;
                 ownedEl.textContent = count;
+            }
+            const tag = document.getElementById('owned-tag-' + it);
+            if (tag) {
+                if (count > 0) {
+                    tag.classList.add('has-owned');
+                } else {
+                    tag.classList.remove('has-owned');
+                }
             }
         });
         const adM = document.getElementById('ad-missile');

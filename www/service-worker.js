@@ -1,4 +1,4 @@
-const CACHE_NAME = 'floaty-shooter-v3';
+const CACHE_NAME = 'floaty-shooter-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -31,9 +31,15 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network-first for code files, cache-first for assets
-  const url = event.request.url;
-  if (url.endsWith('.js') || url.endsWith('.html') || url.endsWith('.css')) {
+  // Network-first for code files and root page, cache-first for assets
+  const url = new URL(event.request.url);
+  const isCode = url.pathname.endsWith('.js') || 
+                 url.pathname.endsWith('.html') || 
+                 url.pathname.endsWith('.css') || 
+                 url.pathname.endsWith('/') || 
+                 !url.pathname.includes('.');
+
+  if (isCode) {
     // Network first — always get fresh code
     event.respondWith(
       fetch(event.request).then((response) => {

@@ -10,9 +10,9 @@
         return {
             coins: 0,
             _cM: 0, // Shadow coin mirror
-            missiles: 3,
-            shields: 3,
-            doubleBullets: 3,
+            missiles: 0,
+            shields: 0,
+            doubleBullets: 0,
             equippedShip: null,
             chapterProgress: { 1: 0 },
             stats: { totalKills: 0, totalDeaths: 0, totalCoins: 0, totalScore: 0, totalTimePlayed: 0, chaptersCompleted: 0, levelsCompleted: 0 },
@@ -48,9 +48,7 @@
         try {
             const rawData = localStorage.getItem(SAVE_KEY);
             if (!rawData) {
-                const def = getDefaultSave();
-                def.receivedWelcomeGift = true;
-                return def;
+                return getDefaultSave();
             }
             
             const parts = rawData.split('.');
@@ -65,22 +63,21 @@
             const defaults = getDefaultSave();
             const loaded = { ...defaults, ...parsed, stats: { ...defaults.stats, ...parsed.stats } };
             
-            // Retroactively grant the 3 free items to older saves that never got them
-            if (!loaded.receivedWelcomeGift) {
-                loaded.missiles += 3;
-                loaded.shields += 3;
-                loaded.doubleBullets += 3;
-                loaded.receivedWelcomeGift = true;
-                // Important: re-save immediately so they don't get them again
-                setTimeout(() => saveSave(loaded), 500); 
+            // Clean up starter items for fresh saves that got auto-injected 3 items
+            if (!loaded._starterItemsFixed) {
+                if (loaded.coins === 0 && (!loaded.stats || loaded.stats.totalKills === 0) && loaded.missiles === 3 && loaded.shields === 3 && loaded.doubleBullets === 3) {
+                    loaded.missiles = 0;
+                    loaded.shields = 0;
+                    loaded.doubleBullets = 0;
+                }
+                loaded._starterItemsFixed = true;
+                setTimeout(() => saveSave(loaded), 300);
             }
             
             return loaded;
         } catch (e) {
             console.warn('Sync ignored: Using defaults.');
-            const def = getDefaultSave();
-            def.receivedWelcomeGift = true;
-            return def;
+            return getDefaultSave();
         }
     }
 
@@ -385,10 +382,18 @@
             const btn = document.getElementById(btnId);
             if (btn) btn.disabled = saveData.coins < STORE_PRICES[it];
 
+            const count = it === 'missile' ? saveData.missiles : it === 'shield' ? saveData.shields : saveData.doubleBullets;
             const ownedEl = document.getElementById('store-owned-' + it);
             if (ownedEl) {
-                const count = it === 'missile' ? saveData.missiles : it === 'shield' ? saveData.shields : saveData.doubleBullets;
                 ownedEl.textContent = count;
+            }
+            const tag = document.getElementById('owned-tag-' + it);
+            if (tag) {
+                if (count > 0) {
+                    tag.classList.add('has-owned');
+                } else {
+                    tag.classList.remove('has-owned');
+                }
             }
         });
         const adM = document.getElementById('ad-missile');
