@@ -644,10 +644,11 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 }
 .store-item-name {
     font-family: var(--font-head);
-    font-size: .98rem;
+    font-size: 1.08rem;
     font-weight: 800;
     color: #f8fafc;
-    letter-spacing: .6px;
+    letter-spacing: .8px;
+    text-shadow: 0 0 12px rgba(0, 234, 255, 0.2);
 }
 .store-item-desc {
     font-size: .74rem;
