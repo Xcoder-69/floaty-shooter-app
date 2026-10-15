@@ -408,7 +408,9 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
 
     window.renderLeaderboardGlobal = async function() {
         const list = document.getElementById('leaderboard-list');
-        if (!list) return;
+        const myRankCard = document.getElementById('lb-my-rank-card');
+        const secLabel = document.getElementById('lb-section-label');
+        if (secLabel) secLabel.textContent = 'GLOBAL RANKINGS';
 
         const pilotName = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
         const sd = (typeof window.getSaveData === 'function') ? window.getSaveData() : { stats: {}, chapterProgress: {} };
@@ -454,6 +456,36 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
 
         const all = [...roster, playerEntry].sort((a, b) => b.score - a.score);
 
+        // Find player's calculated rank
+        const playerIdx = all.findIndex(e => e.isPlayer || (e.name.toUpperCase() === pilotName.toUpperCase()));
+        const playerRank = playerIdx >= 0 ? (playerIdx + 1) : '-';
+
+        // Render Pinned My Rank Card on Top
+        if (myRankCard) {
+            let myBadge = `#${playerRank}`;
+            let myBadgeClass = 'lb-my-rank-badge';
+            if (playerRank === 1) { myBadge = '🥇'; myBadgeClass += ' top-1'; }
+            else if (playerRank === 2) { myBadge = '🥈'; myBadgeClass += ' top-2'; }
+            else if (playerRank === 3) { myBadge = '🥉'; myBadgeClass += ' top-3'; }
+
+            myRankCard.innerHTML = `
+                <div class="${myBadgeClass}">${myBadge}</div>
+                <div class="lb-my-rank-info">
+                    <div class="lb-my-name-row">
+                        <span class="lb-my-name">${escapeHtml(pilotName)}</span>
+                        <span class="lb-me-tag">YOU</span>
+                        <button class="lb-my-edit-link" onclick="openEditPilotPopup()" title="Edit Callsign"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>EDIT</button>
+                    </div>
+                    <div class="lb-my-sub">CH.${playerChapter} • ${playerScore > 0 ? 'ACTIVE ACE' : 'RECRUIT'}</div>
+                </div>
+                <div class="lb-my-score-wrap">
+                    <span class="lb-my-score-label">BEST SCORE</span>
+                    <span class="lb-my-score-val">★ ${(playerScore || 0).toLocaleString()}</span>
+                </div>
+            `;
+        }
+
+        if (!list) return;
         list.innerHTML = all.map((entry, idx) => {
             const rank = idx + 1;
             const isMe = entry.isPlayer || (entry.name.toUpperCase() === pilotName.toUpperCase());
@@ -479,9 +511,34 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
 
     window.renderLeaderboardRuns = function() {
         const list = document.getElementById('leaderboard-list');
-        if (!list) return;
+        const myRankCard = document.getElementById('lb-my-rank-card');
+        const secLabel = document.getElementById('lb-section-label');
+        if (secLabel) secLabel.textContent = 'MISSION LOGS';
 
+        const pilotName = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
         const history = (typeof window.getHistory === 'function') ? window.getHistory() : [];
+        const bestScore = history.reduce((max, h) => Math.max(max, h.score || 0), 0);
+        const wins = history.filter(h => h.result === 'VICTORY').length;
+
+        if (myRankCard) {
+            myRankCard.innerHTML = `
+                <div class="lb-my-rank-badge">📊</div>
+                <div class="lb-my-rank-info">
+                    <div class="lb-my-name-row">
+                        <span class="lb-my-name">${escapeHtml(pilotName)}</span>
+                        <span class="lb-me-tag">YOU</span>
+                        <button class="lb-my-edit-link" onclick="openEditPilotPopup()" title="Edit Callsign"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>EDIT</button>
+                    </div>
+                    <div class="lb-my-sub">${history.length} BATTLES • ${wins} VICTORIES</div>
+                </div>
+                <div class="lb-my-score-wrap">
+                    <span class="lb-my-score-label">BEST RUN</span>
+                    <span class="lb-my-score-val">★ ${bestScore.toLocaleString()}</span>
+                </div>
+            `;
+        }
+
+        if (!list) return;
         if (!history.length) {
             list.innerHTML = `
                 <div class="history-empty">
@@ -513,16 +570,92 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         }).join('');
     };
 
-    window.editLeaderboardCallsign = function() {
+    // Open Stylish Cyberpunk Pilot Edit Modal (Replaces browser prompt)
+    window.openEditPilotPopup = function() {
+        const popup = document.getElementById('edit-pilot-popup');
+        const input = document.getElementById('edit-pilot-input');
+        const counter = document.getElementById('edit-pilot-counter');
+        const err = document.getElementById('edit-pilot-error');
+        if (!popup || !input) return;
+
         const current = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
-        const next = prompt('Enter your Callsign (max 16 chars):', current);
-        if (next && next.trim()) {
-            const cleaned = next.trim().slice(0, 16).toUpperCase();
-            localStorage.setItem('floaty_player_name', cleaned);
-            if (window.updatePilotDisplay) window.updatePilotDisplay();
-            window.renderLeaderboardGlobal();
-            if (window.showToast) window.showToast(`Callsign updated: ${cleaned}`);
+        input.value = current;
+        if (counter) counter.textContent = `${current.length}/16`;
+        if (err) { err.textContent = ''; err.classList.add('hidden'); }
+
+        input.oninput = function() {
+            if (counter) counter.textContent = `${input.value.length}/16`;
+            if (err) err.classList.add('hidden');
+        };
+
+        input.onkeydown = function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                window.savePilotCallsign();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                window.closeEditPilotPopup();
+            }
+        };
+
+        popup.classList.remove('hidden');
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 80);
+    };
+
+    window.closeEditPilotPopup = function() {
+        const popup = document.getElementById('edit-pilot-popup');
+        if (popup) popup.classList.add('hidden');
+    };
+
+    window.savePilotCallsign = function() {
+        const input = document.getElementById('edit-pilot-input');
+        const err = document.getElementById('edit-pilot-error');
+        if (!input) return;
+
+        let raw = input.value.trim();
+        if (!raw) {
+            if (err) {
+                err.textContent = 'Callsign cannot be empty.';
+                err.classList.remove('hidden');
+            }
+            input.focus();
+            return;
         }
+
+        // Clean: letters, numbers, underscores, dashes, spaces; max 16 chars; uppercase
+        let cleaned = raw.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().slice(0, 16).toUpperCase();
+        if (!cleaned) {
+            if (err) {
+                err.textContent = 'Please use letters, numbers or underscores.';
+                err.classList.remove('hidden');
+            }
+            input.focus();
+            return;
+        }
+
+        localStorage.setItem('floaty_player_name', cleaned);
+        if (window.updatePilotDisplay) window.updatePilotDisplay();
+
+        // Refresh Leaderboard if currently visible
+        const lb = document.getElementById('leaderboard-popup');
+        if (lb && !lb.classList.contains('hidden')) {
+            const gTab = document.getElementById('lb-tab-global');
+            if (gTab && gTab.classList.contains('active')) {
+                window.renderLeaderboardGlobal();
+            } else {
+                window.renderLeaderboardRuns();
+            }
+        }
+
+        window.closeEditPilotPopup();
+        if (window.showToast) window.showToast(`CALLSIGN SAVED: ${cleaned}`);
+    };
+
+    window.editLeaderboardCallsign = function() {
+        window.openEditPilotPopup();
     };
 
     window.showStats = function() {
@@ -547,7 +680,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     window.closeAllPopups = function(){
         // Do NOT forcibly close fun-level-popup if game is in mission_popup state
         const safeToCloseFunLevel = !(window.game && window.game.state === 'mission_popup');
-        const list = ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','trial-popup','leaderboard-popup','collection-popup','daily-reward-popup'];
+        const list = ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','trial-popup','leaderboard-popup','collection-popup','daily-reward-popup','edit-pilot-popup'];
         if (safeToCloseFunLevel) list.push('fun-level-popup');
         list.forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('hidden');});
         if(document.getElementById('settings-panel')) document.getElementById('settings-panel').classList.add('hidden');

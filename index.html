@@ -518,7 +518,12 @@
                 <span class="cs-pilot-dot"></span>
                 <span class="cs-pilot-lbl">PILOT:</span>
                 <span id="cs-pilot-name" class="cs-pilot-name">CYBER_PILOT</span>
-                <span class="cs-pilot-edit-icon" title="Edit Callsign">✏️</span>
+                <span class="cs-pilot-edit-icon" title="Edit Callsign">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                </span>
             </div>
 
             <!-- Returning User Greeting -->
@@ -535,7 +540,8 @@
         <!-- ========== LEADERBOARD POPUP ========== -->
         <div id="leaderboard-popup" class="popup-overlay hidden">
             <div class="popup-box popup-box-large leaderboard-box">
-                <button class="popup-close" onclick="closePopup('leaderboard-popup')"></button>
+                <button class="popup-close" onclick="closePopup('leaderboard-popup')">✕</button>
+                <div class="lb-header">
                     <div class="lb-trophy-badge">
                         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/>
@@ -548,13 +554,6 @@
                     <h3>GALACTIC LEADERBOARD</h3>
                     <p class="lb-subtitle">Top Cyberpunk Pilots Across the Galaxy</p>
 
-                    <!-- Pilot Callsign Banner -->
-                    <div class="lb-pilot-bar">
-                        <span class="lb-pilot-label">PILOT:</span>
-                        <span id="lb-pilot-name" class="lb-pilot-name">CYBER_PILOT</span>
-                        <button class="lb-edit-btn" onclick="editLeaderboardCallsign()" title="Change callsign">✏️ EDIT</button>
-                    </div>
-
                     <!-- Tab Switcher -->
                     <div class="lb-tabs">
                         <button id="lb-tab-global" class="lb-tab active" onclick="switchLeaderboardTab('global')">🌐 GLOBAL ACES</button>
@@ -562,7 +561,55 @@
                     </div>
                 </div>
 
+                <!-- Pinned Player Rank Card on Top -->
+                <div id="lb-my-rank-card" class="lb-my-rank-card">
+                    <!-- Populated dynamically with player rank, score & edit callsign button -->
+                </div>
+
+                <!-- Section Subheader -->
+                <div class="lb-section-bar">
+                    <span id="lb-section-label" class="lb-section-label">GLOBAL RANKINGS</span>
+                    <span class="lb-section-sub">TOP PILOTS</span>
+                </div>
+
+                <!-- Scrollable rankings list -->
                 <div id="leaderboard-list" class="leaderboard-list"></div>
+            </div>
+        </div>
+
+        <!-- ========== EDIT PILOT CALLSIGN POPUP ========== -->
+        <div id="edit-pilot-popup" class="popup-overlay hidden">
+            <div class="popup-box edit-pilot-box">
+                <button class="popup-close" onclick="closeEditPilotPopup()">✕</button>
+                <div class="edit-pilot-header">
+                    <div class="edit-pilot-icon">🪪</div>
+                    <h3>PILOT CALLSIGN</h3>
+                    <p class="edit-pilot-subtitle">Update your callsign for the Galactic Leaderboard</p>
+                </div>
+                <div class="edit-pilot-form">
+                    <label class="edit-pilot-label" for="edit-pilot-input">CALLSIGN (MAX 16 CHARACTERS)</label>
+                    <div class="edit-pilot-input-wrap">
+                        <span class="edit-pilot-prefix">PILOT //</span>
+                        <input 
+                            type="text" 
+                            id="edit-pilot-input" 
+                            class="edit-pilot-input" 
+                            maxlength="16" 
+                            placeholder="CYBER_PILOT" 
+                            autocomplete="off" 
+                            spellcheck="false"
+                        />
+                    </div>
+                    <div class="edit-pilot-meta">
+                        <span class="edit-pilot-hint">Letters, numbers & underscores</span>
+                        <span id="edit-pilot-counter" class="edit-pilot-counter">0/16</span>
+                    </div>
+                    <div id="edit-pilot-error" class="edit-pilot-error hidden"></div>
+                </div>
+                <div class="edit-pilot-actions">
+                    <button type="button" class="edit-pilot-btn edit-pilot-cancel" onclick="closeEditPilotPopup()">CANCEL</button>
+                    <button type="button" class="edit-pilot-btn edit-pilot-save" onclick="savePilotCallsign()">SAVE CALLSIGN</button>
+                </div>
             </div>
         </div>
 
