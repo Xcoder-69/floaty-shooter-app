@@ -174,10 +174,17 @@ function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeigh
 resize();window.addEventListener('resize',()=>{initBg();resize();});
 
 // -------- SCREEN NAVIGATION --------
+    window.updatePilotDisplay = function(){
+        const name = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
+        const csName = document.getElementById('cs-pilot-name');
+        if (csName) csName.textContent = name;
+        const lbName = document.getElementById('lb-pilot-name');
+        if (lbName) lbName.textContent = name;
+    };
     window.showScreen = function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById(id);if(el)el.classList.add('active');};
     window.goToStart = function(){window.showScreen('screen-start');};
-    window.goToMainMenu = function(){try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}window.showScreen('screen-chapters');try{window.updateInventoryUI();}catch(e){}};
-    window.goToChapterSelect = function(){try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}window.showScreen('screen-chapters');};
+    window.goToMainMenu = function(){try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}window.showScreen('screen-chapters');try{window.updateInventoryUI();}catch(e){}try{window.updatePilotDisplay();}catch(e){}};
+    window.goToChapterSelect = function(){try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}window.showScreen('screen-chapters');try{window.updatePilotDisplay();}catch(e){}};
     window.handlePlayButton = function(){
         const screenName = document.getElementById('screen-name');
         const savedName = localStorage.getItem('floaty_player_name');
@@ -191,8 +198,9 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     };
     window.confirmPlayerName = function(){
         const input = document.getElementById('player-name-input');
-        const name = input && input.value.trim() ? input.value.trim() : 'PILOT';
+        const name = input && input.value.trim() ? input.value.trim().toUpperCase() : 'PILOT';
         localStorage.setItem('floaty_player_name', name);
+        window.updatePilotDisplay();
         window.goToMainMenu();
     };
 
@@ -316,8 +324,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     window.CrazyGames.SDK.user.getUser().then(u => {
                         if (u && u.username) {
                             localStorage.setItem('floaty_player_name', u.username);
-                            const el = document.getElementById('lb-pilot-name');
-                            if (el) el.textContent = u.username;
+                            if (window.updatePilotDisplay) window.updatePilotDisplay();
                         }
                     }).catch(()=>{});
                 } catch(e) {}
@@ -512,8 +519,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         if (next && next.trim()) {
             const cleaned = next.trim().slice(0, 16).toUpperCase();
             localStorage.setItem('floaty_player_name', cleaned);
-            const el = document.getElementById('lb-pilot-name');
-            if (el) el.textContent = cleaned;
+            if (window.updatePilotDisplay) window.updatePilotDisplay();
             window.renderLeaderboardGlobal();
             if (window.showToast) window.showToast(`Callsign updated: ${cleaned}`);
         }
@@ -2426,6 +2432,7 @@ if (sd.musicEnabled === false && window._gameAudioEngine.musicEnabled) {
     window._gameAudioEngine.toggleMusic();
 }
 updateInventoryUI();
+updatePilotDisplay();
 
 // =====================================================================
 // LOADING LOGIC (Intro video removed — goes straight to loading screen)

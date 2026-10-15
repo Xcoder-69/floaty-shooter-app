@@ -619,6 +619,90 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .cs-gear-btn:hover { background:rgba(150,150,170,.4); transform:rotate(25deg); }
 .cs-gear-btn:active { transform:scale(0.9); }
 
+/* Pilot Callsign Badge (Top Right below Store) */
+.cs-pilot-badge {
+    position: absolute;
+    top: 4.8rem;
+    right: 1.2rem;
+    z-index: 21;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, rgba(13, 23, 42, 0.88), rgba(15, 23, 42, 0.94));
+    border: 1px solid rgba(0, 234, 255, 0.35);
+    border-radius: 50px;
+    padding: 0.35rem 0.85rem;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45), 0 0 15px rgba(0, 234, 255, 0.12);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+}
+.cs-pilot-badge:hover {
+    border-color: rgba(0, 234, 255, 0.75);
+    background: linear-gradient(135deg, rgba(15, 30, 55, 0.95), rgba(20, 35, 65, 0.95));
+    box-shadow: 0 6px 24px rgba(0, 234, 255, 0.35);
+    transform: translateY(-2px);
+}
+.cs-pilot-badge:active {
+    transform: scale(0.97);
+}
+.cs-pilot-dot {
+    width: 7px;
+    height: 7px;
+    background: #00EAFF;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #00EAFF;
+    animation: pulse 1.8s ease-in-out infinite;
+    flex-shrink: 0;
+}
+.cs-pilot-lbl {
+    font-family: var(--font-head);
+    font-size: 0.58rem;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 700;
+}
+.cs-pilot-name {
+    font-family: var(--font-head);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #FDE047;
+    text-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cs-pilot-edit-icon {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    transition: opacity 0.2s, transform 0.2s;
+    line-height: 1;
+}
+.cs-pilot-badge:hover .cs-pilot-edit-icon {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+@media (max-width: 600px) {
+    .cs-pilot-badge {
+        top: 4.4rem;
+        right: 0.8rem;
+        padding: 0.25rem 0.65rem;
+        gap: 0.35rem;
+    }
+    .cs-pilot-name {
+        font-size: 0.65rem;
+        max-width: 100px;
+    }
+    .cs-pilot-lbl {
+        font-size: 0.5rem;
+    }
+}
+
 /* Chapter Cards Area */
 .cs-stages-area {
     position:absolute; top:5rem; bottom:0; left:0; right:0;
