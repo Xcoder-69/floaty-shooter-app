@@ -815,7 +815,8 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     position: absolute;
     top: 4.8rem;
     right: 1.2rem;
-    z-index: 21;
+    z-index: 50;
+    pointer-events: auto !important;
     display: inline-flex;
     align-items: center;
     gap: 0.65rem;
@@ -882,6 +883,8 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     color: #38bdf8;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    pointer-events: auto !important;
+    cursor: pointer;
 }
 .cs-pilot-badge:hover .cs-pilot-edit-icon {
     background: rgba(0, 234, 255, 0.25);
@@ -1194,6 +1197,9 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     transition: all .2s;
     box-shadow: 0 4px 12px rgba(0,0,0,.3), 0 0 16px rgba(255,215,0,0.15);
     flex-shrink: 0;
+    position: relative;
+    z-index: 30;
+    pointer-events: auto !important;
 }
 .cs-leaderboard-btn:hover {
     background: rgba(255,215,0,0.25);
@@ -1366,6 +1372,32 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .lb-my-edit-link, .lb-edit-btn {
     display: none !important;
 }
+.lb-my-edit-callsign {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 6px;
+    padding: 0;
+    flex-shrink: 0;
+}
+.lb-my-edit-callsign:hover {
+    background: rgba(56, 189, 248, 0.35);
+    border-color: rgba(56, 189, 248, 0.85);
+    transform: scale(1.12);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    color: #00EAFF;
+}
+.lb-my-edit-callsign:active {
+    transform: scale(0.95);
+}
 .lb-my-sub {
     font-family: var(--font-head);
     font-size: 0.62rem;
@@ -1535,6 +1567,9 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .lb-empty-icon { font-size: 2.5rem; display: block; margin-bottom: 0.8rem; opacity: 0.5; }
 
 /* ======================== EDIT PILOT CALLSIGN MODAL ======================== */
+#edit-pilot-popup {
+    z-index: 10001 !important;
+}
 .edit-pilot-box {
     width: min(440px, 92vw);
     padding: 1.5rem 1.5rem 1.4rem;

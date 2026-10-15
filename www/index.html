@@ -507,17 +507,17 @@
                     <button class="cs-store-btn" onclick="openStore()">
                         <span class="cs-store-label">🏪 STORE</span>
                     </button>
-                    <button class="cs-leaderboard-btn" onclick="openLeaderboard()" title="Leaderboard">🏆</button>
-                    <button class="cs-gear-btn" onclick="toggleSettings()">⚙️</button>
+                    <button class="cs-leaderboard-btn" onclick="openLeaderboard(event); event.stopPropagation();" title="Leaderboard">🏆</button>
+                    <button class="cs-gear-btn" onclick="toggleSettings(); event.stopPropagation();">⚙️</button>
                 </div>
             </div>
 
             <!-- Pilot Callsign Badge (Top Right below Store) -->
-            <div id="cs-pilot-badge" class="cs-pilot-badge" onclick="editLeaderboardCallsign()" title="Pilot Callsign (Click to Edit)">
+            <div id="cs-pilot-badge" class="cs-pilot-badge" onclick="editLeaderboardCallsign(event); event.stopPropagation();" title="Pilot Callsign (Click to Edit)">
                 <span class="cs-pilot-dot"></span>
                 <span class="cs-pilot-lbl">PILOT:</span>
                 <span id="cs-pilot-name" class="cs-pilot-name">CYBER_PILOT</span>
-                <span class="cs-pilot-edit-icon" title="Edit Callsign">
+                <span class="cs-pilot-edit-icon" onclick="editLeaderboardCallsign(event); event.stopPropagation();" title="Edit Callsign">
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -536,7 +536,7 @@
         <!-- ========== LEADERBOARD POPUP ========== -->
         <div id="leaderboard-popup" class="popup-overlay hidden">
             <div class="popup-box popup-box-large leaderboard-box">
-                <button class="popup-close" onclick="closePopup('leaderboard-popup')">✕</button>
+                <button class="popup-close" onclick="closePopup('leaderboard-popup')"></button>
                 <div class="lb-header">
                     <div class="lb-trophy-badge">
                         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -576,7 +576,7 @@
         <!-- ========== EDIT PILOT CALLSIGN POPUP ========== -->
         <div id="edit-pilot-popup" class="popup-overlay hidden">
             <div class="popup-box edit-pilot-box">
-                <button class="popup-close" onclick="closeEditPilotPopup()">✕</button>
+                <button class="popup-close" onclick="closeEditPilotPopup()"></button>
                 <div class="edit-pilot-header">
                     <div class="edit-pilot-icon">🪪</div>
                     <h3>PILOT CALLSIGN</h3>

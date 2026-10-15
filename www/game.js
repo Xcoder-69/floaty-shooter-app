@@ -96,17 +96,34 @@ window.addEventListener('load', () => {
     gameAssets.loadImg('missile', 'image/missile.png');
     gameAssets.loadImg('fullHp', 'image/full_hp.png');
     
-    // Initialize CrazyGames SDK for audio muting
-    if (window.CrazyGames && window.CrazyGames.SDK) {
-        window.CrazyGames.SDK.init().then(() => {
-            window.CrazyGames.SDK.game.on('audio', (muted) => {
-                if (muted && audio.musicEnabled) {
-                    audio.toggleMusic(); // Mute
-                } else if (!muted && !audio.musicEnabled) {
-                    audio.toggleMusic(); // Unmute
-                }
-            });
-        }).catch(e => console.error("CrazyGames SDK init failed", e));
+    // Initialize CrazyGames SDK for audio muting safely
+    if (window.CrazyGames && window.CrazyGames.SDK && typeof window.CrazyGames.SDK.init === 'function') {
+        try {
+            const initRes = window.CrazyGames.SDK.init();
+            if (initRes && typeof initRes.then === 'function') {
+                initRes.then(() => {
+                    if (window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.on === 'function') {
+                        window.CrazyGames.SDK.game.on('audio', (muted) => {
+                            if (muted && audio.musicEnabled) {
+                                audio.toggleMusic(); // Mute
+                            } else if (!muted && !audio.musicEnabled) {
+                                audio.toggleMusic(); // Unmute
+                            }
+                        });
+                    }
+                }).catch(e => console.warn("CrazyGames SDK init failed", e));
+            } else if (window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.on === 'function') {
+                window.CrazyGames.SDK.game.on('audio', (muted) => {
+                    if (muted && audio.musicEnabled) {
+                        audio.toggleMusic(); // Mute
+                    } else if (!muted && !audio.musicEnabled) {
+                        audio.toggleMusic(); // Unmute
+                    }
+                });
+            }
+        } catch(e) {
+            console.warn("CrazyGames SDK audio init error", e);
+        }
     }
 });
 
@@ -183,8 +200,19 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     };
     window.showScreen = function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));const el=document.getElementById(id);if(el)el.classList.add('active');};
     window.goToStart = function(){window.showScreen('screen-start');};
-    window.goToMainMenu = function(){try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}window.showScreen('screen-chapters');try{window.updateInventoryUI();}catch(e){}try{window.updatePilotDisplay();}catch(e){}};
-    window.goToChapterSelect = function(){try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}window.showScreen('screen-chapters');try{window.updatePilotDisplay();}catch(e){}};
+    window.goToMainMenu = function(){
+        if (window.game) window.game.state = 'menu';
+        try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}
+        window.showScreen('screen-chapters');
+        try{window.updateInventoryUI();}catch(e){}
+        try{window.updatePilotDisplay();}catch(e){}
+    };
+    window.goToChapterSelect = function(){
+        if (window.game) window.game.state = 'menu';
+        try{window.renderChapterCards();}catch(e){console.error('renderChapterCards error:',e);}
+        window.showScreen('screen-chapters');
+        try{window.updatePilotDisplay();}catch(e){}
+    };
     window.handlePlayButton = function(){
         const screenName = document.getElementById('screen-name');
         const savedName = localStorage.getItem('floaty_player_name');
@@ -319,14 +347,22 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             firebaseUrl: '' // e.g. "https://YOUR-APP-default-rtdb.firebaseio.com"
         },
         syncCrazyGamesUser: function() {
-            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.user) {
+            // Never overwrite if player customized their callsign
+            if (localStorage.getItem('floaty_pilot_customized') === 'true') return;
+            const existing = localStorage.getItem('floaty_player_name');
+            if (existing && existing !== 'CYBER_PILOT' && existing !== 'PILOT' && existing !== 'User1') return;
+
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.user && typeof window.CrazyGames.SDK.user.getUser === 'function') {
                 try {
-                    window.CrazyGames.SDK.user.getUser().then(u => {
-                        if (u && u.username) {
-                            localStorage.setItem('floaty_player_name', u.username);
-                            if (window.updatePilotDisplay) window.updatePilotDisplay();
-                        }
-                    }).catch(()=>{});
+                    const res = window.CrazyGames.SDK.user.getUser();
+                    if (res && typeof res.then === 'function') {
+                        res.then(u => {
+                            if (u && u.username && localStorage.getItem('floaty_pilot_customized') !== 'true') {
+                                localStorage.setItem('floaty_player_name', u.username);
+                                if (window.updatePilotDisplay) window.updatePilotDisplay();
+                            }
+                        }).catch(()=>{});
+                    }
                 } catch(e) {}
             }
         },
@@ -376,8 +412,10 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         }
     };
 
-    window.openLeaderboard = function() {
-        if (window.game && window.game.state === 'mission_popup') {
+    window.openLeaderboard = function(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        const isChapterScreen = document.getElementById('screen-chapters') && document.getElementById('screen-chapters').classList.contains('active');
+        if (!isChapterScreen && window.game && window.game.state === 'mission_popup') {
             if (window.showToast) window.showToast('⚠️ Read the mission first!');
             return;
         }
@@ -474,6 +512,12 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     <div class="lb-my-name-row">
                         <span class="lb-my-name">${escapeHtml(pilotName)}</span>
                         <span class="lb-me-tag">YOU</span>
+                        <button class="lb-my-edit-callsign" onclick="openEditPilotPopup(event); event.stopPropagation();" title="Edit Callsign">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                        </button>
                     </div>
                     <div class="lb-my-sub">CH.${playerChapter} • ${playerScore > 0 ? 'ACTIVE ACE' : 'RECRUIT'}</div>
                 </div>
@@ -569,7 +613,8 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     };
 
     // Open Stylish Cyberpunk Pilot Edit Modal (Replaces browser prompt)
-    window.openEditPilotPopup = function() {
+    window.openEditPilotPopup = function(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
         const popup = document.getElementById('edit-pilot-popup');
         const input = document.getElementById('edit-pilot-input');
         const counter = document.getElementById('edit-pilot-counter');
@@ -586,12 +631,12 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             if (err) err.classList.add('hidden');
         };
 
-        input.onkeydown = function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
+        input.onkeydown = function(ev) {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
                 window.savePilotCallsign();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
+            } else if (ev.key === 'Escape') {
+                ev.preventDefault();
                 window.closeEditPilotPopup();
             }
         };
@@ -635,6 +680,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         }
 
         localStorage.setItem('floaty_player_name', cleaned);
+        localStorage.setItem('floaty_pilot_customized', 'true');
         if (window.updatePilotDisplay) window.updatePilotDisplay();
 
         // Refresh Leaderboard if currently visible
@@ -652,8 +698,9 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         if (window.showToast) window.showToast(`CALLSIGN SAVED: ${cleaned}`);
     };
 
-    window.editLeaderboardCallsign = function() {
-        window.openEditPilotPopup();
+    window.editLeaderboardCallsign = function(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        window.openEditPilotPopup(e);
     };
 
     window.showStats = function() {
@@ -731,15 +778,25 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
 
 // Close popups on outside click
 document.addEventListener('click', (e) => {
-    // If the click is inside a popup box, settings panel, or a button meant to open them, ignore it
-    const isInsidePopup = e.target.closest('.popup-box');
-    const isInsideSettings = e.target.closest('.settings-panel');
-    const isOpenBtn = e.target.closest('.start-gear-btn') || e.target.closest('.cs-gear-btn') || e.target.closest('.lm-gear') || e.target.closest('.lm-store-btn') || e.target.closest('.cs-store-btn') || e.target.closest('.cs-trial-btn');
+    // 1. If click is inside a popup box, settings panel, ignore
+    if (e.target.closest('.popup-box') || e.target.closest('.settings-panel')) return;
     
-    if (isInsidePopup || isInsideSettings || isOpenBtn) return;
+    // 2. If click is on any opener/toggle button or pilot badge, ignore
+    const isOpenBtn = e.target.closest(
+        '.start-gear-btn, .cs-gear-btn, .lm-gear, .lm-store-btn, .cs-store-btn, .cs-trial-btn, ' +
+        '.cs-leaderboard-btn, .cs-pilot-badge, .cs-pilot-edit-icon, #cs-pilot-badge, ' +
+        '.lb-my-edit-callsign, .settings-item'
+    );
+    if (isOpenBtn) return;
     
-    // Check if what they clicked had an onclick that explicitly opens something
-    if (e.target.closest('[onclick^="openPopup"]') || e.target.closest('[onclick^="show"]') || e.target.closest('[onclick^="openTrial"]')) return;
+    // 3. Check if what they clicked had an onclick that explicitly opens/toggles something
+    const clickedOnclick = e.target.closest('[onclick]');
+    if (clickedOnclick) {
+        const oc = clickedOnclick.getAttribute('onclick') || '';
+        if (/open|show|edit|toggle|confirm|Leaderboard|Pilot|Reward|Store|Popup/i.test(oc)) {
+            return;
+        }
+    }
     
     closeAllPopups();
 });
@@ -2720,6 +2777,43 @@ function handleTitleTap() {
         titleTaps = 0;
     }
 }
+
+// Reliable event listener attachments for pilot badge and leaderboard button
+function bindHeaderButtons() {
+    const pBadge = document.getElementById('cs-pilot-badge');
+    if (pBadge && !pBadge._boundClick) {
+        pBadge._boundClick = true;
+        pBadge.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.openEditPilotPopup(e);
+        });
+    }
+    const pEditIcon = document.querySelector('.cs-pilot-edit-icon');
+    if (pEditIcon && !pEditIcon._boundClick) {
+        pEditIcon._boundClick = true;
+        pEditIcon.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.openEditPilotPopup(e);
+        });
+    }
+    const lbBtn = document.querySelector('.cs-leaderboard-btn');
+    if (lbBtn && !lbBtn._boundClick) {
+        lbBtn._boundClick = true;
+        lbBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.openLeaderboard(e);
+        });
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindHeaderButtons);
+} else {
+    bindHeaderButtons();
+}
+window.addEventListener('load', bindHeaderButtons);
 
 window.game = game;
 window.handleTitleTap = handleTitleTap;
