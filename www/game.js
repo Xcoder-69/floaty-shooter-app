@@ -472,84 +472,93 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             { name: 'NOVA_STORM',    score: 7400,   chapter: 1, tag: 'TRAINEE' }
         ];
 
+        function drawRoster(currRoster) {
+            const playerEntry = {
+                name: pilotName,
+                score: playerScore,
+                chapter: playerChapter,
+                tag: 'YOU',
+                isPlayer: true
+            };
+
+            // Filter out duplicate if player already exists in roster
+            const filtered = currRoster.filter(e => e.name.toUpperCase() !== pilotName.toUpperCase());
+            const all = [...filtered, playerEntry].sort((a, b) => b.score - a.score);
+
+            // Find player's calculated rank
+            const playerIdx = all.findIndex(e => e.isPlayer || (e.name.toUpperCase() === pilotName.toUpperCase()));
+            const playerRank = playerIdx >= 0 ? (playerIdx + 1) : '-';
+
+            // Render Pinned My Rank Card on Top
+            if (myRankCard) {
+                let myBadge = `#${playerRank}`;
+                let myBadgeClass = 'lb-my-rank-badge';
+                if (playerRank === 1) { myBadge = '🥇'; myBadgeClass += ' top-1'; }
+                else if (playerRank === 2) { myBadge = '🥈'; myBadgeClass += ' top-2'; }
+                else if (playerRank === 3) { myBadge = '🥉'; myBadgeClass += ' top-3'; }
+
+                myRankCard.innerHTML = `
+                    <div class="${myBadgeClass}">${myBadge}</div>
+                    <div class="lb-my-rank-info">
+                        <div class="lb-my-name-row">
+                            <span class="lb-my-name">${escapeHtml(pilotName)}</span>
+                            <span class="lb-me-tag">YOU</span>
+                            <button class="lb-my-edit-callsign" onclick="openEditPilotPopup(event); event.stopPropagation();" title="Edit Callsign">
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                    <rect x="2" y="20" width="20" height="2.2" rx="1.1"/>
+                                    <g transform="translate(9.5, 19) rotate(45)">
+                                        <polygon points="0,0 -2.2,-4.2 2.2,-4.2"/>
+                                        <rect x="-2.2" y="-12.8" width="4.4" height="8.6" rx="0.4"/>
+                                        <rect x="-2.2" y="-17.8" width="4.4" height="3.8" rx="1.2"/>
+                                    </g>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="lb-my-sub">CH.${playerChapter} • ${playerScore > 0 ? 'ACTIVE ACE' : 'RECRUIT'}</div>
+                    </div>
+                    <div class="lb-my-score-wrap">
+                        <span class="lb-my-score-label">BEST SCORE</span>
+                        <span class="lb-my-score-val">★ ${(playerScore || 0).toLocaleString()}</span>
+                    </div>
+                `;
+            }
+
+            if (!list) return;
+            list.innerHTML = all.map((entry, idx) => {
+                const rank = idx + 1;
+                const isMe = entry.isPlayer || (entry.name.toUpperCase() === pilotName.toUpperCase());
+                let rankBadge = `#${rank}`;
+                let rowClass = 'lb-row';
+                if (rank === 1) { rankBadge = '🥇'; rowClass += ' lb-top1'; }
+                else if (rank === 2) { rankBadge = '🥈'; rowClass += ' lb-top2'; }
+                else if (rank === 3) { rankBadge = '🥉'; rowClass += ' lb-top3'; }
+                if (isMe) rowClass += ' lb-me';
+
+                return `
+                    <div class="${rowClass}">
+                        <div class="lb-rank">${rankBadge}</div>
+                        <div class="lb-pilot-info">
+                            <span class="lb-name">${escapeHtml(entry.name)} ${isMe ? '<span class="lb-me-tag">YOU</span>' : ''}</span>
+                            <span class="lb-ch">CH.${entry.chapter || 1} • ${entry.tag || 'ACE'}</span>
+                        </div>
+                        <div class="lb-score">★ ${(entry.score || 0).toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render synchronously immediately for zero delay
+        drawRoster(roster);
+
+        // Fetch fresh cloud scores in background if available
         if (window.LeaderboardAPI) {
             try {
                 const cloudScores = await window.LeaderboardAPI.fetchScores();
                 if (cloudScores && cloudScores.length) {
-                    roster = cloudScores;
+                    drawRoster(cloudScores);
                 }
             } catch(e) {}
         }
-
-        const playerEntry = {
-            name: pilotName,
-            score: playerScore,
-            chapter: playerChapter,
-            tag: 'YOU',
-            isPlayer: true
-        };
-
-        // Filter out duplicate if player already exists in roster
-        roster = roster.filter(e => e.name.toUpperCase() !== pilotName.toUpperCase());
-
-        const all = [...roster, playerEntry].sort((a, b) => b.score - a.score);
-
-        // Find player's calculated rank
-        const playerIdx = all.findIndex(e => e.isPlayer || (e.name.toUpperCase() === pilotName.toUpperCase()));
-        const playerRank = playerIdx >= 0 ? (playerIdx + 1) : '-';
-
-        // Render Pinned My Rank Card on Top
-        if (myRankCard) {
-            let myBadge = `#${playerRank}`;
-            let myBadgeClass = 'lb-my-rank-badge';
-            if (playerRank === 1) { myBadge = '🥇'; myBadgeClass += ' top-1'; }
-            else if (playerRank === 2) { myBadge = '🥈'; myBadgeClass += ' top-2'; }
-            else if (playerRank === 3) { myBadge = '🥉'; myBadgeClass += ' top-3'; }
-
-            myRankCard.innerHTML = `
-                <div class="${myBadgeClass}">${myBadge}</div>
-                <div class="lb-my-rank-info">
-                    <div class="lb-my-name-row">
-                        <span class="lb-my-name">${escapeHtml(pilotName)}</span>
-                        <span class="lb-me-tag">YOU</span>
-                        <button class="lb-my-edit-callsign" onclick="openEditPilotPopup(event); event.stopPropagation();" title="Edit Callsign">
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="lb-my-sub">CH.${playerChapter} • ${playerScore > 0 ? 'ACTIVE ACE' : 'RECRUIT'}</div>
-                </div>
-                <div class="lb-my-score-wrap">
-                    <span class="lb-my-score-label">BEST SCORE</span>
-                    <span class="lb-my-score-val">★ ${(playerScore || 0).toLocaleString()}</span>
-                </div>
-            `;
-        }
-
-        if (!list) return;
-        list.innerHTML = all.map((entry, idx) => {
-            const rank = idx + 1;
-            const isMe = entry.isPlayer || (entry.name.toUpperCase() === pilotName.toUpperCase());
-            let rankBadge = `#${rank}`;
-            let rowClass = 'lb-row';
-            if (rank === 1) { rankBadge = '🥇'; rowClass += ' lb-top1'; }
-            else if (rank === 2) { rankBadge = '🥈'; rowClass += ' lb-top2'; }
-            else if (rank === 3) { rankBadge = '🥉'; rowClass += ' lb-top3'; }
-            if (isMe) rowClass += ' lb-me';
-
-            return `
-                <div class="${rowClass}">
-                    <div class="lb-rank">${rankBadge}</div>
-                    <div class="lb-pilot-info">
-                        <span class="lb-name">${escapeHtml(entry.name)} ${isMe ? '<span class="lb-me-tag">YOU</span>' : ''}</span>
-                        <span class="lb-ch">CH.${entry.chapter || 1} • ${entry.tag || 'ACE'}</span>
-                    </div>
-                    <div class="lb-score">★ ${(entry.score || 0).toLocaleString()}</div>
-                </div>
-            `;
-        }).join('');
     };
 
     window.renderLeaderboardRuns = function() {
@@ -570,6 +579,16 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     <div class="lb-my-name-row">
                         <span class="lb-my-name">${escapeHtml(pilotName)}</span>
                         <span class="lb-me-tag">YOU</span>
+                        <button class="lb-my-edit-callsign" onclick="openEditPilotPopup(event); event.stopPropagation();" title="Edit Callsign">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                <rect x="2" y="20" width="20" height="2.2" rx="1.1"/>
+                                <g transform="translate(9.5, 19) rotate(45)">
+                                    <polygon points="0,0 -2.2,-4.2 2.2,-4.2"/>
+                                    <rect x="-2.2" y="-12.8" width="4.4" height="8.6" rx="0.4"/>
+                                    <rect x="-2.2" y="-17.8" width="4.4" height="3.8" rx="1.2"/>
+                                </g>
+                            </svg>
+                        </button>
                     </div>
                     <div class="lb-my-sub">${history.length} BATTLES • ${wins} VICTORIES</div>
                 </div>

@@ -1216,12 +1216,13 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     display: flex;
     flex-direction: column;
     padding: 1.2rem 1.3rem 1.4rem;
-    background: rgba(11, 17, 30, 0.96);
-    border: 1px solid rgba(56, 189, 248, 0.25);
+    background: rgba(11, 17, 30, 0.98);
+    border: 1px solid rgba(56, 189, 248, 0.35);
     border-radius: 18px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 234, 255, 0.1);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 234, 255, 0.15);
     box-sizing: border-box;
     position: relative;
+    overflow: hidden !important;
 }
 .lb-header { 
     text-align: center; 
@@ -1457,14 +1458,14 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     flex-direction: column;
     gap: 0.45rem;
     flex: 1;
-    max-height: 280px;
+    max-height: 340px;
     min-height: 120px;
     overflow-y: auto;
     padding-right: 4px;
     box-sizing: border-box;
 }
 .leaderboard-list::-webkit-scrollbar { width: 4px; }
-.leaderboard-list::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.35); border-radius: 4px; }
+.leaderboard-list::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.45); border-radius: 4px; }
 
 .lb-row {
     display: flex;
@@ -1565,6 +1566,62 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     letter-spacing: 2px;
 }
 .lb-empty-icon { font-size: 2.5rem; display: block; margin-bottom: 0.8rem; opacity: 0.5; }
+
+/* Responsive adjustments for landscape / compact height viewports */
+@media (max-height: 600px) {
+    .leaderboard-box {
+        max-height: 94vh !important;
+        padding: 0.75rem 1rem 0.9rem !important;
+    }
+    .lb-header {
+        margin-bottom: 0.25rem !important;
+        padding-top: 0 !important;
+    }
+    .lb-trophy-badge {
+        width: 30px !important;
+        height: 30px !important;
+        margin-bottom: 0.1rem !important;
+    }
+    .lb-trophy-badge svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+    .lb-header h3 {
+        font-size: 1rem !important;
+        letter-spacing: 2px !important;
+    }
+    .lb-subtitle {
+        display: none !important;
+    }
+    .lb-tabs {
+        margin-top: 0.25rem !important;
+    }
+    .lb-tab {
+        font-size: 0.62rem !important;
+        padding: 0.25rem 0.75rem !important;
+    }
+    .lb-my-rank-card {
+        padding: 0.45rem 0.75rem !important;
+        margin: 0.2rem 0 0.35rem !important;
+    }
+    .lb-my-rank-badge {
+        min-width: 34px !important;
+        height: 34px !important;
+        font-size: 0.95rem !important;
+    }
+    .lb-section-bar {
+        padding: 0.15rem 0.3rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    .leaderboard-list {
+        min-height: 80px !important;
+        max-height: 190px !important;
+        gap: 0.35rem !important;
+    }
+    .lb-row {
+        padding: 0.45rem 0.75rem !important;
+    }
+}
 
 /* ======================== EDIT PILOT CALLSIGN MODAL ======================== */
 #edit-pilot-popup {
