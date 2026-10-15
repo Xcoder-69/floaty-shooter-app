@@ -1212,123 +1212,128 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 
 /* ======================== LEADERBOARD POPUP (Clean & Unified Card) ======================== */
 .leaderboard-box {
-    width: min(540px, 94vw);
-    max-height: 88vh;
+    width: min(420px, 92vw) !important;
+    max-height: min(520px, 84vh) !important;
     display: flex;
     flex-direction: column;
-    padding: 1.2rem 1.3rem 1.4rem;
+    padding: 0.9rem 1.1rem 1rem !important;
     background: rgba(11, 17, 30, 0.98);
     border: 1px solid rgba(56, 189, 248, 0.35);
-    border-radius: 18px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 234, 255, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 234, 255, 0.15);
     box-sizing: border-box;
     position: relative;
     overflow: hidden !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.leaderboard-box::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+.leaderboard-box .popup-close {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 28px;
+    height: 28px;
 }
 .lb-header { 
     text-align: center; 
-    margin-bottom: 0.5rem; 
-    padding-top: 0.1rem;
+    margin-bottom: 0.35rem; 
+    padding-top: 0;
     flex-shrink: 0;
 }
 .lb-trophy-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(250, 204, 21, 0.18) 0%, rgba(250, 204, 21, 0.02) 70%);
     border: 1px solid rgba(250, 204, 21, 0.35);
-    box-shadow: 0 0 18px rgba(250, 204, 21, 0.25);
-    margin-bottom: 0.3rem;
+    box-shadow: 0 0 14px rgba(250, 204, 21, 0.22);
+    margin-bottom: 0.2rem;
+}
+.lb-trophy-badge svg {
+    width: 18px;
+    height: 18px;
 }
 .lb-header h3 {
     font-family: var(--font-head);
-    font-size: 1.2rem;
+    font-size: 1.05rem;
     font-weight: 900;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     margin: 0;
     background: linear-gradient(135deg, #ffffff 40%, #38bdf8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 20px rgba(0, 234, 255, 0.3);
+    text-shadow: 0 0 16px rgba(0, 234, 255, 0.25);
 }
 .lb-subtitle {
     font-family: var(--font-head);
-    font-size: 0.64rem;
+    font-size: 0.58rem;
     color: #64748b;
-    letter-spacing: 1.5px;
-    margin-top: 3px;
+    letter-spacing: 1.2px;
+    margin-top: 2px;
 }
 .lb-tabs {
     display: inline-flex;
-    gap: 0.3rem;
-    margin-top: 0.5rem;
+    gap: 0.25rem;
+    margin-top: 0.35rem;
     background: rgba(15, 23, 42, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    padding: 3px;
+    border-radius: 20px;
+    padding: 2.5px;
 }
 .lb-tab {
     background: transparent;
     border: none;
-    border-radius: 20px;
+    border-radius: 16px;
     color: #64748b;
     font-family: var(--font-head);
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     font-weight: 700;
-    padding: 0.35rem 0.95rem;
+    padding: 0.28rem 0.75rem;
     cursor: pointer;
     transition: all 0.2s;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.6px;
 }
 .lb-tab.active {
     background: rgba(56, 189, 248, 0.15);
     border: 1px solid rgba(56, 189, 248, 0.45);
     color: #f8fafc;
-    box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
 }
 
 /* Pinned Personal Rank Card on Top of Leaderboard */
 .lb-my-rank-card {
     flex-shrink: 0;
-    margin: 0.3rem 0 0.5rem;
-    padding: 0.65rem 0.95rem;
+    margin: 0.25rem 0 0.35rem;
+    padding: 0.45rem 0.75rem;
     background: linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(15, 23, 42, 0.88) 60%, rgba(250, 204, 21, 0.08) 100%);
-    border: 1.5px solid rgba(56, 189, 248, 0.5);
-    border-radius: 12px;
-    box-shadow: 0 4px 18px rgba(0, 234, 255, 0.15), inset 0 0 14px rgba(56, 189, 248, 0.06);
+    border: 1.5px solid rgba(56, 189, 248, 0.45);
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(0, 234, 255, 0.12), inset 0 0 12px rgba(56, 189, 248, 0.05);
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    gap: 0.7rem;
     position: relative;
     overflow: hidden;
 }
-.lb-my-rank-card::before {
-    content: "YOUR RANK";
-    position: absolute;
-    top: 4px;
-    right: 10px;
-    font-family: var(--font-head);
-    font-size: 0.52rem;
-    font-weight: 800;
-    color: #38bdf8;
-    letter-spacing: 1.5px;
-    opacity: 0.85;
-}
 .lb-my-rank-badge {
-    min-width: 42px;
-    height: 42px;
-    border-radius: 10px;
+    min-width: 36px;
+    height: 36px;
+    border-radius: 8px;
     background: rgba(15, 23, 42, 0.9);
     border: 1px solid rgba(56, 189, 248, 0.5);
-    box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-head);
-    font-size: 1.15rem;
+    font-size: 0.95rem;
     font-weight: 900;
     color: #38bdf8;
     flex-shrink: 0;
@@ -1336,37 +1341,37 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .lb-my-rank-badge.top-1 {
     color: #facc15;
     border-color: #facc15;
-    box-shadow: 0 0 16px rgba(250, 204, 21, 0.5);
+    box-shadow: 0 0 14px rgba(250, 204, 21, 0.45);
 }
 .lb-my-rank-badge.top-2 {
     color: #e2e8f0;
     border-color: #e2e8f0;
-    box-shadow: 0 0 14px rgba(226, 232, 240, 0.4);
+    box-shadow: 0 0 12px rgba(226, 232, 240, 0.35);
 }
 .lb-my-rank-badge.top-3 {
     color: #fbbf24;
     border-color: #fbbf24;
-    box-shadow: 0 0 14px rgba(251, 191, 36, 0.4);
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
 }
 .lb-my-rank-info {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
 }
 .lb-my-name-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex-wrap: wrap;
 }
 .lb-my-name {
     font-family: var(--font-head);
-    font-size: 0.88rem;
+    font-size: 0.8rem;
     font-weight: 800;
     color: #f8fafc;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1378,23 +1383,23 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: rgba(56, 189, 248, 0.15);
     border: 1px solid rgba(56, 189, 248, 0.35);
     color: #38bdf8;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-left: 6px;
+    margin-left: 4px;
     padding: 0;
     flex-shrink: 0;
 }
 .lb-my-edit-callsign:hover {
     background: rgba(56, 189, 248, 0.35);
     border-color: rgba(56, 189, 248, 0.85);
-    transform: scale(1.12);
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    transform: scale(1.1);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
     color: #00EAFF;
 }
 .lb-my-edit-callsign:active {
@@ -1402,31 +1407,31 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 }
 .lb-my-sub {
     font-family: var(--font-head);
-    font-size: 0.62rem;
+    font-size: 0.58rem;
     color: #94a3b8;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.6px;
 }
 .lb-my-score-wrap {
     text-align: right;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 2px;
+    gap: 1px;
     flex-shrink: 0;
 }
 .lb-my-score-label {
     font-family: var(--font-head);
-    font-size: 0.52rem;
+    font-size: 0.5rem;
     color: #64748b;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
 }
 .lb-my-score-val {
     font-family: var(--font-head);
-    font-size: 1rem;
+    font-size: 0.92rem;
     font-weight: 900;
     color: #fde047;
-    text-shadow: 0 0 12px rgba(253, 224, 71, 0.35);
-    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(253, 224, 71, 0.3);
+    letter-spacing: 0.8px;
     white-space: nowrap;
 }
 
@@ -1435,45 +1440,50 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.25rem 0.4rem;
-    margin-bottom: 0.35rem;
+    padding: 0.15rem 0.25rem;
+    margin-bottom: 0.25rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
 }
 .lb-section-label {
     font-family: var(--font-head);
-    font-size: 0.62rem;
+    font-size: 0.58rem;
     font-weight: 800;
     color: #94a3b8;
-    letter-spacing: 1.5px;
+    letter-spacing: 1.2px;
 }
 .lb-section-sub {
     font-family: var(--font-head);
-    font-size: 0.58rem;
+    font-size: 0.54rem;
     color: #64748b;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
 }
 
 .leaderboard-list {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 0.35rem;
     flex: 1;
-    max-height: 340px;
-    min-height: 120px;
+    max-height: 240px;
+    min-height: 90px;
     overflow-y: auto;
-    padding-right: 4px;
+    padding-right: 0;
     box-sizing: border-box;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
-.leaderboard-list::-webkit-scrollbar { width: 4px; }
-.leaderboard-list::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.45); border-radius: 4px; }
+.leaderboard-list::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
 
 .lb-row {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-    padding: 0.65rem 0.95rem;
-    border-radius: 10px;
+    gap: 0.7rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
     background: rgba(15, 23, 42, 0.55);
     border: 1px solid rgba(255, 255, 255, 0.05);
     transition: all 0.15s ease;
@@ -1485,7 +1495,7 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .lb-row.lb-top1 {
     background: linear-gradient(90deg, rgba(250, 204, 21, 0.12) 0%, rgba(15, 23, 42, 0.6) 100%);
     border: 1px solid rgba(250, 204, 21, 0.4);
-    box-shadow: 0 0 14px rgba(250, 204, 21, 0.15);
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.12);
 }
 .lb-row.lb-top2 {
     background: linear-gradient(90deg, rgba(203, 213, 225, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
@@ -1498,129 +1508,130 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .lb-row.lb-me {
     background: linear-gradient(90deg, rgba(56, 189, 248, 0.16) 0%, rgba(15, 23, 42, 0.8) 100%);
     border: 1px solid #38bdf8;
-    box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
 }
 .lb-rank {
     font-family: var(--font-head);
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     font-weight: 800;
-    min-width: 32px;
+    min-width: 26px;
     text-align: center;
     color: #64748b;
 }
-.lb-row.lb-top1 .lb-rank { color: #facc15; font-size: 1rem; text-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
-.lb-row.lb-top2 .lb-rank { color: #e2e8f0; font-size: 1rem; text-shadow: 0 0 8px rgba(226, 232, 240, 0.4); }
-.lb-row.lb-top3 .lb-rank { color: #fbbf24; font-size: 1rem; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); }
+.lb-row.lb-top1 .lb-rank { color: #facc15; font-size: 0.9rem; text-shadow: 0 0 8px rgba(250, 204, 21, 0.5); }
+.lb-row.lb-top2 .lb-rank { color: #e2e8f0; font-size: 0.9rem; text-shadow: 0 0 8px rgba(226, 232, 240, 0.4); }
+.lb-row.lb-top3 .lb-rank { color: #fbbf24; font-size: 0.9rem; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); }
 .lb-pilot-info {
     display: flex;
     flex-direction: column;
     flex: 1;
     overflow: hidden;
-    gap: 2px;
+    gap: 1.5px;
 }
 .lb-name {
     font-family: var(--font-head);
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     font-weight: 700;
     color: #f1f5f9;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .lb-row.lb-me .lb-name { color: #38bdf8; font-weight: 800; }
 .lb-ch {
-    font-size: 0.62rem;
+    font-size: 0.58rem;
     color: #64748b;
     font-family: var(--font-head);
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
 }
 .lb-me-tag {
     background: #38bdf8;
     color: #020617;
-    font-size: 0.55rem;
+    font-size: 0.52rem;
     font-weight: 900;
-    padding: 2px 6px;
+    padding: 1.5px 5px;
     border-radius: 4px;
-    margin-left: 6px;
+    margin-left: 5px;
     vertical-align: middle;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
 }
 .lb-score {
     font-family: var(--font-head);
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     font-weight: 900;
     color: #fde047;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     white-space: nowrap;
-    text-shadow: 0 0 10px rgba(253, 224, 71, 0.25);
+    text-shadow: 0 0 8px rgba(253, 224, 71, 0.25);
 }
 .lb-row.lb-win { border-left: 3px solid #facc15; }
 .lb-row.lb-loss { border-left: 3px solid #f87171; }
 
 .lb-empty {
     text-align: center;
-    padding: 2.5rem 1rem;
+    padding: 1.8rem 1rem;
     color: rgba(255,255,255,0.3);
     font-family: var(--font-head);
-    font-size: 0.7rem;
-    letter-spacing: 2px;
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
 }
-.lb-empty-icon { font-size: 2.5rem; display: block; margin-bottom: 0.8rem; opacity: 0.5; }
+.lb-empty-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; opacity: 0.5; }
 
 /* Responsive adjustments for landscape / compact height viewports */
 @media (max-height: 600px) {
     .leaderboard-box {
-        max-height: 94vh !important;
-        padding: 0.75rem 1rem 0.9rem !important;
+        max-height: 92vh !important;
+        width: min(390px, 88vw) !important;
+        padding: 0.6rem 0.8rem 0.7rem !important;
     }
     .lb-header {
-        margin-bottom: 0.25rem !important;
+        margin-bottom: 0.2rem !important;
         padding-top: 0 !important;
     }
     .lb-trophy-badge {
-        width: 30px !important;
-        height: 30px !important;
+        width: 26px !important;
+        height: 26px !important;
         margin-bottom: 0.1rem !important;
     }
     .lb-trophy-badge svg {
-        width: 16px !important;
-        height: 16px !important;
+        width: 14px !important;
+        height: 14px !important;
     }
     .lb-header h3 {
-        font-size: 1rem !important;
-        letter-spacing: 2px !important;
+        font-size: 0.95rem !important;
+        letter-spacing: 1.5px !important;
     }
     .lb-subtitle {
         display: none !important;
     }
     .lb-tabs {
-        margin-top: 0.25rem !important;
+        margin-top: 0.2rem !important;
     }
     .lb-tab {
-        font-size: 0.62rem !important;
-        padding: 0.25rem 0.75rem !important;
+        font-size: 0.56rem !important;
+        padding: 0.2rem 0.6rem !important;
     }
     .lb-my-rank-card {
-        padding: 0.45rem 0.75rem !important;
-        margin: 0.2rem 0 0.35rem !important;
+        padding: 0.35rem 0.6rem !important;
+        margin: 0.15rem 0 0.25rem !important;
     }
     .lb-my-rank-badge {
-        min-width: 34px !important;
-        height: 34px !important;
-        font-size: 0.95rem !important;
+        min-width: 28px !important;
+        height: 28px !important;
+        font-size: 0.85rem !important;
     }
     .lb-section-bar {
-        padding: 0.15rem 0.3rem !important;
-        margin-bottom: 0.25rem !important;
+        padding: 0.1rem 0.2rem !important;
+        margin-bottom: 0.15rem !important;
     }
     .leaderboard-list {
-        min-height: 80px !important;
-        max-height: 190px !important;
-        gap: 0.35rem !important;
+        min-height: 70px !important;
+        max-height: 160px !important;
+        gap: 0.25rem !important;
     }
     .lb-row {
-        padding: 0.45rem 0.75rem !important;
+        padding: 0.32rem 0.6rem !important;
     }
 }
 
