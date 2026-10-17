@@ -1262,36 +1262,85 @@ function spawnPlayerBullets(p, angle, isDouble){
     }
 }
 
-function spawnEnemy(ch,lvl,type){
-    const et=ENEMY_TYPES[type];const p=game.player;
-    const px=p?p.x:MAP_W/2,py=p?p.y:MAP_H/2;
-    let bx,by,bestGap=-1;
-    for(let a=0;a<8;a++){const ang=Math.random()*Math.PI*2;const d=300+Math.random()*300;
-        const cx=Math.max(50,Math.min(MAP_W-50,px+Math.cos(ang)*d));
-        const cy=Math.max(50,Math.min(MAP_H-50,py+Math.sin(ang)*d));
-        let gap=Infinity;
-        for(let i=0; i<game.enemies.length; i++){
-            const e=game.enemies[i];const dist=Math.hypot(e.x-cx,e.y-cy);if(dist<gap)gap=dist;
+// ---- Multi-Directional Sector-Distributed Enemy Spawner ----
+// Ensures enemies spawn from diverse directions around 360° and never clump together
+function getDistributedEnemySpawnPos(px, py) {
+    const existingAngles = game.enemies.map(e => Math.atan2(e.y - py, e.x - px));
+    const CANDIDATES = 16;
+    let bestAngle = Math.random() * Math.PI * 2;
+    let maxMinDiff = -1;
+
+    for (let c = 0; c < CANDIDATES; c++) {
+        // Distribute candidate angles evenly around 360° circle with slight jitter
+        const candAngle = (c / CANDIDATES) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+        if (existingAngles.length === 0) {
+            bestAngle = candAngle;
+            break;
         }
-        if(gap>bestGap){bestGap=gap;bx=cx;by=cy;}if(gap>=140)break;}
-    const cfg=getEnemyConfig(ch,lvl);
-    let hp=et.hp;
-    if(type==='tank')hp=Math.ceil(et.hp*cfg.tankHpMult);
-    if(type==='miniboss')hp=et.hp+Math.max(0, ch-2)*2;
-    if(type==='bossTankA'||type==='bossTankB')hp=Math.ceil(et.hp*(0.8+ch*0.2));
-    
+        let minDiff = Infinity;
+        for (const ea of existingAngles) {
+            let diff = Math.abs(candAngle - ea);
+            if (diff > Math.PI) diff = 2 * Math.PI - diff; // Angular distance in [0, PI]
+            if (diff < minDiff) minDiff = diff;
+        }
+        if (minDiff > maxMinDiff) {
+            maxMinDiff = minDiff;
+            bestAngle = candAngle;
+        }
+    }
+
+    // Spawn distance: 540px - 750px away from player (outside immediate screen center)
+    const dist = 540 + Math.random() * 210;
+    const sx = Math.max(80, Math.min(MAP_W - 80, px + Math.cos(bestAngle) * dist));
+    const sy = Math.max(80, Math.min(MAP_H - 80, py + Math.sin(bestAngle) * dist));
+    return { x: sx, y: sy, angle: bestAngle };
+}
+
+function spawnEnemy(ch, lvl, type) {
+    const et = ENEMY_TYPES[type];
+    const p = game.player;
+    const px = p ? p.x : MAP_W / 2, py = p ? p.y : MAP_H / 2;
+    const spawnPos = getDistributedEnemySpawnPos(px, py);
+    const cfg = getEnemyConfig(ch, lvl);
+
+    let hp = et.hp;
+    if (type === 'tank') hp = Math.ceil(et.hp * cfg.tankHpMult);
+    if (type === 'miniboss') hp = et.hp + Math.max(0, ch - 2) * 2;
+    if (type === 'bossTankA' || type === 'bossTankB') hp = Math.ceil(et.hp * (0.8 + ch * 0.2));
+
     const e = acquireEnemy();
-    e.id='e_'+Math.random().toString(36).substr(2,8);
-    e.x=bx; e.y=by; e.vx=0; e.vy=0; e.angle=0; e.radius=et.radius; e.hp=hp; e.maxHp=hp;
-    e.speed=et.speed*cfg.speedMult; e.fireRate=Math.ceil(et.fireRate*cfg.fireRateMult);
-    e.shootCooldown=Math.floor(Math.random()*60)+Math.max(90, Math.floor(et.fireRate*cfg.fireRateMult*0.4)); e.type=type;
-    e.pushbackTimer=0;
-    e.color=et.color; e.bodyColor=et.bodyColor; e.accentColor=et.accentColor;
-    e.isTank=et.isTank||false; e.isMiniboss=et.isMiniboss||false; e.isBossTank=et.isBossTank||false;
-    
+    e.id = 'e_' + Math.random().toString(36).substr(2, 8);
+    e.x = spawnPos.x;
+    e.y = spawnPos.y;
+    e.vx = 0;
+    e.vy = 0;
+    e.angle = Math.atan2(py - spawnPos.y, px - spawnPos.x);
+    e.radius = et.radius;
+    e.hp = hp;
+    e.maxHp = hp;
+    e.speed = et.speed * cfg.speedMult;
+    e.fireRate = Math.ceil(et.fireRate * cfg.fireRateMult);
+    e.shootCooldown = Math.floor(Math.random() * 60) + Math.max(90, Math.floor(et.fireRate * cfg.fireRateMult * 0.4));
+    e.type = type;
+    e.pushbackTimer = 0;
+    e.color = et.color;
+    e.bodyColor = et.bodyColor;
+    e.accentColor = et.accentColor;
+    e.isTank = et.isTank || false;
+    e.isMiniboss = et.isMiniboss || false;
+    e.isBossTank = et.isBossTank || false;
+
+    // Tactical formation & anti-clumping properties:
+    // Staggers each enemy's approach vector and orbiting behavior so they never conga-line or clump
+    const eIdx = game.enemies.length;
+    e.flankOffset = ((eIdx % 2 === 0 ? 1 : -1) * (0.35 + (eIdx * 0.18))) % 0.9;
+    e.strafeDir = (eIdx % 2 === 0) ? 1 : -1;
+    e.preferredDist = 200 + ((eIdx * 43) % 150); // Each enemy chooses a different engagement range
+    e.strafeTimer = Math.random() * 3; // Timer for dynamic strafe switching
+
     game.enemies.push(e);
-    
-    if(e.isBossTank) {
+
+    if (e.isBossTank) {
         game.bossAlert = true;
         game.bossAlertTime = performance.now();
         screenShake = 30;
@@ -1672,16 +1721,52 @@ function gameLoop(timestamp){
 
     // ---- Enemies ----
     for(let i=game.enemies.length-1; i>=0; i--){
-        const e=game.enemies[i];
-        const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy);
-        e.angle=Math.atan2(dy,dx);
+        const e = game.enemies[i];
+        const dx = p.x - e.x, dy = p.y - e.y, dist = Math.hypot(dx, dy);
+
+        // Ship visual rotation faces player for aiming lasers
+        e.angle = Math.atan2(dy, dx);
+
+        // Ensure tactical flanking properties are initialized
+        if (e.flankOffset === undefined) {
+            e.flankOffset = ((i % 2 === 0 ? 1 : -1) * (0.35 + (i * 0.18))) % 0.9;
+            e.strafeDir = (i % 2 === 0) ? 1 : -1;
+            e.preferredDist = 200 + ((i * 43) % 150);
+            e.strafeTimer = Math.random() * 3;
+        }
+
+        // Dynamic strafe direction switcher (prevents repetitive circular paths)
+        e.strafeTimer -= dt;
+        if (e.strafeTimer <= 0) {
+            e.strafeDir = Math.random() < 0.5 ? 1 : -1;
+            e.strafeTimer = 2.5 + Math.random() * 2.5;
+        }
+
+        // Calculate tactical movement angle:
+        // When far away: approach along fanned-out flanking angle (pincer maneuver)
+        // When near engagement range: circle/strafe tangentially to surround the player
+        let moveAngle = e.angle;
+        if (dist > e.preferredDist + 60) {
+            // Flanking approach: each ship approaches along its own angle offset
+            const blend = Math.min(1, (dist - e.preferredDist) / 300);
+            moveAngle = e.angle + e.flankOffset * blend;
+        } else if (dist < e.preferredDist - 40) {
+            // Too close: back off slightly or circle away
+            const tangent = e.angle + e.strafeDir * (Math.PI / 2);
+            moveAngle = e.angle + Math.PI * 0.4 * -e.strafeDir + tangent * 0.6;
+        } else {
+            // Sweet spot: strafe smoothly around the player
+            const tangent = e.angle + e.strafeDir * (Math.PI / 2);
+            moveAngle = e.angle * 0.3 + tangent * 0.7;
+        }
+
         const eMax = 75 + e.speed * 35;
         if (e.pushbackTimer > 0) {
             e.pushbackTimer -= dt;
         } else {
             const eAccel = (18 + e.speed * 12) * dt;
-            e.vx += Math.cos(e.angle) * eAccel;
-            e.vy += Math.sin(e.angle) * eAccel;
+            e.vx += Math.cos(moveAngle) * eAccel;
+            e.vy += Math.sin(moveAngle) * eAccel;
         }
         const es = Math.hypot(e.vx, e.vy);
         if (es > eMax && (!e.pushbackTimer || e.pushbackTimer <= 0)) {
@@ -1770,13 +1855,42 @@ function gameLoop(timestamp){
             }
         }
     }
-    // Enemy-enemy collision
-    for(let i=0;i<game.enemies.length;i++){for(let j=i+1;j<game.enemies.length;j++){
-        const ea=game.enemies[i],eb=game.enemies[j];
-        const dx=eb.x-ea.x,dy=eb.y-ea.y,dist=Math.hypot(dx,dy),md=ea.radius+eb.radius;
-        if(dist<md&&dist>0){const ol=(md-dist)/2,nx=dx/dist,ny=dy/dist;ea.x-=nx*ol;ea.y-=ny*ol;eb.x+=nx*ol;eb.y+=ny*ol;
-            const dvx=ea.vx-eb.vx,dvy=ea.vy-eb.vy,dot=dvx*nx+dvy*ny;
-            if(dot>0){ea.vx-=dot*nx;ea.vy-=dot*ny;eb.vx+=dot*nx;eb.vy+=dot*ny;}}}}
+    // ---- Dynamic Flocking & Anti-Grouping Repulsion ----
+    // Actively repels enemies from each other within 140px, completely stopping tight clusters
+    const SEPARATION_DIST = 140;
+    for(let i=0; i<game.enemies.length; i++){
+        for(let j=i+1; j<game.enemies.length; j++){
+            const ea = game.enemies[i], eb = game.enemies[j];
+            const dx = eb.x - ea.x, dy = eb.y - ea.y;
+            const dist = Math.hypot(dx, dy);
+            const md = ea.radius + eb.radius;
+
+            // 1. Soft flocking repulsion field (anti-clumping buffer zone)
+            if (dist < SEPARATION_DIST && dist > 0) {
+                const repulseFactor = (1 - dist / SEPARATION_DIST);
+                const force = repulseFactor * repulseFactor * 420 * dt;
+                const nx = dx / dist, ny = dy / dist;
+                ea.vx -= nx * force;
+                ea.vy -= ny * force;
+                eb.vx += nx * force;
+                eb.vy += ny * force;
+            }
+
+            // 2. Hard physical body separation with bounce (zero physical overlap)
+            if (dist < md && dist > 0) {
+                const ol = (md - dist) / 2;
+                const nx = dx / dist, ny = dy / dist;
+                ea.x -= nx * ol; ea.y -= ny * ol;
+                eb.x += nx * ol; eb.y += ny * ol;
+                const dvx = ea.vx - eb.vx, dvy = ea.vy - eb.vy;
+                const dot = dvx * nx + dvy * ny;
+                if (dot > 0) {
+                    ea.vx -= dot * nx * 1.25; ea.vy -= dot * ny * 1.25;
+                    eb.vx += dot * nx * 1.25; eb.vy += dot * ny * 1.25;
+                }
+            }
+        }
+    }
 
     // ---- Bullets ----
     for(let i=game.bullets.length-1;i>=0;i--){
