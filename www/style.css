@@ -2761,9 +2761,15 @@ html.is-desktop .joystick-zone {
 
 /* Right Side Actions (Fire/Missile) */
 .action-buttons { 
-    position: absolute; bottom: 1.5rem; right: 1.6rem;
-    display: flex; flex-direction: column-reverse; gap: 1.5rem; 
-    align-items: flex-end; pointer-events: auto; z-index: 25;
+    position: absolute; 
+    bottom: 2.2rem; 
+    right: 2.2rem;
+    display: flex; 
+    flex-direction: column-reverse; 
+    gap: 2.2rem; 
+    align-items: flex-end; 
+    pointer-events: auto; 
+    z-index: 25;
 }
 
 .action-btn { 
@@ -3138,9 +3144,11 @@ html.is-desktop .joystick-zone {
 }
 html.is-desktop .action-buttons {
     position: absolute;
-    bottom: 1.5rem;
-    right: 1.6rem;
+    bottom: 2.2rem;
+    right: 2.2rem;
     display: flex !important;
+    flex-direction: column-reverse;
+    gap: 2.2rem;
     pointer-events: auto !important;
 }
 
@@ -3798,7 +3806,7 @@ html.is-desktop #btn-double-mobile.hidden {
     html.is-android .joystick-zone   { position: absolute !important; bottom: 1.4rem !important; left: 6.2rem !important; width: 110px !important; height: 110px !important; margin: 0 !important; }
     .joystick-base   { width: 98px !important; height: 98px !important; }
     .joystick-handle { width: 40px !important; height: 40px !important; }
-    .action-buttons  { position: absolute !important; bottom: 1.2rem !important; right: 1.2rem !important; gap: 1.2rem !important; }
+    .action-buttons  { position: absolute !important; bottom: 1.8rem !important; right: 1.8rem !important; gap: 1.8rem !important; }
     .fire-btn        { width: 88px !important; height: 88px !important; }
     .fire-btn span   { font-size: 12px !important; }
     .missile-mobile-btn { width: 62px !important; height: 62px !important; }
@@ -3812,7 +3820,7 @@ html.is-desktop #btn-double-mobile.hidden {
     html.is-android .joystick-zone   { position: absolute !important; bottom: 1.0rem !important; left: 5.2rem !important; width: 94px !important; height: 94px !important; margin: 0 !important; }
     .joystick-base   { width: 84px !important; height: 84px !important; }
     .joystick-handle { width: 34px !important; height: 34px !important; }
-    .action-buttons  { position: absolute !important; bottom: 0.8rem !important; right: 0.8rem !important; gap: 0.9rem !important; }
+    .action-buttons  { position: absolute !important; bottom: 1.2rem !important; right: 1.4rem !important; gap: 1.4rem !important; }
     .fire-btn        { width: 78px !important; height: 78px !important; }
     .fire-btn span   { font-size: 11px !important; }
     .missile-mobile-btn { width: 54px !important; height: 54px !important; }
