@@ -120,7 +120,7 @@ const ENEMY_TYPES = {
         name: 'Scout',
         hp: 2,
         speed: 0.32,       // base multiplier (was 0.4)
-        fireRate: 320,     // frames between shots (was 250)
+        fireRate: 190,     // frames between shots (was 320)
         radius: 22,
         color: '#ff4444',
         bodyColor: '#cc2200',
@@ -133,7 +133,7 @@ const ENEMY_TYPES = {
         name: 'Striker',
         hp: 1,
         speed: 0.52,       // was 0.7
-        fireRate: 260,     // was 200
+        fireRate: 150,     // was 260
         radius: 18,
         color: '#ffaa00',
         bodyColor: '#cc8800',
@@ -146,7 +146,7 @@ const ENEMY_TYPES = {
         name: 'Juggernaut',
         hp: 5,              // was 6
         speed: 0.20,        // was 0.25
-        fireRate: 340,      // was 300
+        fireRate: 210,      // was 340
         radius: 30,
         color: '#44ff88',
         bodyColor: '#228844',
@@ -160,7 +160,7 @@ const ENEMY_TYPES = {
         name: 'Overlord',
         hp: 12,             // was 15
         speed: 0.25,        // was 0.3
-        fireRate: 200,      // was 150
+        fireRate: 130,      // was 200
         radius: 38,
         color: '#ff00ff',
         bodyColor: '#880088',

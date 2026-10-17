@@ -7,6 +7,10 @@
     --border: rgba(0,234,255,0.2); --text: #e8f0fe;
     --font-head: 'Orbitron', monospace;
     --font-body: 'Inter', sans-serif;
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
 }
 html, body { 
     width:100%; height:100%; overflow:hidden; background:var(--bg); 
@@ -15,6 +19,7 @@ html, body {
     -webkit-user-select:none;
     -webkit-user-drag:none; /* Prevent image dragging */
     touch-action: none; /* Prevent pull-to-refresh & swipe nav in iframes */
+    overscroll-behavior: none;
 }
 /* Universal button reset to eliminate all browser-default white buttons */
 button {
@@ -76,18 +81,129 @@ button {
 }
 @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-/* ======================== PORTRAIT WARNING ======================== */
-@media screen and (max-width: 950px) and (orientation: portrait) {
-    #portrait-warning { display: flex !important; }
-}
+/* ======================== PORTRAIT WARNING (LANDSCAPE ONLY ENFORCEMENT) ======================== */
 #portrait-warning {
-    display:none; position:fixed; inset:0; background:#020202; z-index:999999;
-    color:#fff; flex-direction:column; align-items:center; justify-content:center;
-    font-family:var(--font-head); text-align:center; padding:20px;
+    display: none;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(ellipse at center, #0c1222 0%, #03060c 100%) #03060c;
+    z-index: 99999999;
+    color: #fff;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-head);
+    text-align: center;
+    padding: clamp(1rem, 4vw, 2.5rem);
+    box-sizing: border-box;
+    pointer-events: all;
+    user-select: none;
+    -webkit-user-select: none;
 }
-#portrait-warning svg { width:80px; height:80px; fill:var(--cyan); margin-bottom:25px; animation:rotatePhone 1.5s infinite ease-in-out alternate; }
-#portrait-warning p { margin-top:10px; color:#aaddff; }
-@keyframes rotatePhone { 0%{transform:rotate(0deg)} 100%{transform:rotate(90deg)} }
+
+.portrait-warning-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 440px;
+    width: 90%;
+    animation: popIn 0.35s ease;
+}
+
+.pw-badge {
+    font-family: var(--font-head);
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--cyan, #00f0ff);
+    background: rgba(0, 240, 255, 0.08);
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    padding: 4px 14px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.pw-icon-wrap {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.pw-phone-svg {
+    width: 64px;
+    height: 64px;
+    fill: var(--cyan, #00f0ff);
+    filter: drop-shadow(0 0 18px rgba(0, 240, 255, 0.7));
+    animation: rotatePhone 2.2s infinite ease-in-out alternate;
+}
+
+.pw-rotate-arrow {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    font-size: 1.6rem;
+    color: #ff3a5c;
+    text-shadow: 0 0 12px rgba(255, 58, 92, 0.8);
+    animation: pulse 1.2s infinite ease-in-out;
+}
+
+#portrait-warning h2 {
+    font-family: var(--font-head);
+    font-size: clamp(1.2rem, 5.5vw, 1.7rem);
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 2px;
+    margin: 0 0 12px 0;
+    text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+    line-height: 1.25;
+}
+
+#portrait-warning p {
+    margin: 0 0 14px 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: clamp(0.85rem, 3.5vw, 1rem);
+    line-height: 1.45;
+}
+
+#portrait-warning p strong {
+    color: var(--cyan, #00f0ff);
+    font-weight: 700;
+}
+
+.pw-hint {
+    font-family: var(--font-head);
+    font-size: clamp(0.68rem, 2.5vw, 0.78rem);
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 1px;
+}
+
+@keyframes rotatePhone {
+    0% { transform: rotate(0deg); }
+    40% { transform: rotate(0deg); }
+    70% { transform: rotate(90deg); }
+    100% { transform: rotate(90deg); }
+}
+
+/* Enforce landscape orientation: display overlay on ANY screen where height > width */
+@media screen and (orientation: portrait), screen and (max-aspect-ratio: 1/1) {
+    #portrait-warning {
+        display: flex !important;
+    }
+}
+@media screen and (orientation: landscape) and (min-aspect-ratio: 101/100) {
+    #portrait-warning {
+        display: none !important;
+    }
+}
 
 /* ======================== BACKGROUND CANVAS ======================== */
 #bgCanvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
@@ -113,7 +229,7 @@ button {
 
 /* ======================== START PAGE — FULL SCREEN LAYOUT ======================== */
 /* Top-left: privacy/terms links */
-.start-top-left { position:absolute; top:1rem; left:1.2rem; display:flex; gap:1.2rem; z-index:20; }
+.start-top-left { position:absolute; top:max(1rem, var(--sat)); left:max(1.2rem, var(--sal)); display:flex; gap:1.2rem; z-index:20; }
 .start-link {
     background:none; border:none; color:rgba(255,255,255,0.45); font-family:var(--font-body);
     font-size:.72rem; cursor:pointer; text-decoration:underline; transition:color .2s;
@@ -122,7 +238,7 @@ button {
 .start-link:hover { color:var(--cyan); }
 
 /* Top-right: store badge + gear */
-.start-top-right { position:absolute; top:1rem; right:1.2rem; display:flex; gap:.6rem; align-items:flex-start; z-index:20; }
+.start-top-right { position:absolute; top:max(1rem, var(--sat)); right:max(1.2rem, var(--sar)); display:flex; gap:.6rem; align-items:flex-start; z-index:20; }
 .start-store-badge {
     background:linear-gradient(135deg, #ff8800, #ff5500); border:3px solid #cc4400;
     border-radius:14px; padding:.5rem .9rem; cursor:pointer; transition:all .2s;
@@ -167,18 +283,40 @@ button {
 }
 .start-leaderboard-btn:active { transform: scale(0.9); }
 
-/* Center: Title */
-.start-center { position:absolute; top:45%; left:50%; transform:translate(-50%,-50%); text-align:center; z-index:10; }
+/* Center: Title & PLAY Button Unified Unit */
+.start-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 10;
+    width: 92%;
+    max-width: 900px;
+    pointer-events: none;
+}
+.start-center * {
+    pointer-events: auto;
+}
 .start-logo-sub {
-    font-family:var(--font-head); font-size:.7rem; letter-spacing:6px; color:var(--cyan);
-    opacity:.7; margin-bottom:.5rem; text-shadow:0 0 20px rgba(0,234,255,0.4);
+    font-family: var(--font-head);
+    font-size: 0.7rem;
+    letter-spacing: 6px;
+    color: var(--cyan);
+    opacity: 0.7;
+    margin-bottom: 0.35rem;
+    text-shadow: 0 0 20px rgba(0,234,255,0.4);
 }
 .start-logo-text {
     font-family: var(--font-head);
-    font-size: clamp(3rem, 9vw, 5rem);
+    font-size: clamp(2.8rem, 8.5vw, 4.8rem);
     font-weight: 900;
     color: #c8eef5;
-    line-height: 1.05;
+    line-height: 1.0;
     letter-spacing: 8px;
     text-transform: uppercase;
     text-align: center;
@@ -207,8 +345,13 @@ button {
     50% { transform: translateY(-5px) scale(1.005); }
 }
 
-/* Bottom: BIG PLAY Button */
-.start-bottom { position:absolute; bottom:20%; left:50%; transform:translateX(-50%); z-index:10; }
+/* Bottom: BIG PLAY Button - exactly 8px (5-10px) space below title text */
+.start-bottom {
+    position: static;
+    transform: none;
+    margin-top: 8px; /* 5-10px space as requested */
+    z-index: 10;
+}
 .btn-play {
     position:relative; overflow:hidden;
     font-family:var(--font-head); font-size:clamp(1.4rem,4vw,2rem); font-weight:900;
@@ -427,6 +570,19 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .btn.secondary { background:rgba(255,255,255,.06); color:var(--text); border:1px solid var(--border); }
 .btn.secondary:hover { background:rgba(0,234,255,.1); border-color:var(--cyan); }
 .btn:active { transform:scale(0.97); }
+.btn-icon-svg {
+    width: 17px;
+    height: 17px;
+    display: inline-block;
+    vertical-align: -3px;
+    margin-right: 6px;
+    stroke: currentColor;
+    fill: none;
+    transition: transform 0.4s ease;
+}
+.btn:hover .btn-icon-svg {
+    transform: rotate(180deg);
+}
 .back-btn { background:none; border:none; color:rgba(255,255,255,.4); cursor:pointer; font-size:.8rem; font-family:var(--font-head); margin-bottom:1rem; padding:0; transition:color .2s; }
 .back-btn:hover { color:var(--cyan); }
 .error-text { color:var(--red); font-size:.8rem; min-height:1rem; margin-top:.7rem; text-align:center; }
@@ -902,6 +1058,7 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1;
+    text-transform: none !important;
 }
 .cs-pilot-edit-icon {
     width: 24px;
@@ -957,11 +1114,26 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 
 /* Chapter Cards Area */
 .cs-stages-area {
-    position:absolute; top:5rem; bottom:0; left:0; right:0;
+    position:absolute; top:4.5rem; bottom:0; left:0; right:0;
     display:flex; align-items:center; justify-content:flex-start;
-    padding:1rem 1.5rem; overflow-x:auto; overflow-y:hidden;
+    padding:0.5rem 1.5rem; overflow-x:auto; overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
-.cs-stage-cards { display:flex; gap:1.2rem; align-items:stretch; height:85%; margin: 0 auto; }
+.cs-stages-area::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+.cs-stage-cards {
+    display:flex;
+    flex-wrap: nowrap;
+    gap:1.2rem;
+    align-items:stretch;
+    height:84%;
+    margin: 0 auto;
+}
 
 /* Individual Chapter Card */
 .cs-stage-card {
@@ -1123,6 +1295,7 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     outline: none;
     transition: all 0.25s;
     caret-color: var(--cyan);
+    text-transform: none !important;
 }
 .name-input::placeholder {
     color: rgba(255,255,255,0.2);
@@ -1406,6 +1579,7 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-transform: none !important;
 }
 .lb-my-edit-link, .lb-edit-btn {
     display: none !important;
@@ -1568,6 +1742,7 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-transform: none !important;
 }
 .lb-row.lb-me .lb-name { color: #38bdf8; font-weight: 800; }
 .lb-ch {
@@ -1609,18 +1784,26 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     border: 1px solid rgba(56, 189, 248, 0.35);
     color: #38bdf8;
     border-radius: 6px;
-    padding: 2px 6px;
+    padding: 3px 6px;
     font-size: 0.75rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
+.lb-refresh-btn svg {
+    display: block;
+    stroke: currentColor;
+    transition: transform 0.4s ease;
+}
 .lb-refresh-btn:hover {
     background: rgba(56, 189, 248, 0.2);
     border-color: #38bdf8;
-    transform: rotate(90deg);
+    color: #00eaff;
+}
+.lb-refresh-btn:hover svg {
+    transform: rotate(180deg);
 }
 
 .lb-empty {
@@ -2086,7 +2269,7 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     color: #ffffff;
     letter-spacing: 1.6px;
     padding: 0.55rem 0;
-    text-transform: uppercase;
+    text-transform: none !important;
 }
 .edit-pilot-input::placeholder {
     color: #475569;
@@ -2410,6 +2593,13 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     position:absolute; top:4.2rem; bottom:0; left:0; right:0;
     overflow-x:auto; overflow-y:auto;
     -webkit-overflow-scrolling:touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.lm-area::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 .lm-svg {
     position:absolute; top:0; left:0;
@@ -2639,12 +2829,119 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .overlay-bar { height:100%; background:linear-gradient(to right,var(--cyan),var(--green)); border-radius:999px; width:100%; animation:shrink-bar 2.5s linear forwards; }
 @keyframes shrink-bar { from{width:100%} to{width:0%} }
 
-/* Game Over */
-.game-over-box { border-color:rgba(255,58,92,.4) !important; box-shadow:0 0 60px rgba(255,58,92,.15) !important; }
-.game-over-box h2 { font-family:var(--font-head); font-size:1.8rem; color:var(--red); text-shadow:0 0 24px rgba(255,58,92,.6); margin-bottom:.6rem; animation:pulse 1s infinite; }
-.game-over-box p { color:rgba(255,255,255,.65); margin-bottom:.4rem; font-size:.85rem; }
-.game-over-box span { color:var(--cyan); font-weight:900; }
-.gameover-buttons { display:flex; flex-direction:column; gap:.5rem; margin-top:1rem; }
+/* Game Over Modal — Responsive Exact UI */
+.game-over-box {
+    background: linear-gradient(160deg, rgba(14, 18, 30, 0.96) 0%, rgba(8, 10, 18, 0.98) 100%) !important;
+    border: 1.5px solid rgba(255, 58, 92, 0.45) !important;
+    border-radius: clamp(14px, 2.5vw, 18px) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 58, 92, 0.18) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: clamp(0.7rem, 2.4vh, 1.3rem) clamp(1rem, 3.5vw, 1.8rem) !important;
+    min-width: unset !important;
+    width: min(420px, 90vw) !important;
+    max-width: 420px !important;
+    max-height: calc(100vh - 24px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    box-sizing: border-box !important;
+    text-align: center;
+    position: relative;
+    animation: popIn 0.35s ease;
+}
+.game-over-box h2 {
+    font-family: var(--font-head);
+    font-size: clamp(1.2rem, 4vh, 1.55rem) !important;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #ff3a5c !important;
+    text-shadow: 0 0 20px rgba(255, 58, 92, 0.7) !important;
+    margin: 0 0 clamp(0.25rem, 1.2vh, 0.5rem) 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    animation: pulse 1.8s ease-in-out infinite;
+}
+.game-over-box p {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    color: rgba(255, 255, 255, 0.72) !important;
+    font-size: clamp(0.72rem, 2.2vh, 0.86rem) !important;
+    margin: clamp(1px, 0.5vh, 3px) 0 !important;
+    line-height: 1.35;
+}
+.game-over-box p span {
+    color: var(--cyan, #00f0ff) !important;
+    font-weight: 800;
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.45);
+}
+.gameover-buttons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: clamp(5px, 1.4vh, 8px) !important;
+    margin-top: clamp(0.5rem, 1.8vh, 0.85rem) !important;
+    width: 100% !important;
+}
+.gameover-buttons .btn {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: clamp(0.44rem, 1.6vh, 0.65rem) 1rem !important;
+    font-size: clamp(0.74rem, 2.1vh, 0.85rem) !important;
+    font-family: var(--font-head);
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    border-radius: 10px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+    min-height: unset !important;
+}
+.gameover-buttons .btn:active {
+    transform: scale(0.97);
+}
+/* Exit button (Button 1: dark blue with cyan border) */
+.btn-go-exit {
+    background: rgba(14, 24, 44, 0.9) !important;
+    border: 1px solid rgba(0, 190, 255, 0.45) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(0, 190, 255, 0.2) !important;
+}
+.btn-go-exit:hover {
+    background: rgba(22, 36, 66, 0.95) !important;
+    border-color: rgba(0, 230, 255, 0.8) !important;
+    box-shadow: 0 0 18px rgba(0, 190, 255, 0.4) !important;
+}
+.btn-go-exit .ui-icon {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+}
+/* Watch Ad to Respawn (Button 2: golden olive with gold border) */
+.btn-ad-respawn {
+    background: linear-gradient(135deg, rgba(125, 95, 0, 0.45), rgba(85, 60, 0, 0.55)) !important;
+    border: 1.5px solid rgba(250, 204, 21, 0.55) !important;
+    color: #fde047 !important;
+    box-shadow: 0 0 14px rgba(250, 204, 21, 0.2) !important;
+}
+.btn-ad-respawn:hover {
+    background: linear-gradient(135deg, rgba(160, 120, 0, 0.55), rgba(110, 80, 0, 0.65)) !important;
+    border-color: rgba(250, 204, 21, 0.9) !important;
+    box-shadow: 0 0 20px rgba(250, 204, 21, 0.4) !important;
+}
+/* Retry Level (Button 3: glowing cyan-purple gradient) */
+.btn-retry {
+    background: linear-gradient(135deg, #00d2ff 0%, #8000ff 100%) !important;
+    border: 1px solid rgba(0, 240, 255, 0.6) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 18px rgba(0, 240, 255, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+.btn-retry:hover {
+    background: linear-gradient(135deg, #2ae0ff 0%, #951aff 100%) !important;
+    box-shadow: 0 0 26px rgba(0, 240, 255, 0.65), 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+}
 .btn-gameover-lb {
     background: linear-gradient(135deg, rgba(250, 204, 21, 0.16), rgba(245, 158, 11, 0.25)) !important;
     border: 1px solid rgba(250, 204, 21, 0.45) !important;
@@ -2655,7 +2952,6 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     background: linear-gradient(135deg, rgba(250, 204, 21, 0.28), rgba(245, 158, 11, 0.38)) !important;
     box-shadow: 0 0 16px rgba(250, 204, 21, 0.35);
 }
-.btn-ad-respawn { background:linear-gradient(135deg,rgba(255,215,0,.3),rgba(255,150,0,.3)) !important; color:var(--gold) !important; border:1px solid rgba(255,215,0,.4); }
 
 /* Chapter Complete */
 .chapter-complete-box { border-color:var(--gold) !important; box-shadow:0 0 80px rgba(255,215,0,.3) !important; }
@@ -2995,11 +3291,11 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 /* Left-Edge Powerups — Shield on top, Double Fire below */
 .powerups-left, .powerups-bottom { 
     position: absolute; 
-    bottom: 2.2rem; 
-    left: 2.0rem;
+    bottom: max(2.4rem, calc(var(--sab) + 1.2rem)); 
+    left: max(2.4rem, calc(var(--sal) + 1.2rem));
     display: flex; 
     flex-direction: column; 
-    gap: 1.6rem;
+    gap: 1.8rem;
     align-items: center; 
     pointer-events: auto; 
     z-index: 25;
@@ -3034,8 +3330,8 @@ html.is-desktop .joystick-zone {
 /* Right Side Actions (Fire/Missile) */
 .action-buttons { 
     position: absolute; 
-    bottom: 2.2rem; 
-    right: 2.2rem;
+    bottom: max(2.4rem, calc(var(--sab) + 1.2rem)); 
+    right: max(2.6rem, calc(var(--sar) + 1.4rem));
     display: flex; 
     flex-direction: column-reverse; 
     gap: 2.2rem; 
@@ -3395,18 +3691,17 @@ html.is-desktop .joystick-zone {
 /* ============================================================
    DESKTOP DETECTION — suppress mobile-only elements on PC
    ============================================================ */
-html.is-desktop #portrait-warning { display: none !important; }
 
 /* On desktop: show tactical buttons, but HIDE joystick (joystick is Android only) */
 html.is-desktop #mobile-controls  { display: block !important; pointer-events: none; }
 html.is-desktop .powerups-left,
 html.is-desktop .powerups-bottom  {
     position: absolute;
-    bottom: 2.2rem;
-    left: 2.0rem;
+    bottom: max(2.4rem, calc(var(--sab) + 1.2rem));
+    left: max(2.4rem, calc(var(--sal) + 1.2rem));
     display: flex !important;
     flex-direction: column;
-    gap: 1.6rem;
+    gap: 1.8rem;
     pointer-events: auto !important;
 }
 html.is-desktop .joystick-zone { 
@@ -3415,8 +3710,8 @@ html.is-desktop .joystick-zone {
 }
 html.is-desktop .action-buttons {
     position: absolute;
-    bottom: 2.2rem;
-    right: 2.2rem;
+    bottom: max(2.4rem, calc(var(--sab) + 1.2rem));
+    right: max(2.6rem, calc(var(--sar) + 1.4rem));
     display: flex !important;
     flex-direction: column-reverse;
     gap: 2.2rem;
@@ -3923,253 +4218,629 @@ html.is-desktop #btn-double-mobile.hidden {
 
 
 /* =====================================================================
-   RESPONSIVE SYSTEM — Full Game
-   All overrides use !important to guarantee they win over base styles.
-   Breakpoints:  ≤ 900px  chapter cards wrap
-                 ≤ 768px  general mobile tweaks
-                 ≤ 600px  small phone landscape
-                 ≤ 480px  very small screens
+   RESPONSIVE SYSTEM — Full Game (Landscape-First Architecture)
+   Supports:
+   - Desktop & Ultrawide Monitors (1920x1080, 1440p, 4K, 720p)
+   - Tablets & iPads (1024x768, 1280x800)
+   - Mobile Landscape (iPhone 8 to 16 Pro Max, Samsung Galaxy, Pixel)
+   - Notch & Safe-Area Aware (--sat, --sar, --sab, --sal)
    ===================================================================== */
 
-/* ── 1. CHAPTER SELECT: topbar + card wrapping ── */
-@media (max-width: 900px) {
-    /* Topbar: wrap items onto two lines */
+/* ── 0. UNIVERSAL SLEEK SCROLLBARS ── */
+.cs-stages-area,
+.lm-area,
+.leaderboard-list,
+.history-list,
+.collection-grid,
+.stats-grid,
+.popup-box,
+.popup-box-large,
+.settings-panel {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+.cs-stages-area::-webkit-scrollbar,
+.lm-area::-webkit-scrollbar,
+.leaderboard-list::-webkit-scrollbar,
+.history-list::-webkit-scrollbar,
+.collection-grid::-webkit-scrollbar,
+.stats-grid::-webkit-scrollbar,
+.popup-box::-webkit-scrollbar,
+.popup-box-large::-webkit-scrollbar,
+.settings-panel::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* ── 1. TABLET & COMPACT WIDTH (≤ 1024px) ── */
+@media (max-width: 1024px) {
+    /* Chapter Select Topbar: single row, never wrap */
     .cs-topbar {
-        flex-wrap: wrap !important;
-        gap: .35rem !important;
-        padding: .5rem .7rem !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: clamp(0.25rem, 1vw, 0.6rem) !important;
+        padding: max(0.4rem, var(--sat)) max(0.8rem, var(--sar)) 0.35rem max(0.8rem, var(--sal)) !important;
         height: auto !important;
+    }
+    .cs-topbar-left {
+        min-width: auto !important;
+        flex-shrink: 0 !important;
     }
     .cs-topbar-center {
-        order: 3 !important;
-        flex-basis: 100% !important;
-        justify-content: flex-start !important;
-        gap: .35rem !important;
-        flex-wrap: wrap !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-    }
-
-    /* Push stage area down to clear the taller topbar */
-    .cs-stages-area {
-        top: 7rem !important;
-        overflow-x: hidden !important;
-        overflow-y: auto !important;
-        align-items: flex-start !important;
-        padding: .7rem .8rem !important;
-    }
-
-    /* Cards: flex-wrap into 2-column rows */
-    .cs-stage-cards {
-        flex-wrap: wrap !important;
-        height: auto !important;
-        width: 100% !important;
+        order: 0 !important;
+        flex: 1 !important;
+        flex-basis: auto !important;
         justify-content: center !important;
-        align-items: flex-start !important;
-        gap: .8rem !important;
+        gap: clamp(0.25rem, 0.8vw, 0.45rem) !important;
+        flex-wrap: nowrap !important;
+    }
+    .cs-topbar-right {
+        min-width: auto !important;
+        gap: clamp(0.25rem, 0.8vw, 0.45rem) !important;
+        flex-shrink: 0 !important;
+    }
+    .cs-back-btn {
+        width: 42px !important;
+        height: 42px !important;
+        font-size: 1.2rem !important;
+    }
+    .cs-inv-item {
+        padding: 0.22rem 0.45rem !important;
+        font-size: 0.78rem !important;
+        border-radius: 6px !important;
+    }
+    .cs-inv-item b {
+        font-size: 0.78rem !important;
+    }
+    .cs-inv-item .ui-icon-inv {
+        width: 15px !important;
+        height: 15px !important;
+    }
+    .cs-store-btn {
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.75rem !important;
+        border-radius: 10px !important;
+    }
+    .cs-trial-btn {
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.72rem !important;
+        border-radius: 10px !important;
+    }
+    .cs-gear-btn, .cs-leaderboard-btn {
+        width: 42px !important;
+        height: 42px !important;
+        font-size: 1.2rem !important;
+        border-radius: 10px !important;
     }
 
-    /* Each card: approx 2 per row */
+    /* Callsign Badge */
+    .cs-pilot-badge {
+        top: clamp(3.2rem, 9vh, 3.8rem) !important;
+        right: max(0.8rem, var(--sar)) !important;
+        padding: 0.28rem 0.85rem !important;
+        gap: 0.45rem !important;
+        font-size: 0.75rem !important;
+    }
+    .cs-pilot-name {
+        font-size: 0.85rem !important;
+        max-width: 140px !important;
+    }
+
+    /* Chapter Carousel: Pure horizontal scrolling track */
+    .cs-stages-area {
+        top: 3.6rem !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 0.4rem max(1.2rem, var(--sar)) 0.4rem max(1.2rem, var(--sal)) !important;
+    }
+    .cs-stage-cards {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: stretch !important;
+        height: 84% !important;
+        max-height: 460px !important;
+        gap: clamp(0.8rem, 2vw, 1.4rem) !important;
+        margin: auto 0 !important;
+    }
     .cs-stage-card {
-        width: clamp(130px, 43vw, 200px) !important;
-        min-height: 200px !important;
-        flex-shrink: 1 !important;
+        width: clamp(140px, 19vw, 210px) !important;
+        height: 100% !important;
+        min-height: 190px !important;
+        flex-shrink: 0 !important;
         flex-grow: 0 !important;
+        border-radius: 16px !important;
     }
-    .cs-stage-name { font-size: clamp(.85rem, 2vw, 1.2rem) !important; }
-    .cs-stage-sub  { font-size: .6rem !important; }
-}
+    .cs-stage-name {
+        font-size: clamp(0.9rem, 1.8vw, 1.3rem) !important;
+        max-width: 160px !important;
+    }
+    .cs-stage-sub {
+        font-size: 0.58rem !important;
+    }
+    .cs-lock-icon {
+        font-size: 2.2rem !important;
+    }
 
-@media (max-width: 600px) {
-    .cs-topbar { padding: .4rem .5rem !important; }
-    .cs-store-label { display: none !important; }
-    .cs-store-btn { padding: .4rem .55rem !important; }
-    .cs-inv { gap: .25rem !important; font-size: .75rem !important; }
-    .cs-inv-item { padding: .15rem .35rem !important; }
-    .cs-inv-item b { font-size: .72rem !important; }
-    .cs-gear-btn, .cs-back-btn { width: 38px !important; height: 38px !important; font-size: 1.1rem !important; }
-    .cs-stages-area { top: 8rem !important; }
-    .cs-stage-card { width: clamp(120px, 44vw, 165px) !important; min-height: 180px !important; }
-}
-
-@media (max-width: 480px) {
-    .cs-stage-cards { gap: .55rem !important; }
-    .cs-stage-card  { width: clamp(115px, 45vw, 155px) !important; min-height: 165px !important; }
-}
-
-
-/* ── 2. LEVEL MAP NAVBAR ── */
-@media (max-width: 768px) {
+    /* Level Map Navbar: single row, clean spacing */
     .lm-navbar {
-        flex-wrap: wrap !important;
-        padding: .4rem .6rem !important;
-        gap: .3rem !important;
-        height: auto !important;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        height: 3.2rem !important;
+        padding: max(0.35rem, var(--sat)) max(0.8rem, var(--sar)) 0.35rem max(0.8rem, var(--sal)) !important;
+        gap: 0.4rem !important;
     }
     .lm-navbar-center {
-        position: relative !important;
+        order: 0 !important;
+        position: static !important;
         left: auto !important;
         transform: none !important;
-        order: 3 !important;
-        flex-basis: 100% !important;
-        justify-content: flex-start !important;
-        gap: .4rem !important;
-        flex-wrap: wrap !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: clamp(0.3rem, 1vw, 0.7rem) !important;
+        flex-wrap: nowrap !important;
     }
-    .lm-navbar-right { width: auto !important; gap: .4rem !important; }
-    .lm-ch-name  { font-size: .85rem !important; }
-    .lm-ch-sub   { font-size: .45rem !important; }
-    .lm-inv      { gap: .25rem !important; font-size: .7rem !important; flex-wrap: wrap !important; }
-    .lm-store-btn { padding: .32rem .6rem !important; font-size: .65rem !important; }
-    .lm-gear, .lm-back { width: 38px !important; height: 38px !important; font-size: 1.1rem !important; }
-    .lm-stars { font-size: .7rem !important; padding: .12rem .45rem !important; }
-    .lm-area  { top: 6rem !important; }
-}
-
-@media (max-width: 480px) {
-    .lm-inv      { gap: .2rem !important; font-size: .65rem !important; }
-    .lm-store-btn { padding: .28rem .5rem !important; }
-}
-
-
-/* ── 3. HUD (in-game) ── */
-@media (max-width: 768px) {
-    .hud-top-left  { top: .45rem !important; left: .45rem !important; gap: .25rem !important; }
-    .hud-top-right { top: .45rem !important; right: .45rem !important; gap: .25rem !important; }
-    .hud-chip { font-size: .6rem !important; padding: .25rem .5rem !important; }
-    .hud-btn  { padding: .35rem .55rem !important; font-size: .9rem !important; }
-    .pause-btn { font-size: .95rem !important; padding: .3rem .5rem !important; }
-    .combo-text  { font-size: 1.05rem !important; }
-    .combo-label { font-size: .42rem !important; }
-    .mission-display {
-        font-size: .6rem !important;
-        padding: .28rem .65rem !important;
-        top: 3.5rem !important;
-        max-width: 90vw !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+    .lm-navbar-right {
+        width: auto !important;
+        gap: 0.4rem !important;
     }
-    /* HP bar */
-    .hud-hp-section { padding: .28rem .6rem !important; gap: .35rem !important; bottom: .7rem !important; }
-    .hp-bar-container { width: 100px !important; height: 8px !important; }
-    .hud-label { font-size: .55rem !important; }
-    .hp-text   { font-size: .6rem !important; min-width: 26px !important; }
-    /* Powerup timers */
-    .hud-timer-item     { min-width: 100px !important; font-size: .65rem !important; padding: 2px 5px !important; }
-    .hud-timer-bar-wrap { width: 38px !important; }
-}
+    .lm-ch-name { font-size: 0.85rem !important; }
+    .lm-ch-sub  { font-size: 0.48rem !important; }
+    .lm-stars   { font-size: 0.72rem !important; padding: 0.16rem 0.45rem !important; }
+    .lm-inv     { gap: 0.25rem !important; font-size: 0.72rem !important; flex-wrap: nowrap !important; }
+    .lm-inv-item { padding: 0.18rem 0.38rem !important; }
+    .lm-store-btn { padding: 0.35rem 0.65rem !important; font-size: 0.68rem !important; border-radius: 8px !important; }
+    .lm-gear, .lm-back { width: 38px !important; height: 38px !important; font-size: 1.1rem !important; border-radius: 8px !important; }
+    .lm-area {
+        top: 3.2rem !important;
+        bottom: 0 !important;
+    }
 
-@media (max-width: 480px) {
-    .hud-chip { font-size: .52rem !important; padding: .2rem .4rem !important; }
-    .hp-bar-container { width: 78px !important; }
-    .hud-hp-section { padding: .22rem .5rem !important; bottom: .5rem !important; }
-    .mission-display { font-size: .52rem !important; top: 3rem !important; }
-}
+    /* HUD elements */
+    .hud-top-left  { top: max(0.45rem, var(--sat)) !important; left: max(0.55rem, var(--sal)) !important; gap: 0.3rem !important; }
+    .hud-top-right { top: max(0.45rem, var(--sat)) !important; right: max(0.55rem, var(--sar)) !important; gap: 0.3rem !important; }
+    .hud-chip { font-size: 0.62rem !important; padding: 0.22rem 0.48rem !important; border-radius: 6px !important; }
+    .hud-btn, .pause-btn { font-size: 0.88rem !important; padding: 0.28rem 0.5rem !important; border-radius: 8px !important; }
+    .hud-hp-section {
+        bottom: max(0.6rem, calc(var(--sab) + 0.3rem)) !important;
+        padding: 0.24rem 0.55rem !important;
+        gap: 0.35rem !important;
+    }
+    .hp-bar-container { width: 105px !important; height: 8px !important; }
+    .hud-label { font-size: 0.55rem !important; }
+    .hp-text   { font-size: 0.6rem !important; }
 
-
-/* ── 4. MOBILE CONTROLS ── */
-@media (max-width: 768px) {
-    .powerups-left, .powerups-bottom { position: absolute !important; bottom: 1.8rem !important; left: 1.4rem !important; gap: 1.3rem !important; }
-    .shield-mobile-btn, .double-mobile-btn { width: 58px !important; height: 58px !important; }
-    .shield-mobile-btn img, .double-mobile-btn img { width: 32px !important; height: 32px !important; }
-    .shield-mobile-btn span, .double-mobile-btn span { font-size: 8.5px !important; }
-    html.is-android .joystick-zone   { position: absolute !important; bottom: 1.4rem !important; left: 6.2rem !important; width: 110px !important; height: 110px !important; margin: 0 !important; }
-    .joystick-base   { width: 98px !important; height: 98px !important; }
-    .joystick-handle { width: 40px !important; height: 40px !important; }
-    .action-buttons  { position: absolute !important; bottom: 1.8rem !important; right: 1.8rem !important; gap: 1.8rem !important; }
-    .fire-btn        { width: 88px !important; height: 88px !important; }
-    .fire-btn span   { font-size: 12px !important; }
-    .missile-mobile-btn { width: 62px !important; height: 62px !important; }
-}
-
-@media (max-width: 480px) {
-    .powerups-left, .powerups-bottom { position: absolute !important; bottom: 1.2rem !important; left: 1.0rem !important; gap: 1.0rem !important; }
-    .shield-mobile-btn, .double-mobile-btn { width: 50px !important; height: 50px !important; }
+    /* Touch Controls: Comfortable touch target sizes */
+    .powerups-left, .powerups-bottom {
+        bottom: max(1.5rem, calc(var(--sab) + 0.8rem)) !important;
+        left: max(1.6rem, calc(var(--sal) + 0.85rem)) !important;
+        gap: 1.5rem !important;
+    }
+    .shield-mobile-btn, .double-mobile-btn { width: 54px !important; height: 54px !important; }
     .shield-mobile-btn img, .double-mobile-btn img { width: 28px !important; height: 28px !important; }
-    .shield-mobile-btn span, .double-mobile-btn span { font-size: 7.5px !important; }
-    html.is-android .joystick-zone   { position: absolute !important; bottom: 1.0rem !important; left: 5.2rem !important; width: 94px !important; height: 94px !important; margin: 0 !important; }
-    .joystick-base   { width: 84px !important; height: 84px !important; }
-    .joystick-handle { width: 34px !important; height: 34px !important; }
-    .action-buttons  { position: absolute !important; bottom: 1.2rem !important; right: 1.4rem !important; gap: 1.4rem !important; }
-    .fire-btn        { width: 78px !important; height: 78px !important; }
-    .fire-btn span   { font-size: 11px !important; }
-    .missile-mobile-btn { width: 54px !important; height: 54px !important; }
-}
-
-
-/* ── 5. OVERLAYS (Pause, Game Over, Level Complete, etc.) ── */
-@media (max-width: 768px) {
-    .big-overlay {
-        align-items: flex-start !important;
-        overflow-y: auto !important;
-        padding: .5rem !important;
+    .shield-mobile-btn span, .double-mobile-btn span { font-size: 8px !important; }
+    html.is-android .joystick-zone {
+        bottom: max(1.5rem, calc(var(--sab) + 0.8rem)) !important;
+        left: max(6.4rem, calc(var(--sal) + 5.6rem)) !important;
+        width: 108px !important;
+        height: 108px !important;
     }
-    .big-overlay-box {
-        width: 94vw !important;
-        max-width: 100% !important;
-        margin: auto !important;
-        padding: 1.3rem 1.1rem !important;
-        border-radius: 14px !important;
+    .joystick-base { width: 96px !important; height: 96px !important; }
+    .joystick-handle { width: 40px !important; height: 40px !important; }
+    .action-buttons {
+        bottom: max(1.5rem, calc(var(--sab) + 0.8rem)) !important;
+        right: max(1.8rem, calc(var(--sar) + 0.95rem)) !important;
+        gap: 1.8rem !important;
+    }
+    .fire-btn { width: 84px !important; height: 84px !important; }
+    .fire-btn span { font-size: 11.5px !important; }
+    .missile-mobile-btn { width: 58px !important; height: 58px !important; }
+
+    /* Overlays & Modals: Bounded size with auto scroll */
+    .popup-box, .popup-box-large, .big-overlay-box {
+        width: min(540px, 92vw) !important;
+        max-height: 88vh !important;
+        padding: 1.2rem 1.4rem !important;
         box-sizing: border-box !important;
     }
-    .pause-box h2            { font-size: 1.2rem !important; }
-    .level-complete-box h2   { font-size: 1.15rem !important; }
-    .game-over-box h2        { font-size: 1.4rem !important; }
-    .chapter-complete-box h2 { font-size: 1.1rem !important; }
-    .win-stars      { font-size: 1.6rem !important; letter-spacing: 4px !important; }
-    .fun-level-badge { font-size: 2.2rem !important; }
-    .fun-level-box h2 { font-size: 1.1rem !important; }
 }
 
-
-/* ── 6. START SCREEN ── */
-@media (max-width: 768px) {
-    .start-center    { top: 42% !important; }
-    .start-logo-sub  { font-size: .58rem !important; letter-spacing: 4px !important; }
-    .start-logo-text { font-size: clamp(2.2rem, 8vw, 3.5rem) !important; letter-spacing: 4px !important; }
-    .start-bottom    { bottom: 15% !important; }
-    .btn-play        { font-size: clamp(1.1rem, 4vw, 1.6rem) !important; padding: .85rem 2.5rem !important; }
-}
-
-@media (max-width: 480px) {
-    .start-logo-text { font-size: clamp(1.8rem, 7vw, 2.8rem) !important; }
-    .btn-play        { font-size: 1rem !important; padding: .72rem 2rem !important; }
-}
-
-
-/* ── 7. POPUPS (Store, Collection, Settings, Legal) ── */
-@media (max-width: 768px) {
-    .popup-box, .popup-box-large {
-        width: 94vw !important;
-        max-width: 100% !important;
-        max-height: 88vh !important;
-        overflow-y: auto !important;
-        padding: 1.1rem .9rem !important;
+/* ── 2. MOBILE LANDSCAPE & COMPACT HEIGHT (≤ 520px) ──
+   Directly handles all landscape smartphones (iPhone, Galaxy, Pixel, etc.) */
+@media (max-height: 520px) {
+    /* Screen 1: Start Screen */
+    .start-center {
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
     }
-    .popup-box h3, .popup-box-large h3 { font-size: .95rem !important; }
-    .legal-text    { font-size: .76rem !important; }
-    .legal-text h5 { font-size: .85rem !important; }
-    .store-items     { gap: .6rem !important; }
-    .collection-grid { gap: .55rem !important; }
-    .stats-grid      { gap: .45rem !important; }
-    .settings-box    { padding: 1.2rem 1rem !important; }
+    .start-logo-sub {
+        font-size: 0.55rem !important;
+        letter-spacing: 4px !important;
+        margin-bottom: 0.15rem !important;
+    }
+    .start-logo-text {
+        font-size: clamp(1.8rem, 8vh, 2.6rem) !important;
+        line-height: 0.98 !important;
+        letter-spacing: 4px !important;
+    }
+    .start-bottom {
+        position: static !important;
+        transform: none !important;
+        margin-top: 8px !important; /* 5-10px space as requested */
+    }
+    .btn-play {
+        font-size: clamp(0.95rem, 4.5vh, 1.2rem) !important;
+        padding: 0.55rem 2.4rem !important;
+        letter-spacing: 4px !important;
+    }
+    .start-link { font-size: 0.65rem !important; }
+    .start-gear-btn { width: 36px !important; height: 36px !important; font-size: 1.1rem !important; }
+
+    /* Screen 1b: Name Entry Box */
+    .name-entry-box {
+        padding: 0.85rem 1.6rem !important;
+        max-height: 94vh !important;
+        width: min(390px, 92vw) !important;
+    }
+    .name-entry-icon { font-size: 1.8rem !important; margin-bottom: 0.2rem !important; }
+    .name-entry-title { font-size: 1.15rem !important; margin-bottom: 0.2rem !important; }
+    .name-entry-sub { font-size: 0.65rem !important; margin-bottom: 0.75rem !important; }
+    .name-input { font-size: 0.95rem !important; padding: 0.4rem 0.8rem !important; }
+    .name-confirm-btn { padding: 0.55rem 1.8rem !important; font-size: 0.85rem !important; margin-top: 0.6rem !important; }
+
+    /* Screen 2: Chapter Select */
+    .cs-topbar {
+        padding: max(0.3rem, var(--sat)) max(0.8rem, var(--sar)) 0.3rem max(0.8rem, var(--sal)) !important;
+    }
+    .cs-back-btn { width: 36px !important; height: 36px !important; font-size: 1.05rem !important; }
+    .cs-inv-item { padding: 0.18rem 0.38rem !important; font-size: 0.72rem !important; }
+    .cs-inv-item b { font-size: 0.72rem !important; }
+    .cs-inv-item .ui-icon-inv { width: 13px !important; height: 13px !important; }
+    .cs-store-btn { padding: 0.32rem 0.65rem !important; font-size: 0.7rem !important; }
+    .cs-trial-btn { padding: 0.32rem 0.6rem !important; font-size: 0.68rem !important; }
+    .cs-gear-btn, .cs-leaderboard-btn { width: 36px !important; height: 36px !important; font-size: 1.1rem !important; }
+    .cs-pilot-badge {
+        top: 3.1rem !important;
+        right: max(0.8rem, var(--sar)) !important;
+        padding: 0.2rem 0.65rem !important;
+        font-size: 0.68rem !important;
+        gap: 0.35rem !important;
+    }
+    .cs-pilot-dot { width: 7px !important; height: 7px !important; }
+    .cs-pilot-lbl { font-size: 0.58rem !important; }
+    .cs-pilot-name { font-size: 0.78rem !important; max-width: 105px !important; }
+    .cs-pilot-edit-icon { width: 18px !important; height: 18px !important; }
+    .cs-pilot-edit-icon svg { width: 9px !important; height: 9px !important; }
+    .cs-stages-area {
+        top: 3.2rem !important;
+        padding: 0.35rem max(1rem, var(--sar)) 0.35rem max(1rem, var(--sal)) !important;
+    }
+    .cs-stage-cards {
+        height: 82% !important;
+        gap: 0.85rem !important;
+    }
+    .cs-stage-card {
+        width: clamp(125px, 18vw, 180px) !important;
+        border-radius: 14px !important;
+    }
+    .cs-stage-name { font-size: 0.92rem !important; max-width: 140px !important; }
+    .cs-stage-sub  { font-size: 0.52rem !important; }
+    .cs-lock-icon  { font-size: 1.8rem !important; }
+
+    /* Screen 3: Level Map */
+    .lm-navbar {
+        height: 2.9rem !important;
+        padding: max(0.25rem, var(--sat)) max(0.8rem, var(--sar)) 0.25rem max(0.8rem, var(--sal)) !important;
+    }
+    .lm-ch-name { font-size: 0.78rem !important; }
+    .lm-ch-sub  { font-size: 0.42rem !important; }
+    .lm-stars   { font-size: 0.66rem !important; padding: 0.12rem 0.38rem !important; }
+    .lm-inv-item { padding: 0.14rem 0.32rem !important; font-size: 0.66rem !important; }
+    .lm-store-btn { padding: 0.28rem 0.55rem !important; font-size: 0.62rem !important; }
+    .lm-gear, .lm-back { width: 34px !important; height: 34px !important; font-size: 0.95rem !important; }
+    .lm-area { top: 2.9rem !important; }
+
+    /* In-Game HUD: Compact, crisp, ergonomic */
+    .hud-top-left  { top: max(0.35rem, var(--sat)) !important; left: max(0.5rem, var(--sal)) !important; gap: 0.25rem !important; }
+    .hud-top-right { top: max(0.35rem, var(--sat)) !important; right: max(0.5rem, var(--sar)) !important; gap: 0.25rem !important; }
+    .hud-chip { font-size: 0.56rem !important; padding: 0.18rem 0.42rem !important; }
+    .hud-btn, .pause-btn { font-size: 0.8rem !important; padding: 0.22rem 0.42rem !important; }
+    .hud-hp-section {
+        bottom: max(0.45rem, calc(var(--sab) + 0.25rem)) !important;
+        padding: 0.18rem 0.48rem !important;
+        gap: 0.28rem !important;
+    }
+    .hp-bar-container { width: 90px !important; height: 7px !important; }
+    .hud-label { font-size: 0.5rem !important; }
+    .hp-text   { font-size: 0.55rem !important; }
+
+    /* Mobile Controls: thumb zones scaled to phone heights */
+    .powerups-left, .powerups-bottom {
+        bottom: max(1.25rem, calc(var(--sab) + 0.75rem)) !important;
+        left: max(1.4rem, calc(var(--sal) + 0.85rem)) !important;
+        gap: 1.35rem !important;
+    }
+    .shield-mobile-btn, .double-mobile-btn { width: 48px !important; height: 48px !important; }
+    .shield-mobile-btn img, .double-mobile-btn img { width: 24px !important; height: 24px !important; }
+    .shield-mobile-btn span, .double-mobile-btn span { font-size: 7px !important; }
+    html.is-android .joystick-zone {
+        bottom: max(1.25rem, calc(var(--sab) + 0.75rem)) !important;
+        left: max(5.6rem, calc(var(--sal) + 4.9rem)) !important;
+        width: 96px !important;
+        height: 96px !important;
+    }
+    .joystick-base { width: 84px !important; height: 84px !important; }
+    .joystick-handle { width: 34px !important; height: 34px !important; }
+    .action-buttons {
+        bottom: max(1.25rem, calc(var(--sab) + 0.75rem)) !important;
+        right: max(1.5rem, calc(var(--sar) + 0.95rem)) !important;
+        gap: 1.45rem !important;
+    }
+    .fire-btn { width: 74px !important; height: 74px !important; }
+    .fire-btn span { font-size: 10.5px !important; }
+    .missile-mobile-btn { width: 50px !important; height: 50px !important; }
+    .missile-mobile-btn img { width: 26px !important; height: 26px !important; }
+
+    /* Modals & Popups: Never overflow screen height */
+    .popup-box, .popup-box-large, .big-overlay-box {
+        max-height: 94vh !important;
+        width: min(480px, 92vw) !important;
+        padding: 0.75rem 1.1rem !important;
+        overflow-y: auto !important;
+    }
+    .popup-box h3, .popup-box-large h3 {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.45rem !important;
+    }
+    .popup-close {
+        top: 0.5rem !important;
+        right: 0.55rem !important;
+        width: 1.6rem !important;
+        height: 1.6rem !important;
+    }
+    .popup-close::before {
+        font-size: 1.1rem !important;
+    }
+
+    /* Game Over Modal (Landscape Compact — Exact UI) */
+    .game-over-box {
+        padding: clamp(0.45rem, 1.8vh, 0.75rem) clamp(0.8rem, 2.5vw, 1.2rem) !important;
+        width: min(390px, 92vw) !important;
+        max-width: 390px !important;
+    }
+    .game-over-box h2 {
+        font-size: clamp(1.05rem, 3.2vh, 1.25rem) !important;
+        margin: 0 0 clamp(0.12rem, 0.6vh, 0.25rem) 0 !important;
+        gap: 6px !important;
+    }
+    .game-over-box p {
+        font-size: clamp(0.66rem, 1.8vh, 0.78rem) !important;
+        margin: 1px 0 !important;
+    }
+    .gameover-buttons {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: clamp(4px, 1.1vh, 6px) !important;
+        width: 100% !important;
+        margin-top: clamp(0.35rem, 1.2vh, 0.55rem) !important;
+    }
+    .gameover-buttons .btn {
+        width: 100% !important;
+        padding: clamp(0.38rem, 1.4vh, 0.48rem) 0.8rem !important;
+        font-size: clamp(0.68rem, 1.8vh, 0.78rem) !important;
+    }
+
+    @media (max-height: 380px) {
+        .game-over-box {
+            padding: 0.35rem 0.75rem !important;
+            width: min(360px, 94vw) !important;
+        }
+        .game-over-box h2 {
+            font-size: 0.96rem !important;
+            margin-bottom: 1px !important;
+        }
+        .game-over-box p {
+            font-size: 0.62rem !important;
+            margin: 0 !important;
+        }
+        .gameover-buttons {
+            gap: 3px !important;
+            margin-top: 0.25rem !important;
+        }
+        .gameover-buttons .btn {
+            padding: 0.3rem 0.5rem !important;
+            font-size: 0.64rem !important;
+        }
+    }
+
+    /* Pause Modal */
+    .pause-box {
+        padding: 0.8rem 1.3rem !important;
+    }
+    .pause-box h2 {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    .pause-buttons {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 0.5rem !important;
+        justify-content: center !important;
+    }
+    .pause-buttons .btn {
+        padding: 0.45rem 1.1rem !important;
+        font-size: 0.76rem !important;
+    }
+
+    /* Level Complete Modal */
+    .level-complete-box {
+        padding: 0.75rem 1.2rem !important;
+    }
+    .level-complete-box h2 {
+        font-size: 1.15rem !important;
+        margin-bottom: 0.35rem !important;
+    }
+    .level-complete-box p {
+        font-size: 0.72rem !important;
+        margin: 2px 0 !important;
+    }
+
+    /* Store Modal */
+    .store-box {
+        padding: 0.7rem 1.1rem !important;
+    }
+    .store-header h3 {
+        font-size: 1.05rem !important;
+    }
+    .store-coins-wrap {
+        margin-bottom: 0.4rem !important;
+    }
+    .store-coins {
+        font-size: 0.9rem !important;
+        padding: 0.18rem 0.85rem !important;
+    }
+    .store-grid {
+        gap: 0.4rem !important;
+    }
+    .store-item {
+        padding: 0.4rem 0.7rem !important;
+        gap: 0.55rem !important;
+        border-radius: 10px !important;
+    }
+    .store-item-icon {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 8px !important;
+    }
+    .store-item-icon img {
+        max-width: 24px !important;
+        max-height: 24px !important;
+    }
+    .store-item-name {
+        font-size: 0.88rem !important;
+    }
+    .store-item-actions {
+        gap: 0.4rem !important;
+    }
+    .btn-store-buy, .btn-store-ad {
+        padding: 0.32rem 0.62rem !important;
+        font-size: 0.65rem !important;
+        border-radius: 7px !important;
+    }
+
+    /* In-Game Replenish Card */
+    .replenish-card {
+        padding: 0.65rem 1.1rem 0.55rem !important;
+        max-width: 360px !important;
+    }
+    .replenish-close-btn {
+        top: 8px !important;
+        right: 8px !important;
+        width: 26px !important;
+        height: 26px !important;
+        font-size: 1.1rem !important;
+    }
+    .replenish-badge { font-size: 0.55rem !important; }
+    .replenish-icon-wrap {
+        width: 40px !important;
+        height: 40px !important;
+        margin: 0.15rem auto 0.25rem !important;
+    }
+    .replenish-title { font-size: 0.98rem !important; margin: 0 0 2px 0 !important; }
+    .replenish-subtitle { font-size: 0.58rem !important; }
+    .replenish-desc { font-size: 0.62rem !important; margin-bottom: 0.35rem !important; line-height: 1.25 !important; }
+    .replenish-actions { gap: 0.35rem !important; margin-bottom: 0.35rem !important; }
+    .replenish-action-btn { padding: 0.38rem 0.55rem !important; font-size: 0.68rem !important; }
+    .replenish-resume-btn { padding: 0.28rem !important; font-size: 0.65rem !important; }
+
+    /* Daily Login Reward Modal */
+    .daily-reward-box {
+        padding: 0.6rem 0.9rem 0.75rem !important;
+        max-width: 580px !important;
+    }
+    .dr-header { margin-bottom: 0.35rem !important; }
+    .dr-title { font-size: 1.05rem !important; letter-spacing: 2px !important; }
+    .dr-subtitle { font-size: 0.62rem !important; margin-bottom: 0.15rem !important; }
+    .dr-streak-info { font-size: 0.54rem !important; margin-top: 0.1rem !important; }
+    .dr-crates { gap: 0.25rem !important; margin-bottom: 0.45rem !important; }
+    .dr-crate { padding: 0.32rem 0.1rem !important; border-radius: 8px !important; }
+    .dr-crate-box, .dr-box-lid { font-size: 1.15rem !important; }
+    .dr-crate-day { font-size: 0.42rem !important; }
+    .dr-crate-label { font-size: 0.42rem !important; }
+    .dr-tomorrow-banner {
+        padding: 0.32rem 0.7rem !important;
+        margin: 0.15rem 0 0.45rem !important;
+        gap: 0.55rem !important;
+    }
+    .dr-tomorrow-icon { font-size: 1.25rem !important; }
+    .dr-tomorrow-badge { font-size: 0.55rem !important; }
+    .dr-tomorrow-sub { font-size: 0.68rem !important; }
+    .dr-tomorrow-timer-wrap { font-size: 0.55rem !important; }
+    .dr-claim-btn { padding: 0.48rem 1rem !important; font-size: 0.78rem !important; }
+
+    /* Edit Pilot Callsign Modal */
+    .edit-pilot-box {
+        padding: 0.7rem 1.1rem !important;
+        max-width: 380px !important;
+    }
+    .pilot-card-topbar { margin-bottom: 0.4rem !important; }
+    .edit-pilot-header { margin-bottom: 0.45rem !important; }
+    .edit-pilot-badge-wrap { margin-bottom: 0.15rem !important; }
+    .pilot-vector-badge { width: 34px !important; height: 34px !important; }
+    .edit-pilot-header h3 { font-size: 0.95rem !important; letter-spacing: 1.5px !important; }
+    .edit-pilot-subtitle { display: none !important; }
+    .edit-pilot-form { margin-bottom: 0.35rem !important; }
+    .edit-pilot-actions { margin-top: 0.4rem !important; }
+    .edit-pilot-btn { padding: 0.38rem 0.85rem !important; font-size: 0.72rem !important; }
+
+    /* Controls Modal */
+    .controls-modal-box {
+        padding: 0.75rem 1.1rem !important;
+    }
+    .ctrl-modal-header { margin-bottom: 0.5rem !important; }
+    .ctrl-modal-badge { font-size: 1.3rem !important; margin-bottom: 0 !important; }
+    .ctrl-modal-title { font-size: 0.95rem !important; }
+    .ctrl-modal-sub { font-size: 0.58rem !important; }
+    .pc-ctrl-grid { gap: 5px !important; }
+    .pc-ctrl-item { padding: 5px 8px !important; }
+    .pc-ctrl-label { font-size: 0.52rem !important; }
+    .pc-ctrl-mouse-tip { font-size: 0.62rem !important; margin-top: 0.4rem !important; }
+    .ctrl-modal-footer { margin-top: 0.45rem !important; }
+    .ctrl-confirm-btn { padding: 0.42rem 1.4rem !important; font-size: 0.75rem !important; }
+
+    /* Settings Dropdown Panel */
+    .settings-panel {
+        top: 3.1rem !important;
+        right: max(0.8rem, var(--sar)) !important;
+        max-height: calc(100vh - 3.6rem) !important;
+        padding: 0.65rem 0.8rem !important;
+        overflow-y: auto !important;
+    }
+    .settings-panel h3 { font-size: 0.78rem !important; margin: 0 0 0.4rem 0 !important; }
+    .settings-list { gap: 0.32rem !important; }
+    .settings-item { padding: 0.35rem 0.55rem !important; font-size: 0.72rem !important; }
 }
 
-
-/* ── 8. PC CONTROLS POPUP (responsive inside media query) ── */
-@media (max-width: 768px) {
-    .pc-controls-box  { padding: 1.2rem 1rem 1rem !important; }
-    .pc-ctrl-grid     { grid-template-columns: repeat(2, 1fr) !important; gap: 7px !important; }
-    .pc-ctrl-title    { font-size: .9rem !important; letter-spacing: 2px !important; }
-    .pc-ctrl-badge    { font-size: 1.8rem !important; }
-    .pc-ctrl-sub      { font-size: .62rem !important; }
+/* ── 3. ULTRA-NARROW SCREENS (≤ 640px) ── */
+@media (max-width: 640px) {
+    .cs-store-label { display: none !important; }
+    .cs-store-btn { padding: 0.32rem 0.55rem !important; }
+    .cs-trial-btn span { font-size: 0.65rem !important; }
+    .lm-store-btn { padding: 0.28rem 0.5rem !important; }
 }
 
-@media (max-width: 480px) {
-    .pc-ctrl-footer { flex-direction: column !important; align-items: stretch !important; }
-    .pc-ctrl-go-btn { width: 100% !important; min-width: unset !important; }
-}
 
 
 /* =====================================================

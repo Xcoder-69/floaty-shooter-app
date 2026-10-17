@@ -188,7 +188,39 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 }
 
 function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
-resize();window.addEventListener('resize',()=>{initBg();resize();});
+
+function checkOrientation() {
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const warning = document.getElementById('portrait-warning');
+    if (warning) {
+        if (isPortrait) {
+            warning.style.display = 'flex';
+            if (window.game && window.game.state === 'playing') {
+                if (typeof pauseGame === 'function') pauseGame();
+            }
+        } else {
+            warning.style.display = 'none';
+        }
+    }
+}
+
+function tryLockLandscape() {
+    try {
+        if (screen.orientation && typeof screen.orientation.lock === 'function') {
+            screen.orientation.lock('landscape').catch(() => {});
+        }
+    } catch(e) {}
+}
+
+window.addEventListener('click', tryLockLandscape, { once: true });
+window.addEventListener('touchstart', tryLockLandscape, { once: true });
+
+resize();
+checkOrientation();
+window.addEventListener('resize',()=>{initBg();resize();checkOrientation();});
+window.addEventListener('orientationchange',()=>{
+    setTimeout(()=>{initBg();resize();checkOrientation();}, 150);
+});
 
 // -------- SCREEN NAVIGATION --------
     window.updatePilotDisplay = function(){
@@ -214,6 +246,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         try{window.updatePilotDisplay();}catch(e){}
     };
     window.handlePlayButton = function(){
+        tryLockLandscape();
         const screenName = document.getElementById('screen-name');
         const savedName = localStorage.getItem('floaty_player_name');
         if (screenName && (!savedName || savedName.trim() === '')) {
@@ -226,7 +259,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     };
     window.confirmPlayerName = function(){
         const input = document.getElementById('player-name-input');
-        const name = input && input.value.trim() ? input.value.trim().toUpperCase() : 'PILOT';
+        const name = input && input.value.trim() ? input.value.trim() : 'PILOT';
         localStorage.setItem('floaty_player_name', name);
         window.updatePilotDisplay();
         if (window.LootLocker && typeof window.LootLocker.setPlayerName === 'function') {
@@ -368,7 +401,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
                     if (getUserPromise && typeof getUserPromise.then === 'function') {
                         getUserPromise.then(u => {
                             if (u && u.username && localStorage.getItem('floaty_pilot_customized') !== 'true') {
-                                const sanitized = u.username.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().slice(0, 16).toUpperCase();
+                                const sanitized = u.username.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().slice(0, 16);
                                 if (sanitized) {
                                     localStorage.setItem('floaty_player_name', sanitized);
                                     if (window.updatePilotDisplay) window.updatePilotDisplay();
@@ -733,7 +766,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             const val = input.value;
             if (counter) counter.textContent = `${val.length}/16`;
             if (meterBar) meterBar.style.width = `${Math.min(100, (val.length / 16) * 100)}%`;
-            if (livePlate) livePlate.textContent = val.trim() ? val.toUpperCase() : 'CYBER_PILOT';
+            if (livePlate) livePlate.textContent = val.trim() ? val : 'CYBER_PILOT';
             if (err) err.classList.add('hidden');
         };
 
@@ -774,8 +807,8 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             return;
         }
 
-        // Clean: letters, numbers, underscores, dashes, spaces; max 16 chars; uppercase
-        let cleaned = raw.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().slice(0, 16).toUpperCase();
+        // Clean: letters, numbers, underscores, dashes, spaces; max 16 chars; preserve casing
+        let cleaned = raw.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().slice(0, 16);
         if (!cleaned) {
             if (err) {
                 err.textContent = 'Please use letters, numbers or underscores.';
@@ -1323,7 +1356,7 @@ function spawnEnemy(ch, lvl, type) {
     e.maxHp = hp;
     e.speed = et.speed * cfg.speedMult;
     e.fireRate = Math.ceil(et.fireRate * cfg.fireRateMult);
-    e.shootCooldown = Math.floor(Math.random() * 60) + Math.max(90, Math.floor(et.fireRate * cfg.fireRateMult * 0.4));
+    e.shootCooldown = Math.floor(Math.random() * 40) + Math.max(40, Math.floor(et.fireRate * cfg.fireRateMult * 0.25));
     e.type = type;
     e.pushbackTimer = 0;
     e.color = et.color;
@@ -1360,6 +1393,7 @@ function spawnPickup(x,y,type){
 // START / RETRY / EXIT
 // =====================================================================
     window.startLevel = function(chapter,level){
+        tryLockLandscape();
         game.chapter=chapter;game.level=level;
         game.player=createPlayer(chapter);
         game.enemies=[]; game.bullets=[]; game.pickups=[]; game.clones=[];
@@ -1958,10 +1992,10 @@ function gameLoop(timestamp){
         }
         // Enemy shoot
         if(game.safeTimer<=0){e.shootCooldown--;
-            if(dist<650&&e.shootCooldown<=0){e.shootCooldown=e.fireRate;
-                const baseSpd = 4.2 + (game.chapter - 1) * 0.75;
-                const bs = baseSpd + Math.min(game.level * 0.06, 1.8);
-                const aimSpread = Math.max(0, (3 - game.chapter) * 0.12);
+            if(dist<750&&e.shootCooldown<=0){e.shootCooldown=e.fireRate;
+                const baseSpd = 11.0 + (game.chapter - 1) * 1.0;
+                const bs = baseSpd + Math.min(game.level * 0.08, 2.5);
+                const aimSpread = Math.max(0.01, (3 - game.chapter) * 0.025);
                 const shootAngle = Math.atan2(p.y - e.y, p.x - e.x) + (Math.random() - 0.5) * aimSpread;
                 const eox=e.x+Math.cos(shootAngle)*(e.radius+6), eoy=e.y+Math.sin(shootAngle)*(e.radius+6);
 
@@ -1980,13 +2014,13 @@ function gameLoop(timestamp){
                 };
 
                 if(e.type==='bossTankA') {
-                    [-0.5,-0.25,0,0.25,0.5].forEach(a => addEnemyBullet(shootAngle+a, '#ff5500', '#ff2200', 'bossBeam', bs*1.15));
+                    [-0.5,-0.25,0,0.25,0.5].forEach(a => addEnemyBullet(shootAngle+a, '#ff5500', '#ff2200', 'bossBeam', bs*1.2));
                     spawnMuzzleFlash(e.x,e.y,shootAngle);
                     if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
                     else if (game.chapter >= 2) playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
                     else audio.play('enemyShoot');
                 } else if(e.type==='bossTankB') {
-                    for(let burst=0;burst<3;burst++) addEnemyBullet(shootAngle+(Math.random()-0.5)*0.12, '#cc66ff', '#8800ff', 'shadowVolt', bs*1.3);
+                    for(let burst=0;burst<3;burst++) addEnemyBullet(shootAngle+(Math.random()-0.5)*0.08, '#cc66ff', '#8800ff', 'shadowVolt', bs*1.28);
                     spawnMuzzleFlash(e.x,e.y,shootAngle);
                     if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
                     else playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
@@ -2001,8 +2035,8 @@ function gameLoop(timestamp){
                         else playCustomSound('music/enemy.ogg', 8, 0.6);
                     }
                     if(e.isMiniboss || e.type==='boss'){
-                        (e.type==='boss' ? [-0.6,-0.3,0.3,0.6] : [-0.3,0.3]).forEach(a => addEnemyBullet(shootAngle+a, e.type==='boss'?'#ff3a5c':'#ff66ff', e.type==='boss'?'#ff0000':'#ff00ff', 'redDash', bs*1.05));
-                        if(e.type==='boss'&&Math.random()<0.3) for(let j=0;j<8;j++) addEnemyBullet(j*Math.PI/4, '#ff3a5c', '#ff0000', 'redDash', bs*0.9);
+                        (e.type==='boss' ? [-0.6,-0.3,0.3,0.6] : [-0.3,0.3]).forEach(a => addEnemyBullet(shootAngle+a, e.type==='boss'?'#ff3a5c':'#ff66ff', e.type==='boss'?'#ff0000':'#ff00ff', 'redDash', bs*1.08));
+                        if(e.type==='boss'&&Math.random()<0.3) for(let j=0;j<8;j++) addEnemyBullet(j*Math.PI/4, '#ff3a5c', '#ff0000', 'redDash', bs*0.95);
                     }
                 }
             }
@@ -2081,8 +2115,10 @@ function gameLoop(timestamp){
             }
         }else{
             const prevX = b.x - b.vx, prevY = b.y - b.vy;
-            const hitDist = distToSegment(p.x, p.y, prevX, prevY, b.x, b.y);
-            const hitThreshold = p.radius + (b.size || 5) + (game.shieldActive ? 15 : 4);
+            const dNow = Math.hypot(p.x - b.x, p.y - b.y);
+            const segDist = distToSegment(p.x, p.y, prevX, prevY, b.x, b.y);
+            const hitDist = Math.min(dNow, segDist);
+            const hitThreshold = p.radius + (b.size || 6) + (game.shieldActive ? 18 : 6);
             if(hitDist <= hitThreshold){
                 if(game.shieldActive){
                     game.shieldHits--; screenShake=6;

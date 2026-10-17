@@ -288,9 +288,17 @@
                 return { success: false, error: 'Invalid score value' };
             }
 
+            // Optimize LootLocker API calls: only submit if new personal best (or first session record)
+            const savedBest = parseInt(localStorage.getItem(STORAGE_KEY_LAST_SCORE) || '0', 10);
+            const currentRecord = Math.max(this.state.lastSubmittedScore || 0, savedBest);
+
+            if (currentRecord > 0 && numScore <= currentRecord) {
+                return { success: true, skippedDuplicate: true, currentBest: currentRecord };
+            }
+
             // Debounce rapid duplicate score submissions (must wait at least 2s)
             const now = Date.now();
-            if (now - this.state.lastSubmitTimestamp < 2000 && numScore <= this.state.lastSubmittedScore) {
+            if (now - this.state.lastSubmitTimestamp < 2000) {
                 return { success: true, skippedDuplicate: true };
             }
             this.state.lastSubmitTimestamp = now;

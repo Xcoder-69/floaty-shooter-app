@@ -202,11 +202,18 @@
 
     <canvas id="bgCanvas"></canvas>
 
-    <!-- PORTRAIT WARNING -->
+    <!-- PORTRAIT WARNING (Landscape Only Enforcement) -->
     <div id="portrait-warning">
-        <svg viewBox="0 0 24 24"><path d="M16,1H8C6.34,1 5,2.34 5,4V20C5,21.66 6.34,23 8,23H16C17.66,23 19,21.66 19,20V4C19,2.34 17.66,1 16,1M14,21H10V20H14V21M17,18H7V6H17V18Z"/></svg>
-        <h2>PLEASE ROTATE DEVICE</h2>
-        <p>This game requires Landscape mode.</p>
+        <div class="portrait-warning-content">
+            <div class="pw-badge">LANDSCAPE ONLY</div>
+            <div class="pw-icon-wrap">
+                <svg viewBox="0 0 24 24" class="pw-phone-svg"><path d="M16,1H8C6.34,1 5,2.34 5,4V20C5,21.66 6.34,23 8,23H16C17.66,23 19,21.66 19,20V4C19,2.34 17.66,1 16,1M14,21H10V20H14V21M17,18H7V6H17V18Z"/></svg>
+                <div class="pw-rotate-arrow">⟳</div>
+            </div>
+            <h2>PLEASE ROTATE DEVICE</h2>
+            <p>Floaty Shooter is designed exclusively for <strong>Landscape mode</strong>.</p>
+            <div class="pw-hint">Turn your device horizontally to play</div>
+        </div>
     </div>
 
     <div id="ui-container">
@@ -225,18 +232,16 @@
                 <button class="start-gear-btn" onclick="toggleSettings()">⚙️</button>
             </div>
 
-            <!-- Center: Title -->
+            <!-- Center: Title and PLAY Button (Unified Layout) -->
             <div class="start-center">
                 <div class="start-logo-sub">HYPERFLUX STUDIOS</div>
                 <div class="start-logo-text" onclick="handleTitleTap()">FLOATY<br>SHOOTER</div>
-            </div>
-
-            <!-- Bottom Center: BIG PLAY Button -->
-            <div class="start-bottom">
-                <button id="btn-start-game" class="btn-play" onclick="handlePlayButton()">
-                    <span class="play-shine"></span>
-                    PLAY
-                </button>
+                <div class="start-bottom">
+                    <button id="btn-start-game" class="btn-play" onclick="handlePlayButton()">
+                        <span class="play-shine"></span>
+                        PLAY
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -600,7 +605,12 @@
                     <span id="lb-section-label" class="lb-section-label">GLOBAL RANKINGS</span>
                     <div class="lb-section-right">
                         <span class="lb-section-sub">TOP 100 PILOTS</span>
-                        <button id="lb-refresh-btn" class="lb-refresh-btn" onclick="renderLeaderboardGlobal()" title="Refresh Rankings">🔄</button>
+                        <button id="lb-refresh-btn" class="lb-refresh-btn" onclick="renderLeaderboardGlobal()" title="Refresh Rankings">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -1045,14 +1055,20 @@
             <!-- Game Over Overlay -->
             <div id="game-over-overlay" class="big-overlay hidden">
                 <div class="big-overlay-box game-over-box">
-                    <h2>💥 GAME OVER</h2>
+                    <h2>💀 GAME OVER</h2>
                     <p>Chapter <span id="go-chapter">1</span> — Level <span id="go-level">1</span></p>
                     <p>Score: <span id="go-score">0</span></p>
                     <p>Enemies destroyed: <span id="go-kills">0</span></p>
                     <div class="gameover-buttons">
-                        <button class="btn secondary" onclick="exitToMenu()">🏠 Exit</button>
+                        <button class="btn secondary btn-go-exit" onclick="exitToMenu()"><img src="image/home_icon.png" class="ui-icon" alt=""> Exit</button>
                         <button class="btn primary btn-ad-respawn" onclick="watchAdToRespawn()">📺 Watch Ad to Respawn</button>
-                        <button class="btn primary" onclick="retryLevel()">🔄 Retry Level</button>
+                        <button class="btn primary btn-retry" onclick="retryLevel()">
+                            <svg class="btn-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                                <path d="M21 3v5h-5"/>
+                            </svg>
+                            Retry Level
+                        </button>
                     </div>
                 </div>
             </div>

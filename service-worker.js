@@ -1,4 +1,4 @@
-const CACHE_NAME = 'floaty-shooter-v10';
+const CACHE_NAME = 'floaty-shooter-v16';
 const ASSETS = [
   './',
   './index.html',
@@ -31,8 +31,17 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network-first for code files and root page, cache-first for assets
+  // Never intercept non-GET requests (e.g. POST to LootLocker or score APIs)
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Only handle same-origin local assets
   const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   const isCode = url.pathname.endsWith('.js') || 
                  url.pathname.endsWith('.html') || 
                  url.pathname.endsWith('.css') || 
