@@ -167,7 +167,7 @@ let particlePool=[];   // Inactive recycled particles
 const camera={x:0,y:0},keys={w:false,a:false,s:false,d:false};
 const mouse={x:0,y:0,aimAngle:null,useMobileAim:false};
 let isShooting=false,lastShootTime=0,currentZoom=1,screenShake=0,hitFlash=0;
-const MAX_SPEED=55,ACCEL=280,DECAY=12.0;
+const MAX_SPEED=46,ACCEL=240,DECAY=12.0;
 
 // -------- OBJECT POOLING --------
 const bulletPool = [];
@@ -868,6 +868,9 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             window.showInGameAdPrompt('doubleBullet');
         }
     };
+    function useDoubleFire() {
+        if (typeof window.useDoubleFire === 'function') window.useDoubleFire();
+    }
     
     // ---- DEBUG LOGGING & AUTO-UNLOCK ----
     document.addEventListener('mousedown', (e) => {
@@ -1491,39 +1494,189 @@ function togglePause(){
 }
 
 // =====================================================================
-// IN-GAME "WATCH AD TO GET ITEM" PROMPT
+// IN-GAME TACTICAL REPLENISH MODAL (BUY WITH COINS OR WATCH AD)
 // =====================================================================
-const ITEM_LABELS = { missile: { icon:'🚀', name:'Missile' }, shield: { icon:'🛡️', name:'Shield' }, doubleBullet: { icon:'⚡', name:'Double Fire' } };
+const REPLENISH_ITEMS = {
+    shield: {
+        id: 'shield',
+        name: 'FORCE SHIELD',
+        sub: 'DEPLETED • 0 IN INVENTORY',
+        desc: 'Deploys a reinforced electromagnetic shield absorbing 3 lethal hits for 15s.',
+        img: 'image/shield.png',
+        icon: '🛡️',
+        price: 75,
+        themeClass: 'theme-shield'
+    },
+    doubleBullet: {
+        id: 'doubleBullet',
+        name: 'DOUBLE FIRE',
+        sub: 'DEPLETED • 0 IN INVENTORY',
+        desc: 'Overcharges plasma cannons for twin high-velocity burst fire lasers.',
+        img: 'image/double_fire.png',
+        icon: '⚡',
+        price: 50,
+        themeClass: 'theme-double'
+    },
+    missile: {
+        id: 'missile',
+        name: 'MISSILE STRIKE',
+        sub: 'DEPLETED • 0 IN INVENTORY',
+        desc: 'Launches a tactical barrage of explosive missiles annihilating all active enemies.',
+        img: 'image/missile.png',
+        icon: '🚀',
+        price: 100,
+        themeClass: 'theme-missile'
+    }
+};
+
+let _currentReplenishItem = null;
+
+function deployReplenishItem(itemType) {
+    if (itemType === 'missile') {
+        if (typeof useMissile === 'function') useMissile();
+    } else if (itemType === 'shield') {
+        if (typeof useShield === 'function') useShield();
+    } else if (itemType === 'doubleBullet') {
+        if (typeof window.useDoubleFire === 'function') window.useDoubleFire();
+    }
+}
+
 window.showInGameAdPrompt = function(itemType) {
-    const info = ITEM_LABELS[itemType] || { icon:'🎁', name: itemType };
+    const item = REPLENISH_ITEMS[itemType] || REPLENISH_ITEMS.shield;
+    _currentReplenishItem = item;
+    
+    // Dynamically sync price from STORE_PRICES if available
+    if (typeof STORE_PRICES !== 'undefined' && STORE_PRICES[item.id]) {
+        item.price = STORE_PRICES[item.id];
+    }
+
     const popup = document.getElementById('ingame-ad-prompt');
     if (!popup) return;
-    document.getElementById('ingame-ad-icon').textContent = info.icon;
-    document.getElementById('ingame-ad-name').textContent = info.name;
-    document.getElementById('ingame-ad-watch-btn').onclick = function() {
-        window.closeInGameAdPrompt();
-        if (window.showRewardAd) {
-            window.showRewardAd(itemType, function(ok) {
-                if (ok) {
-                    // Item granted — now use it immediately
-                    if (itemType === 'missile') useMissile();
-                    else if (itemType === 'shield') useShield();
-                    else if (itemType === 'doubleBullet' && window.useDoubleFire) window.useDoubleFire();
-                }
-            });
+
+    // Pause game while prompt is open so player doesn't take damage or lose match
+    if (!isPaused && game && game.state === 'playing') {
+        isPaused = true;
+        window._adPromptPaused = true;
+    }
+
+    // Populate UI details
+    const userCoins = (window.getSaveData ? window.getSaveData().coins : (window.saveData ? window.saveData.coins : 0)) || 0;
+    const userCoinsEl = document.getElementById('replenish-user-coins');
+    if (userCoinsEl) userCoinsEl.textContent = userCoins;
+
+    const nameEl = document.getElementById('ingame-ad-name');
+    if (nameEl) nameEl.textContent = item.name;
+
+    const subEl = document.getElementById('replenish-item-sub');
+    if (subEl) subEl.textContent = item.sub;
+
+    const descEl = document.getElementById('replenish-item-desc');
+    if (descEl) descEl.textContent = item.desc;
+
+    const imgEl = document.getElementById('replenish-item-img');
+    if (imgEl) imgEl.src = item.img;
+
+    const iconEl = document.getElementById('ingame-ad-icon');
+    if (iconEl) iconEl.textContent = item.icon;
+
+    // Card Theme accent
+    const cardEl = popup.querySelector('.replenish-card');
+    if (cardEl) {
+        cardEl.classList.remove('theme-shield', 'theme-double', 'theme-missile');
+        cardEl.classList.add(item.themeClass);
+    }
+
+    // Update Coin Buy Button
+    const buyBtn = document.getElementById('replenish-buy-coin-btn');
+    const costBadge = document.getElementById('replenish-coin-cost-badge');
+
+    if (buyBtn && costBadge) {
+        if (userCoins >= item.price) {
+            buyBtn.disabled = false;
+            buyBtn.classList.remove('is-disabled');
+            costBadge.textContent = `${item.price} COINS`;
+            buyBtn.title = `Buy and immediately deploy for ${item.price} coins`;
+        } else {
+            buyBtn.disabled = true;
+            buyBtn.classList.add('is-disabled');
+            costBadge.textContent = `NEED ${item.price - userCoins} MORE`;
+            buyBtn.title = `Need ${item.price - userCoins} more coins to purchase`;
         }
-    };
-    // Pause game while prompt is open
-    if (!isPaused && game.state === 'playing') { isPaused = true; window._adPromptPaused = true; }
+    }
+
+    // Configure Ad Watch Button
+    const watchBtn = document.getElementById('ingame-ad-watch-btn');
+    if (watchBtn) {
+        watchBtn.onclick = function() {
+            if (window.showRewardAd) {
+                window.showRewardAd(item.id, function(ok) {
+                    if (ok) {
+                        const sd = window.getSaveData ? window.getSaveData() : window.saveData;
+                        const key = item.id === 'doubleBullet' ? 'doubleBullets' : item.id + 's';
+                        if (!sd || !sd[key] || sd[key] <= 0) {
+                            if (window.addItem) window.addItem(item.id, 1);
+                        }
+                        if (window.showToast) window.showToast(`🎁 +1 ${item.name} RECEIVED & DEPLOYED!`);
+                        window.closeInGameAdPrompt();
+                        deployReplenishItem(item.id);
+                    } else {
+                        if (window.showToast) window.showToast('⚠️ Ad reward not completed.');
+                        window.closeInGameAdPrompt();
+                    }
+                });
+            } else {
+                // Fallback simulation
+                if (window.addItem) window.addItem(item.id, 1);
+                if (window.showToast) window.showToast(`🎁 +1 ${item.name} RECEIVED & DEPLOYED!`);
+                window.closeInGameAdPrompt();
+                deployReplenishItem(item.id);
+            }
+        };
+    }
+
     popup.classList.remove('hidden');
 };
+
+window.handleInGameBuyWithCoins = function() {
+    if (!_currentReplenishItem) return;
+    const item = _currentReplenishItem;
+    const price = (typeof STORE_PRICES !== 'undefined' && STORE_PRICES[item.id]) ? STORE_PRICES[item.id] : item.price;
+    const userCoins = (window.getSaveData ? window.getSaveData().coins : (window.saveData ? window.saveData.coins : 0)) || 0;
+
+    if (userCoins < price) {
+        if (window.showToast) window.showToast(`❌ Need ${price - userCoins} more coins!`);
+        return;
+    }
+
+    const spent = window.spendCoins ? window.spendCoins(price) : false;
+    if (spent) {
+        if (window.addItem) window.addItem(item.id, 1);
+        if (typeof playPurchaseChime === 'function') playPurchaseChime();
+        if (window.showToast) window.showToast(`⚡ ${item.name} RESTOCKED & DEPLOYED!`);
+        
+        // Close modal first and resume game
+        window.closeInGameAdPrompt();
+        
+        // Immediately deploy the powerup
+        deployReplenishItem(item.id);
+    } else {
+        if (window.showToast) window.showToast('❌ Purchase failed.');
+    }
+};
+
 window.closeInGameAdPrompt = function() {
     const popup = document.getElementById('ingame-ad-prompt');
     if (popup) popup.classList.add('hidden');
-    // Resume game if we paused it
-    if (window._adPromptPaused) { isPaused = false; window._adPromptPaused = false; }
+    _currentReplenishItem = null;
+    // Resume game if we paused it for this prompt
+    if (window._adPromptPaused) {
+        isPaused = false;
+        window._adPromptPaused = false;
+    }
 };
-window.closeInGameAdPrompt = window.closeInGameAdPrompt;
+
+window.showInGameReplenishCard = window.showInGameAdPrompt;
+window.closeInGameReplenishCard = window.closeInGameAdPrompt;
 function watchAdToRespawn(){
     if (window.adManager && typeof window.adManager.showRetryReward === 'function') {
         window.adManager.showRetryReward(ok => {
@@ -2656,6 +2809,10 @@ window.addEventListener('keydown',e=>{
     const k=e.key.toLowerCase();
     if(k==='w'||k==='arrowup')keys.w=true;if(k==='a'||k==='arrowleft')keys.a=true;
     if(k==='s'||k==='arrowdown')keys.s=true;if(k==='d'||k==='arrowright')keys.d=true;
+    if(e.key==='Escape'){
+        const rep = document.getElementById('ingame-ad-prompt');
+        if(rep && !rep.classList.contains('hidden')){ window.closeInGameAdPrompt(); return; }
+    }
     if(k==='p'&&isPlaying)togglePause();
     // Missile: M, Shift, or L
     if((k==='m'||k==='l'||(e.code==='ShiftLeft'||e.code==='ShiftRight'))&&isPlaying&&game.state==='playing'){e.preventDefault();useMissile();}
@@ -2950,14 +3107,17 @@ function setupMobileControls(){
     // Tactical Missile Button
     if (btnMissile) {
         btnMissile.addEventListener('touchstart', e => { e.preventDefault(); useMissile(); }, {passive: false});
+        btnMissile.addEventListener('click', e => { e.preventDefault(); useMissile(); });
     }
 
     // Powerup Buttons
     if (btnShield) {
         btnShield.addEventListener('touchstart', e => { e.preventDefault(); useShield(); }, {passive: false});
+        btnShield.addEventListener('click', e => { e.preventDefault(); useShield(); });
     }
     if (btnDouble) {
         btnDouble.addEventListener('touchstart', e => { e.preventDefault(); useDoubleFire(); }, {passive: false});
+        btnDouble.addEventListener('click', e => { e.preventDefault(); useDoubleFire(); });
     }
 }
 

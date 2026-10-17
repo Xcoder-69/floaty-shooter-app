@@ -980,6 +980,54 @@
                 </div>
             </div>
 
+            <!-- In-Game Tactical Replenish Modal (Buy with Coins or Watch Ad) -->
+            <div id="ingame-ad-prompt" class="big-overlay hidden" onclick="closeInGameAdPrompt()">
+                <div class="big-overlay-box replenish-card" onclick="event.stopPropagation()">
+                    <button class="replenish-close-btn" onclick="closeInGameAdPrompt()" title="Resume Combat">&times;</button>
+                    
+                    <div class="replenish-header">
+                        <span class="replenish-badge">⚡ TACTICAL RESUPPLY</span>
+                        <div class="replenish-coin-chip">
+                            <img src="image/coin.png" class="ui-icon" alt="">
+                            <span id="replenish-user-coins">0</span>
+                        </div>
+                    </div>
+
+                    <div class="replenish-icon-wrap" id="replenish-icon-container">
+                        <img id="replenish-item-img" src="image/shield.png" alt="" class="replenish-img">
+                        <span id="ingame-ad-icon" class="hidden">🛡️</span>
+                    </div>
+
+                    <h2 id="ingame-ad-name" class="replenish-title">FORCE SHIELD</h2>
+                    <div class="replenish-subtitle" id="replenish-item-sub">DEPLETED • 0 IN INVENTORY</div>
+                    <p class="replenish-desc" id="replenish-item-desc">Deploys a reinforced electromagnetic shield absorbing 3 lethal hits for 15s.</p>
+
+                    <div class="replenish-actions">
+                        <!-- Buy with Coins -->
+                        <button id="replenish-buy-coin-btn" class="replenish-action-btn btn-buy-coin" onclick="handleInGameBuyWithCoins()">
+                            <div class="btn-action-main">
+                                <img src="image/coin.png" class="ui-icon" alt="">
+                                <span>BUY & DEPLOY</span>
+                            </div>
+                            <div class="btn-action-cost" id="replenish-coin-cost-badge">75 COINS</div>
+                        </button>
+
+                        <!-- Watch Ad -->
+                        <button id="ingame-ad-watch-btn" class="replenish-action-btn btn-watch-ad">
+                            <div class="btn-action-main">
+                                <span class="ad-film-icon">🎬</span>
+                                <span>WATCH AD (+1 FREE)</span>
+                            </div>
+                            <div class="btn-action-cost ad-free-badge">FREE DROP</div>
+                        </button>
+                    </div>
+
+                    <button class="replenish-resume-btn" onclick="closeInGameAdPrompt()">
+                        ◀ RESUME COMBAT
+                    </button>
+                </div>
+            </div>
+
             <!-- Level Complete Overlay -->
             <div id="level-complete-overlay" class="big-overlay hidden">
                 <div class="big-overlay-box level-complete-box">
