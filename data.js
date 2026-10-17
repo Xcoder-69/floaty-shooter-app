@@ -19,7 +19,7 @@ const CHAPTERS = [
         description: 'Begin your training. Learn the basics of combat.',
         icon: '🌀',
         enemyTypes: ['basic'],
-        missionCount: 4,
+        missionCount: 2,
         shipSVG: '<path d="M0 -45 L35 40 L0 25 L-35 40 Z" />',
     },
     {
@@ -37,7 +37,7 @@ const CHAPTERS = [
         description: 'Rebels strike back. Fast enemies appear.',
         icon: '⚡',
         enemyTypes: ['basic', 'fast'],
-        missionCount: 6,
+        missionCount: 3,
         shipSVG: '<path d="M0 -45 L35 -15 L35 40 L0 20 L-35 40 L-35 -15 Z" />',
     },
     {
@@ -55,7 +55,7 @@ const CHAPTERS = [
         description: 'The siege begins. Tank enemies enter the field.',
         icon: '🔥',
         enemyTypes: ['basic', 'fast', 'tank'],
-        missionCount: 8,
+        missionCount: 4,
         shipSVG: '<path d="M38 0 L19 33 L-19 33 L-38 0 L-19 -33 L 19 -33 Z" />',
     },
     {
@@ -73,7 +73,7 @@ const CHAPTERS = [
         description: 'Mixed threats converge. Adapt or perish.',
         icon: '🌑',
         enemyTypes: ['basic', 'fast', 'tank'],
-        missionCount: 10,
+        missionCount: 5,
         shipSVG: '<circle cx="0" cy="0" r="35" />',
     },
     {
@@ -91,7 +91,7 @@ const CHAPTERS = [
         description: 'The core burns. Multiple enemy types swarm.',
         icon: '☄️',
         enemyTypes: ['basic', 'fast', 'tank'],
-        missionCount: 12,
+        missionCount: 6,
         shipSVG: '<path d="M-35 -45 L35 -45 L35 -20 L-35 -20 Z M-35 20 L 35 20 L 35 45 L-35 45 Z" />',
     },
     {
@@ -109,7 +109,7 @@ const CHAPTERS = [
         description: 'The final stand. Mini-bosses guard every 10th level.',
         icon: '💀',
         enemyTypes: ['basic', 'fast', 'tank', 'miniboss'],
-        missionCount: 18,
+        missionCount: 8,
         shipSVG: '<path d="M0 -45 L12 -15 L45 -15 L18 10 L30 45 L0 25 L-30 45 L-18 10 L-45 -15 L-12 -15 Z" />',
     },
 ];
@@ -119,8 +119,8 @@ const ENEMY_TYPES = {
     basic: {
         name: 'Scout',
         hp: 2,
-        speed: 0.4,       // base multiplier
-        fireRate: 250,     // frames between shots
+        speed: 0.32,       // base multiplier (was 0.4)
+        fireRate: 320,     // frames between shots (was 250)
         radius: 22,
         color: '#ff4444',
         bodyColor: '#cc2200',
@@ -132,8 +132,8 @@ const ENEMY_TYPES = {
     fast: {
         name: 'Striker',
         hp: 1,
-        speed: 0.7,
-        fireRate: 200,
+        speed: 0.52,       // was 0.7
+        fireRate: 260,     // was 200
         radius: 18,
         color: '#ffaa00',
         bodyColor: '#cc8800',
@@ -144,9 +144,9 @@ const ENEMY_TYPES = {
     },
     tank: {
         name: 'Juggernaut',
-        hp: 6,              // base, scales with chapter
-        speed: 0.25,
-        fireRate: 300,
+        hp: 5,              // was 6
+        speed: 0.20,        // was 0.25
+        fireRate: 340,      // was 300
         radius: 30,
         color: '#44ff88',
         bodyColor: '#228844',
@@ -158,9 +158,9 @@ const ENEMY_TYPES = {
     },
     miniboss: {
         name: 'Overlord',
-        hp: 15,
-        speed: 0.3,
-        fireRate: 150,
+        hp: 12,             // was 15
+        speed: 0.25,        // was 0.3
+        fireRate: 200,      // was 150
         radius: 38,
         color: '#ff00ff',
         bodyColor: '#880088',
@@ -173,9 +173,9 @@ const ENEMY_TYPES = {
     },
     boss: {
         name: 'THE OVERLORD',
-        hp: 50,              // Massive HP
-        speed: 0.15,         // Slow and intimidating
-        fireRate: 80,        // Rapid fire barrages
+        hp: 38,              // was 50
+        speed: 0.15,
+        fireRate: 110,       // was 80
         radius: 54,
         color: '#ff0044',
         bodyColor: '#440011',
@@ -186,12 +186,12 @@ const ENEMY_TYPES = {
         isTank: true,
         isBoss: true,
     },
-    // ---- RANDOM BOSS TANKS (appear after chapter 1) ----
+    // ---- RANDOM BOSS TANKS (appear after chapter 2) ----
     bossTankA: {
         name: 'Iron Colossus',
-        hp: 35,
-        speed: 0.18,
-        fireRate: 110,
+        hp: 26,              // was 35
+        speed: 0.16,         // was 0.18
+        fireRate: 140,       // was 110
         radius: 46,
         color: '#ff6600',
         bodyColor: '#992200',
@@ -205,9 +205,9 @@ const ENEMY_TYPES = {
     },
     bossTankB: {
         name: 'Shadow Goliath',
-        hp: 28,
-        speed: 0.32,
-        fireRate: 70,
+        hp: 22,              // was 28
+        speed: 0.26,         // was 0.32
+        fireRate: 95,        // was 70
         radius: 40,
         color: '#aa44ff',
         bodyColor: '#330066',
@@ -224,70 +224,90 @@ const ENEMY_TYPES = {
 // ======================== ENEMY RATIOS PER CHAPTER ========================
 // Returns { count, types[] } for a given chapter and level
 function getEnemyConfig(chapter, level) {
+    const ch = CHAPTERS[chapter - 1] || CHAPTERS[0]; // fallback
     let count = 3;
     let types = ['basic'];
-    const ch = CHAPTERS[chapter - 1] || CHAPTERS[0]; // fallback
-    let speedMult = 1.0;
-    let fireRateMult = 1.0;
+    let speedMult = 0.55;
+    let fireRateMult = 1.35;
     let tankHpMult = 1.0;
     let hasTank = false;
     let hasMiniboss = false;
 
-    // Define common enemy pool for all chapters
-    types = ['basic', 'fast'];
-    hasTank = true;
-    if (level > 5 || chapter > 1) hasMiniboss = true;
-
-    // Chapter-specific variations (Difficulty Scaling only)
+    // Strict, balanced per-chapter progression matching game lore & difficulty curve
     switch (chapter) {
-        case 1: // 10 levels - Learning Phase
-            if (level <= 3) count = 3 + Math.floor(Math.random() * 2);
-            else if (level <= 6) count = 4 + Math.floor(Math.random() * 3);
-            else count = 6 + Math.floor(Math.random() * 3);
-            speedMult = 0.7; // slow movement
-            break;
-
-        case 2: // 15 levels
-            if (level <= 5) count = 4 + Math.floor(Math.random() * 2);
-            else if (level <= 10) count = 5 + Math.floor(Math.random() * 2);
-            else count = 6 + Math.floor(Math.random() * 2);
-            speedMult = 0.85;
-            break;
-
-        case 3: // 20 levels
-            if (level <= 7) count = 5 + Math.floor(Math.random() * 2);
-            else if (level <= 14) count = 6 + Math.floor(Math.random() * 3);
-            else count = 7 + Math.floor(Math.random() * 3);
-            speedMult = 0.95;
-            fireRateMult = 0.9;
+        case 1: // Genesis Protocol (10 levels) — Beginner training, basic combat only
+            types = ['basic'];
+            hasTank = false;
+            hasMiniboss = false;
+            speedMult = 0.55;       // Slow and easy to maneuver around
+            fireRateMult = 1.35;    // Enemies shoot 35% slower
             tankHpMult = 1.0;
+            if (level <= 2) count = 3;
+            else if (level <= 4) count = 4;
+            else if (level <= 7) count = 5;
+            else if (level <= 9) count = 6;
+            else count = 7;         // Level 10 has Boss
             break;
 
-        case 4: // 25 levels
-            if (level <= 8) count = 6 + Math.floor(Math.random() * 3);
-            else if (level <= 17) count = 7 + Math.floor(Math.random() * 3);
-            else count = 8 + Math.floor(Math.random() * 3);
+        case 2: // Neon Uprising (15 levels) — Fast strikers appear, no tanks
+            types = level <= 3 ? ['basic', 'basic', 'fast'] : ['basic', 'fast'];
+            hasTank = false;
+            hasMiniboss = (level === 10); // Mini-boss encounter only on level 10
+            speedMult = 0.70;
+            fireRateMult = 1.20;
+            tankHpMult = 1.0;
+            if (level <= 5) count = 4;
+            else if (level <= 10) count = 5;
+            else count = 6;
+            break;
+
+        case 3: // Crimson Siege (20 levels) — Tanks enter the field
+            types = ['basic', 'fast'];
+            hasTank = (level >= 4 && (level % 3 === 0 || level === ch.levels));
+            hasMiniboss = (level === 10);
+            if (hasTank) types.push('tank');
+            speedMult = 0.80;
+            fireRateMult = 1.10;
+            tankHpMult = 0.85;
+            if (level <= 6) count = 4 + Math.floor(Math.random() * 2);
+            else if (level <= 12) count = 5 + Math.floor(Math.random() * 2);
+            else count = 6 + Math.floor(Math.random() * 2);
+            break;
+
+        case 4: // Void Dominion (25 levels) — Mixed tactical threats
+            types = ['basic', 'fast', 'tank'];
+            hasTank = (level % 2 === 0);
+            hasMiniboss = (level === 12 || level === 20);
+            speedMult = 0.90;
+            fireRateMult = 1.0;
+            tankHpMult = 1.0;
+            if (level <= 8) count = 5 + Math.floor(Math.random() * 2);
+            else if (level <= 17) count = 6 + Math.floor(Math.random() * 2);
+            else count = 7 + Math.floor(Math.random() * 2);
+            break;
+
+        case 5: // Inferno Core (30 levels) — Swarms & intense combat
+            types = ['basic', 'fast', 'tank'];
+            hasTank = (level % 2 === 1);
+            hasMiniboss = (level === 10 || level === 20);
             speedMult = 1.0;
-            fireRateMult = 0.85;
+            fireRateMult = 0.95;
+            tankHpMult = 1.25;
+            if (level <= 10) count = 6 + Math.floor(Math.random() * 2);
+            else if (level <= 20) count = 7 + Math.floor(Math.random() * 2);
+            else count = 8 + Math.floor(Math.random() * 2);
+            break;
+
+        case 6: // Omega Extinction (40 levels) — Mini-bosses guard every 10th level
+            types = ['basic', 'fast', 'tank'];
+            hasTank = (level % 2 === 0);
+            hasMiniboss = (level % 10 === 0 && level < ch.levels); // Levels 10, 20, 30
+            speedMult = 1.10;
+            fireRateMult = 0.88;
             tankHpMult = 1.5;
-            break;
-
-        case 5: // 30 levels
-            if (level <= 10) count = 7 + Math.floor(Math.random() * 3);
-            else if (level <= 20) count = 8 + Math.floor(Math.random() * 3);
-            else count = 9 + Math.floor(Math.random() * 3);
-            speedMult = 1.1;
-            fireRateMult = 0.8;
-            tankHpMult = 2.4;
-            break;
-
-        case 6: // 40 levels
-            if (level <= 15) count = 8 + Math.floor(Math.random() * 3);
-            else if (level <= 30) count = 9 + Math.floor(Math.random() * 3);
-            else count = 10 + Math.floor(Math.random() * 3);
-            speedMult = 1.25;
-            fireRateMult = 0.7;
-            tankHpMult = 3.5;
+            if (level <= 15) count = 6 + Math.floor(Math.random() * 2);
+            else if (level <= 30) count = 7 + Math.floor(Math.random() * 3);
+            else count = 8 + Math.floor(Math.random() * 3);
             break;
     }
 
@@ -297,12 +317,11 @@ function getEnemyConfig(chapter, level) {
         count = Math.max(count, 5); // Ensure enough enemies spawn with boss
     }
 
-    // RANDOM BOSS TANKS: spawn randomly in chapters 2-6 (not on final level)
-    // 15% chance per level; mutually exclusive with hasMiniboss/boss
+    // RANDOM BOSS TANKS: spawn rarely in chapters 3-6 (not on final level or when miniboss is present)
     let hasBossTank = false;
     let bossTankType = null;
-    if (chapter >= 2 && level < ch.levels && !hasMiniboss && !types.includes('boss')) {
-        if (Math.random() < 0.15) {
+    if (chapter >= 3 && level < ch.levels && !hasMiniboss && !types.includes('boss')) {
+        if (Math.random() < 0.08) {
             hasBossTank = true;
             bossTankType = Math.random() < 0.5 ? 'bossTankA' : 'bossTankB';
         }
@@ -319,8 +338,8 @@ function getEnemyDrop(chapter, level, enemyType) {
         return getTankDrop(chapter);
     }
 
-    // Regular enemies: rare drops
-    const dropChance = 0.08 + (level * 0.005); // 8% base, +0.5% per level
+    // Regular enemies: frequent helpful drops
+    const dropChance = 0.12 + (level * 0.006); // 12% base, +0.6% per level
     if (Math.random() > dropChance) return null;
 
     const roll = Math.random();
@@ -365,7 +384,7 @@ const MISSION_TYPES = [
         id: 'kill_count',
         name: 'Elimination',
         description: 'Kill {count} enemies',
-        getTarget: (ch, lvl) => 15 + ch * 5 + lvl * 2,
+        getTarget: (ch, lvl) => Math.min(25, 6 + ch * 2 + Math.floor(lvl * 0.5)),
         icon: '💀',
         image: 'image/mission_kill.png',
     },
@@ -373,7 +392,7 @@ const MISSION_TYPES = [
         id: 'survive_time',
         name: 'Endurance',
         description: 'Survive for {time} seconds',
-        getTarget: (ch, lvl) => 60 + ch * 15,
+        getTarget: (ch, lvl) => 20 + ch * 5,
         icon: '⏱️',
         image: 'image/mission_time.png',
     },
@@ -381,7 +400,7 @@ const MISSION_TYPES = [
         id: 'no_damage',
         name: 'Untouchable',
         description: 'Take no damage for {time} seconds',
-        getTarget: (ch, lvl) => 20 + ch * 3,
+        getTarget: (ch, lvl) => 8 + ch * 2, // 10s on ch1, accessible and achievable!
         icon: '🛡️',
         image: 'image/mission_time.png', // Fallback to time/survive icon
     },
@@ -389,7 +408,7 @@ const MISSION_TYPES = [
         id: 'time_kill',
         name: 'Time Attack',
         description: 'Kill {count} enemies in 60s',
-        getTarget: (ch, lvl) => 30,
+        getTarget: (ch, lvl) => Math.min(20, 8 + ch * 2),
         icon: '⏳',
         image: 'image/mission_time.png',
     },
@@ -397,7 +416,7 @@ const MISSION_TYPES = [
         id: 'pacifist',
         name: 'Pacifist',
         description: 'Survive {time}s without killing',
-        getTarget: (ch, lvl) => 20,
+        getTarget: (ch, lvl) => 10 + ch * 2,
         icon: '🕊️',
         image: 'image/mission_pacifist.png',
     }
@@ -405,36 +424,33 @@ const MISSION_TYPES = [
 
 // ======================== FUN LEVEL SCHEDULE ========================
 // Exact fun level positions per chapter — matches fun_levels.txt exactly
+// Scaling: 10 levels -> 2, 15 -> 3, 20 -> 4, 25 -> 5, 30 -> 6, 40 -> 8
+// Fun levels NEVER appear on Level 1 of any chapter or on the final Boss level
 const FUN_LEVEL_SCHEDULE = {
-    1: [2, 4, 6, 8],
-    2: [2, 4, 6, 8, 10, 12],
-    3: [2, 4, 6, 8, 10, 12, 14, 16],
-    4: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
-    5: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24],
-    6: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36],
+    1: [4, 8],
+    2: [4, 8, 12],
+    3: [5, 9, 14, 18],
+    4: [5, 9, 14, 18, 22],
+    5: [4, 9, 14, 19, 24, 28],
+    6: [4, 8, 14, 18, 24, 28, 34, 38],
 };
 
-// Fixed mission rotation per fun-level index (0-based within chapter)
-// Pattern: Untouchable → Pacifist → Endurance → TimeAttack → Elimination → repeat
+// Fun Level Mission Assignments per chapter and level
+const FUN_LEVEL_MISSIONS = {
+    1: { 4: 'no_damage', 8: 'time_kill' },
+    2: { 4: 'pacifist', 8: 'survive_time', 12: 'kill_count' },
+    3: { 5: 'no_damage', 9: 'time_kill', 14: 'pacifist', 18: 'kill_count' },
+    4: { 5: 'survive_time', 9: 'time_kill', 14: 'no_damage', 18: 'pacifist', 22: 'kill_count' },
+    5: { 4: 'no_damage', 9: 'pacifist', 14: 'survive_time', 19: 'time_kill', 24: 'kill_count', 28: 'no_damage' },
+    6: { 4: 'pacifist', 8: 'no_damage', 14: 'survive_time', 18: 'time_kill', 24: 'kill_count', 28: 'no_damage', 34: 'survive_time', 38: 'time_kill' },
+};
+
 const FUN_LEVEL_MISSION_ROTATION = [
-    'no_damage',     // index 0  → lvl 2  of each chapter
-    'pacifist',      // index 1  → lvl 4
-    'survive_time',  // index 2  → lvl 6
-    'time_kill',     // index 3  → lvl 8
-    'kill_count',    // index 4  → lvl 10
-    'no_damage',     // index 5  → lvl 12
-    'pacifist',      // index 6  → lvl 14
-    'survive_time',  // index 7  → lvl 16
-    'time_kill',     // index 8  → lvl 18
-    'kill_count',    // index 9  → lvl 20
-    'no_damage',     // index 10 → lvl 22
-    'pacifist',      // index 11 → lvl 24
-    'survive_time',  // index 12 → lvl 26
-    'time_kill',     // index 13 → lvl 28
-    'kill_count',    // index 14 → lvl 30
-    'no_damage',     // index 15 → lvl 32
-    'pacifist',      // index 16 → lvl 34
-    'survive_time',  // index 17 → lvl 36
+    'no_damage',
+    'pacifist',
+    'survive_time',
+    'time_kill',
+    'kill_count',
 ];
 
 function getMissionLevels(chapter) {
@@ -442,12 +458,13 @@ function getMissionLevels(chapter) {
 }
 
 function getMissionForLevel(chapter, level) {
-    if (level === 1) return null; // Never on Level 1
+    if (level <= 1) return null; // FIX: Never on Level 1 of any chapter
     const schedule = FUN_LEVEL_SCHEDULE[chapter] || [];
     const idx = schedule.indexOf(level);
     if (idx === -1) return null; // Not a fun level
 
-    const missionId = FUN_LEVEL_MISSION_ROTATION[idx % FUN_LEVEL_MISSION_ROTATION.length];
+    const chMissions = FUN_LEVEL_MISSIONS[chapter];
+    const missionId = (chMissions && chMissions[level]) || FUN_LEVEL_MISSION_ROTATION[idx % FUN_LEVEL_MISSION_ROTATION.length];
     const missionTemplate = MISSION_TYPES.find(m => m.id === missionId);
     if (!missionTemplate) return null;
 
@@ -466,13 +483,13 @@ function getMissionForLevel(chapter, level) {
 // ======================== PLAYER BASE STATS ========================
 function getPlayerMaxHp(chapter) {
     switch (chapter) {
-        case 1: return 20;
-        case 2: return 40;
-        case 3: return 50;
-        case 4: return 60;
-        case 5: return 70;
-        case 6: return 80;
-        default: return 80 + (chapter - 6) * 10;
+        case 1: return 35; // increased from 20 for beginner-friendly survivability
+        case 2: return 45;
+        case 3: return 55;
+        case 4: return 65;
+        case 5: return 75;
+        case 6: return 85;
+        default: return 85 + (chapter - 6) * 10;
     }
 }
 
@@ -548,7 +565,7 @@ const COMBO_CONFIG = {
 };
 
 // ======================== SAFE START DELAY ========================
-const SAFE_START_DELAY = 1500; // 1.5 seconds before enemies start firing
+const SAFE_START_DELAY = 2000; // 2.0 seconds before enemies start firing
 
 // ======================== PICKUP CONFIG ========================
 const PICKUP_DESPAWN_TIME = 8000; // 8 seconds

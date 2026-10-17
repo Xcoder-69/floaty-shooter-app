@@ -2,10 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Device & Platform detection — runs immediately so CSS classes are set before first paint -->
+    <script>
+        (function() {
+            var ua = navigator.userAgent || '';
+            var hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            var isAndroid = /Android/i.test(ua) || 
+                            (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android') ||
+                            (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+            var mobileUA  = /Android|iPhone|iPad|iPod|Mobile|BlackBerry|Windows Phone/i.test(ua);
+            window._isAndroid = !!isAndroid;
+            window._isDesktop = !hasTouch && !mobileUA;
+            if (window._isDesktop) document.documentElement.classList.add('is-desktop');
+            if (window._isAndroid) document.documentElement.classList.add('is-android');
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Floaty Shooter — Cyberpunk Campaign</title>
     <meta name="description" content="Floaty Shooter: A premium 2D cyberpunk shooting game with 6 chapters, 140 levels, and intense combat." />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="icon.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="stylesheet" href="style.css?v=37218" />
     <link rel="manifest" href="manifest.json" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
     <script>
@@ -241,7 +258,7 @@
             <!-- Controls Popup (Device-Only: Auto-detects PC or Mobile) -->
             <div id="controls-popup" class="popup-overlay hidden">
                 <div class="popup-box popup-box-large controls-modal-box">
-                    <button class="popup-close" onclick="closePopup('controls-popup')">✕</button>
+                    <button class="popup-close" onclick="closePopup('controls-popup')"></button>
                     <div class="ctrl-modal-header">
                         <span id="ctrl-modal-badge" class="ctrl-modal-badge">⌨️</span>
                         <h3 id="ctrl-modal-title" class="ctrl-modal-title">PC CONTROLS</h3>
@@ -350,7 +367,7 @@
             <!-- History Popup -->
             <div id="history-popup" class="popup-overlay hidden">
                 <div class="popup-box history-box">
-                    <button class="popup-close" onclick="closePopup('history-popup')">✕</button>
+                    <button class="popup-close" onclick="closePopup('history-popup')"></button>
                     <div class="history-header">
                         <h3>📜 Match History</h3>
                         <button id="btn-clear-history" class="btn-clear-history" onclick="clearHistory()" title="Clear match history">🗑️ Clear</button>
@@ -362,7 +379,7 @@
             <!-- Stats Popup -->
             <div id="stats-popup" class="popup-overlay hidden">
                 <div class="popup-box">
-                    <button class="popup-close" onclick="closePopup('stats-popup')">✕</button>
+                    <button class="popup-close" onclick="closePopup('stats-popup')"></button>
                     <h3>📊 Statistics</h3>
                     <div id="stats-content" class="stats-grid"></div>
                 </div>
@@ -371,7 +388,7 @@
             <!-- Collection Popup -->
             <div id="collection-popup" class="popup-overlay hidden">
                 <div class="popup-box popup-box-large">
-                    <button class="popup-close" onclick="closePopup('collection-popup')">✕</button>
+                    <button class="popup-close" onclick="closePopup('collection-popup')"></button>
                     <h3>🚀 Ship Collection</h3>
                     <p class="popup-subtitle">Unlocked Chapter Ships</p>
                     <div id="collection-grid" class="collection-grid"></div>
@@ -381,7 +398,7 @@
             <!-- Ship Trial Popup -->
             <div id="trial-popup" class="popup-overlay hidden">
                 <div class="popup-box popup-box-large">
-                    <button class="popup-close" onclick="closePopup('trial-popup')">✕</button>
+                    <button class="popup-close" onclick="closePopup('trial-popup')"></button>
                     <h3>🔬 Ship Trial Lab</h3>
                     <p class="popup-subtitle">Watch an ad to test-drive any ship for this session!</p>
                     <div id="trial-grid" class="collection-grid"></div>
@@ -391,7 +408,7 @@
             <!-- Privacy Policy Popup -->
             <div id="privacy-popup" class="popup-overlay hidden">
                 <div class="popup-box popup-box-large">
-                    <button class="popup-close" onclick="closePopup('privacy-popup')">✕</button>
+                    <button class="popup-close" onclick="closePopup('privacy-popup')"></button>
                     <h3>🔒 Privacy Policy</h3>
                     <div class="legal-text">
                         <p class="legal-date">Last Updated: 3/31/2026</p>
@@ -436,48 +453,60 @@
             <!-- Terms & Conditions Popup -->
             <div id="terms-popup" class="popup-overlay hidden">
                 <div class="popup-box popup-box-large">
-                    <button class="popup-close" onclick="closePopup('terms-popup')">✕</button>
-                    <h3>📜 Terms & Conditions</h3>
+                    <button class="popup-close" onclick="closePopup('terms-popup')"></button>
+                    <h3>📋 Terms & Conditions</h3>
                     <div class="legal-text">
-                        <p class="legal-date">Last Updated: 3/31/2026</p>
-                        <p>By downloading, accessing, or using this Game, you agree to be bound by these Terms and Conditions.</p>
+                        <p class="legal-date">Last Updated: October 16, 2026</p>
+                        <p>Welcome to <strong>Floaty Shooter</strong> ("Game", "we", "our"). By downloading, installing, accessing, or playing Floaty Shooter across any web platform or Android mobile application, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not access or play the Game.</p>
 
-                        <h5>1. USE OF THE GAME</h5>
-                        <p>You are granted a limited, non-exclusive, non-transferable license to use the Game for personal, non-commercial purposes only. You agree not to:</p>
-                        <ul><li>Modify, copy, distribute, or reproduce any part of the Game</li><li>Use the Game for unlawful purposes</li><li>Attempt to reverse engineer or exploit the Game</li></ul>
+                        <h5>1. LICENSE & USE OF THE GAME</h5>
+                        <p>We grant you a personal, revocable, non-exclusive, non-transferable, limited license to play the Game for personal entertainment purposes only. You agree not to:</p>
+                        <ul>
+                            <li>Decompile, reverse engineer, disassemble, or derive the source code of the Game.</li>
+                            <li>Use cheats, automation software (bots), hacks, memory modifiers, or unauthorized third-party tools to manipulate game scores or economy.</li>
+                            <li>Exploit bugs or vulnerabilities to gain an unfair advantage or disrupt gameplay for others.</li>
+                            <li>Distribute, sell, lease, or commercially exploit any part of the Game without express written permission.</li>
+                        </ul>
 
                         <h5>2. INTELLECTUAL PROPERTY RIGHTS</h5>
-                        <p>All content within the Game, including but not limited to:</p>
-                        <ul><li>Design</li><li>Graphics</li><li>Code</li><li>Visual assets</li><li>Audio</li></ul>
-                        <p>is the exclusive property of the developer. Unauthorized copying, reproduction, distribution, or use of any assets is strictly prohibited and may result in legal action under applicable intellectual property laws.</p>
+                        <p>All rights, title, and interest in and to Floaty Shooter—including but not limited to source code, graphics, aircraft designs, user interfaces, visual effects, audio tracks, sound effects, characters, lore, and branding—are the exclusive intellectual property of the developer and protected by applicable copyright and international intellectual property laws.</p>
 
-                        <h5>3. IN-GAME FEATURES AND PURCHASES</h5>
-                        <p>The Game may include optional features such as virtual items or rewards. These items:</p>
-                        <ul><li>Have no real-world monetary value</li><li>Cannot be exchanged outside the Game</li></ul>
-                        <p>All purchases or rewards are final and non-refundable unless required by law.</p>
+                        <h5>3. ONLINE LEADERBOARDS & PILOT CALLSIGNS</h5>
+                        <p>The Game features global competitive leaderboards powered by LootLocker services:</p>
+                        <ul>
+                            <li><strong>Callsigns:</strong> You may customize your pilot callsign for display on global leaderboards. Callsigns must not contain vulgar, defamatory, harassing, hateful, or unlawful text.</li>
+                            <li><strong>Fair Play:</strong> We reserve the right to remove, reset, or disqualify any leaderboard score or player entry obtained via illicit manipulation or violating fair play standards.</li>
+                        </ul>
 
-                        <h5>4. ADVERTISEMENTS</h5>
-                        <p>The Game may display third-party advertisements. We are not responsible for the content or practices of these advertisers.</p>
+                        <h5>4. VIRTUAL ITEMS & IN-GAME ECONOMY</h5>
+                        <p>The Game features virtual currencies and items (credits, coins, shields, missiles, ship unlocks, and trial licenses):</p>
+                        <ul>
+                            <li>Virtual items exist solely within the Game and have no real-world monetary value.</li>
+                            <li>Virtual items cannot be redeemed, transferred, or exchanged for fiat currency or real-world goods.</li>
+                            <li>All progress, item unlocks, and rewards are earned via gameplay or optional rewarded advertisements.</li>
+                        </ul>
 
-                        <h5>5. DISCLAIMER</h5>
-                        <p>The Game is provided "as is" without warranties of any kind. We do not guarantee:</p>
-                        <ul><li>That the Game will be error-free</li><li>That access will be uninterrupted</li></ul>
+                        <h5>5. ADVERTISEMENTS & THIRD-PARTY INTEGRATIONS</h5>
+                        <p>The Game may integrate third-party advertising networks (such as Google AdMob and CrazyGames SDK) to offer optional rewarded features and support ongoing development:</p>
+                        <ul>
+                            <li>Interaction with third-party advertisements or external links is governed by the respective third party's terms and privacy policies.</li>
+                            <li>We do not control and are not responsible for third-party advertisements or third-party web content.</li>
+                        </ul>
 
-                        <h5>6. LIMITATION OF LIABILITY</h5>
-                        <p>To the fullest extent permitted by law, we shall not be liable for:</p>
-                        <ul><li>Any indirect or incidental damages</li><li>Loss of data or progress</li><li>Any issues arising from use of the Game</li></ul>
+                        <h5>6. DISCLAIMER OF WARRANTIES</h5>
+                        <p>Floaty Shooter is provided on an "AS IS" and "AS AVAILABLE" basis without warranties of any kind, whether express or implied. We do not warrant that gameplay will be uninterrupted, error-free, completely secure, or free from bugs or compatibility issues on every device configuration.</p>
 
-                        <h5>7. TERMINATION</h5>
-                        <p>We reserve the right to suspend or terminate access to the Game at any time without prior notice if these Terms are violated.</p>
+                        <h5>7. LIMITATION OF LIABILITY</h5>
+                        <p>To the maximum extent permitted by applicable law, the developer shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages resulting from your access to, use of, or inability to access the Game, including loss of local game save data or device performance issues.</p>
 
-                        <h5>8. GOVERNING LAW</h5>
-                        <p>These Terms shall be governed and interpreted in accordance with the laws of your jurisdiction.</p>
+                        <h5>8. TERMINATION</h5>
+                        <p>We reserve the right, without prior notice or liability, to suspend, terminate, or restrict your access to leaderboard features or game services if you violate these Terms or engage in conduct detrimental to the community.</p>
 
                         <h5>9. CHANGES TO TERMS</h5>
-                        <p>We may update these Terms at any time. Continued use of the Game after changes means you accept the updated Terms.</p>
+                        <p>We reserve the right to modify or replace these Terms at any time. Changes will be effective upon posting the revised Terms within the Game. Your continued use of Floaty Shooter following any updates signifies your acceptance of the revised Terms.</p>
 
-                        <h5>10. CONTACT</h5>
-                        <p>For any questions regarding these Terms, contact: craze777@gmail.com</p>
+                        <h5>10. CONTACT US</h5>
+                        <p>For questions, support, or legal inquiries regarding Floaty Shooter, please contact us at: <strong>craze77789@gmail.com</strong></p>
                     </div>
                 </div>
             </div>
@@ -566,10 +595,13 @@
                     <!-- Populated dynamically with player rank, score & edit callsign button -->
                 </div>
 
-                <!-- Section Subheader -->
+                <!-- Section Subheader with Live Refresh -->
                 <div class="lb-section-bar">
                     <span id="lb-section-label" class="lb-section-label">GLOBAL RANKINGS</span>
-                    <span class="lb-section-sub">TOP PILOTS</span>
+                    <div class="lb-section-right">
+                        <span class="lb-section-sub">TOP 100 PILOTS</span>
+                        <button id="lb-refresh-btn" class="lb-refresh-btn" onclick="renderLeaderboardGlobal()" title="Refresh Rankings">🔄</button>
+                    </div>
                 </div>
 
                 <!-- Scrollable rankings list -->
@@ -580,35 +612,101 @@
         <!-- ========== EDIT PILOT CALLSIGN POPUP ========== -->
         <div id="edit-pilot-popup" class="popup-overlay hidden">
             <div class="popup-box edit-pilot-box">
-                <button class="popup-close" onclick="closeEditPilotPopup()"></button>
-                <div class="edit-pilot-header">
-                    <div class="edit-pilot-icon">🪪</div>
-                    <h3>PILOT CALLSIGN</h3>
-                    <p class="edit-pilot-subtitle">Update your callsign for the Galactic Leaderboard</p>
+                <!-- Cyberpunk Tech Corner Accents -->
+                <div class="pilot-card-corner tl"></div>
+                <div class="pilot-card-corner tr"></div>
+                <div class="pilot-card-corner bl"></div>
+                <div class="pilot-card-corner br"></div>
+
+                <button class="popup-close" onclick="closeEditPilotPopup()" title="Close"></button>
+
+                <!-- Top Cyber Ribbon -->
+                <div class="pilot-card-topbar">
+                    <span class="pilot-card-sysid"><span class="pilot-pulse-beacon"></span> FLIGHT CREDENTIAL // SEC-04</span>
                 </div>
+
+                <!-- Header with Custom Cyberpunk Pilot Badge SVG -->
+                <div class="edit-pilot-header">
+                    <div class="edit-pilot-badge-wrap">
+                        <div class="edit-pilot-badge-glow"></div>
+                        <svg class="pilot-vector-badge" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                            <defs>
+                                <linearGradient id="pBadgeGrad_www" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#00eaff"/>
+                                    <stop offset="50%" stop-color="#38bdf8"/>
+                                    <stop offset="100%" stop-color="#818cf8"/>
+                                </linearGradient>
+                                <linearGradient id="pShieldGrad_www" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stop-color="rgba(14, 165, 233, 0.3)"/>
+                                    <stop offset="100%" stop-color="rgba(2, 6, 23, 0.85)"/>
+                                </linearGradient>
+                                <linearGradient id="pGoldGrad_www" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#fde047"/>
+                                    <stop offset="100%" stop-color="#eab308"/>
+                                </linearGradient>
+                            </defs>
+                            <!-- Cyber Shield Outer Frame -->
+                            <polygon points="32,4 58,16 58,38 32,60 6,38 6,16" stroke="url(#pBadgeGrad_www)" stroke-width="2.2" fill="url(#pShieldGrad_www)" filter="drop-shadow(0 0 8px rgba(0,234,255,0.4))"/>
+                            <!-- Inner Flight Wings -->
+                            <path d="M12 24 L24 28 L32 20 L40 28 L52 24" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+                            <path d="M10 32 L22 35 L32 46 L42 35 L54 32" stroke="#00eaff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <!-- Pilot Helmet Visor Emblem -->
+                            <path d="M22 28 C22 20 42 20 42 28 C42 34 38 38 32 39 C26 38 22 34 22 28 Z" fill="#0f172a" stroke="url(#pBadgeGrad_www)" stroke-width="1.8"/>
+                            <!-- Glowing Visor Slit -->
+                            <path d="M25 28 Q32 25 39 28" stroke="#00eaff" stroke-width="2.5" stroke-linecap="round" filter="drop-shadow(0 0 4px #00eaff)"/>
+                            <!-- Core Star Pip -->
+                            <polygon points="32,44 34.5,49 40,49.5 36,53 37.2,58 32,55 26.8,58 28,53 24,49.5 29.5,49" fill="url(#pGoldGrad_www)" stroke="#fef08a" stroke-width="0.8"/>
+                        </svg>
+                    </div>
+                    <h3>PILOT CALLSIGN</h3>
+                    <p class="edit-pilot-subtitle">Galactic Flight Registry &amp; Ace Identification</p>
+                </div>
+
+                <!-- Input Form -->
                 <div class="edit-pilot-form">
-                    <label class="edit-pilot-label" for="edit-pilot-input">CALLSIGN (MAX 16 CHARACTERS)</label>
+                    <div class="edit-pilot-label-row">
+                        <label class="edit-pilot-label" for="edit-pilot-input">CALLSIGN IDENTIFIER</label>
+                        <span class="edit-pilot-sublabel">MAX 16 CHARS</span>
+                    </div>
                     <div class="edit-pilot-input-wrap">
-                        <span class="edit-pilot-prefix">PILOT //</span>
+                        <span class="edit-pilot-prefix-badge">
+                            <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="3" width="12" height="10" rx="2"/>
+                                <line x1="5" y1="7" x2="11" y2="7"/>
+                                <line x1="5" y1="10" x2="9" y2="10"/>
+                            </svg>
+                            PILOT
+                        </span>
                         <input 
                             type="text" 
                             id="edit-pilot-input" 
                             class="edit-pilot-input" 
                             maxlength="16" 
-                            placeholder="CYBER_PILOT" 
+                            placeholder="ENTER_CALLSIGN" 
                             autocomplete="off" 
                             spellcheck="false"
                         />
                     </div>
                     <div class="edit-pilot-meta">
-                        <span class="edit-pilot-hint">Letters, numbers & underscores</span>
+                        <span class="edit-pilot-hint">Letters, numbers, dashes &amp; underscores</span>
                         <span id="edit-pilot-counter" class="edit-pilot-counter">0/16</span>
+                    </div>
+                    <!-- Mini character meter bar -->
+                    <div class="edit-pilot-meter-track">
+                        <div id="edit-pilot-meter-bar" class="edit-pilot-meter-bar" style="width: 0%;"></div>
                     </div>
                     <div id="edit-pilot-error" class="edit-pilot-error hidden"></div>
                 </div>
+
+                <!-- Action Buttons -->
                 <div class="edit-pilot-actions">
                     <button type="button" class="edit-pilot-btn edit-pilot-cancel" onclick="closeEditPilotPopup()">CANCEL</button>
-                    <button type="button" class="edit-pilot-btn edit-pilot-save" onclick="savePilotCallsign()">SAVE CALLSIGN</button>
+                    <button type="button" class="edit-pilot-btn edit-pilot-save" onclick="savePilotCallsign()">
+                        <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="4 10 8 14 16 6"/>
+                        </svg>
+                        SAVE CALLSIGN
+                    </button>
                 </div>
             </div>
         </div>
@@ -616,7 +714,7 @@
         <!-- ========== DAILY REWARD POPUP ========== -->
         <div id="daily-reward-popup" class="popup-overlay hidden">
             <div class="popup-box popup-box-large daily-reward-box">
-                <button id="dr-close-btn" class="popup-close" onclick="closeDailyReward()">✕</button>
+                <button id="dr-close-btn" class="popup-close" onclick="closeDailyReward()"></button>
                 <div class="dr-header">
                     <h2 class="dr-title">DAILY LOGIN REWARD</h2>
                     <p class="dr-subtitle">Tap today's box to unlock your daily supply crate!</p>
@@ -693,7 +791,7 @@
         <!-- ========== STORE OVERLAY ========== -->
         <div id="store-overlay" class="popup-overlay hidden">
             <div class="popup-box store-box">
-                <button class="popup-close" onclick="closeStore()">✕</button>
+                <button class="popup-close" onclick="closeStore()"></button>
                 <h3>🏪 STORE</h3>
                 <div class="store-coins-wrap">
                     <div class="store-coins"><img src="image/coin.png" class="ui-icon"> <span id="store-coins-display">0</span></div>
@@ -840,13 +938,7 @@
 
             <!-- Mobile Controls -->
             <div id="mobile-controls" class="mobile-controls hidden">
-                <div id="joystick-zone" class="joystick-zone">
-                    <div id="joystick-base" class="joystick-base">
-                        <div id="joystick-handle" class="joystick-handle"></div>
-                    </div>
-                </div>
-
-                <!-- Left Side Items -->
+                <!-- Left Side Powerups (Shield on top, Double below) -->
                 <div class="powerups-left">
                     <button id="btn-shield-mobile" class="action-btn shield-mobile-btn hidden" onclick="useShield()">
                         <div class="btn-count">0</div>
@@ -859,6 +951,13 @@
                         <img src="image/double_fire.png">
                         <span>DOUBLE</span>
                     </button>
+                </div>
+
+                <!-- Virtual Joystick (right of Shield & Double) -->
+                <div id="joystick-zone" class="joystick-zone">
+                    <div id="joystick-base" class="joystick-base">
+                        <div id="joystick-handle" class="joystick-handle"></div>
+                    </div>
                 </div>
 
                 <!-- Right Side Actions -->
@@ -937,8 +1036,9 @@
 
     <script src="admob-manager.js"></script>
     <script src="daily_reward.js"></script>
-    <script src="data.js"></script>
+    <script src="data.js?v=37216"></script>
     <script src="store.js"></script>
-    <script src="game.js"></script>
+    <script src="lootlocker.js?v=37216"></script>
+    <script src="game.js?v=37216"></script>
 </body>
 </html>

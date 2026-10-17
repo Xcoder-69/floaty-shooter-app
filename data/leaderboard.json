@@ -1,0 +1,107 @@
+[
+  {
+    "name": "CYBER_VALKYRIE",
+    "score": 148500,
+    "chapter": 6,
+    "tag": "ACE",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "NEON_PHANTOM",
+    "score": 122800,
+    "chapter": 5,
+    "tag": "ELITE",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "VOID_REAPER",
+    "score": 98400,
+    "chapter": 5,
+    "tag": "HUNTER",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "CHROME_BLADE",
+    "score": 82100,
+    "chapter": 4,
+    "tag": "ACE",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "APEX_GUNNER",
+    "score": 69500,
+    "chapter": 4,
+    "tag": "VET",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "GLITCH_RUNNER",
+    "score": 56200,
+    "chapter": 3,
+    "tag": "PILOT",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "SOLAR_PULSE",
+    "score": 44800,
+    "chapter": 3,
+    "tag": "CADET",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "ZERO_COOL",
+    "score": 35900,
+    "chapter": 2,
+    "tag": "PILOT",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "BYTE_HAWK",
+    "score": 26400,
+    "chapter": 2,
+    "tag": "CADET",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "TURBO_FALCON",
+    "score": 18200,
+    "chapter": 1,
+    "tag": "ROOKIE",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "AERO_BLAST",
+    "score": 12500,
+    "chapter": 1,
+    "tag": "ROOKIE",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "NOVA_STORM",
+    "score": 7400,
+    "chapter": 1,
+    "tag": "TRAINEE",
+    "timestamp": 1700000000000
+  },
+  {
+    "name": "CYBER_ACE",
+    "score": 215,
+    "chapter": 1,
+    "tag": "PILOT",
+    "timestamp": 1792148251696
+  },
+  {
+    "name": "DWS",
+    "score": 36,
+    "chapter": 1,
+    "tag": "PILOT",
+    "timestamp": 1792245614983
+  },
+  {
+    "name": "DW",
+    "score": 15,
+    "chapter": 1,
+    "tag": "PILOT",
+    "timestamp": 1792173283462
+  }
+]

@@ -10,16 +10,17 @@
         return {
             coins: 0,
             _cM: 0, // Shadow coin mirror
-            missiles: 0,
-            shields: 0,
-            doubleBullets: 0,
+            missiles: 3,
+            shields: 3,
+            doubleBullets: 3,
             equippedShip: null,
             chapterProgress: { 1: 0 },
             stats: { totalKills: 0, totalDeaths: 0, totalCoins: 0, totalScore: 0, totalTimePlayed: 0, chaptersCompleted: 0, levelsCompleted: 0 },
             history: [],
             missileAdTimestamps: [],
             musicEnabled: true,
-            collectedShips: { 1: true }
+            collectedShips: { 1: true },
+            _starterPackGiven: true
         };
     }
 
@@ -63,14 +64,12 @@
             const defaults = getDefaultSave();
             const loaded = { ...defaults, ...parsed, stats: { ...defaults.stats, ...parsed.stats } };
             
-            // Clean up starter items for fresh saves that got auto-injected 3 items
-            if (!loaded._starterItemsFixed) {
-                if (loaded.coins === 0 && (!loaded.stats || loaded.stats.totalKills === 0) && loaded.missiles === 3 && loaded.shields === 3 && loaded.doubleBullets === 3) {
-                    loaded.missiles = 0;
-                    loaded.shields = 0;
-                    loaded.doubleBullets = 0;
-                }
-                loaded._starterItemsFixed = true;
+            // Ensure every pilot receives 3 starter supplies if newly starting or empty
+            if (!loaded._starterPackGiven || (loaded.missiles === 0 && loaded.shields === 0 && loaded.doubleBullets === 0)) {
+                loaded.missiles = Math.max(3, loaded.missiles || 0);
+                loaded.shields = Math.max(3, loaded.shields || 0);
+                loaded.doubleBullets = Math.max(3, loaded.doubleBullets || 0);
+                loaded._starterPackGiven = true;
                 setTimeout(() => saveSave(loaded), 300);
             }
             

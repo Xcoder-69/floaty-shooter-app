@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  game-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: floaty-shooter:latest
+    container_name: floaty-shooter-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CLUSTER=true
+    volumes:
+      - game-data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  game-data:
+    driver: local

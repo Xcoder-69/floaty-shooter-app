@@ -229,6 +229,9 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         const name = input && input.value.trim() ? input.value.trim().toUpperCase() : 'PILOT';
         localStorage.setItem('floaty_player_name', name);
         window.updatePilotDisplay();
+        if (window.LootLocker && typeof window.LootLocker.setPlayerName === 'function') {
+            window.LootLocker.setPlayerName(name).catch(() => {});
+        }
         window.goToMainMenu();
     };
 
@@ -241,7 +244,18 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         const p=document.getElementById('settings-panel');
         if(p) p.classList.toggle('hidden');
     };
-    // ---- DEVICE DETECTION: Auto-detect PC Browser vs Mobile Browser ----
+    // ---- DEVICE DETECTION: Auto-detect PC Browser vs Android / Mobile ----
+    window.isAndroidDevice = function() {
+        if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function') {
+            if (window.Capacitor.getPlatform() === 'android') return true;
+        }
+        if (/Android/i.test(navigator.userAgent)) return true;
+        if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) {
+            return true;
+        }
+        return false;
+    };
+
     window.isMobileDevice = function() {
         // 1. User Agent checks for phones / tablets
         const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent);
@@ -256,9 +270,13 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return true;
         return false;
     };
+    window._isAndroid = window.isAndroidDevice();
     window._isDesktop = !window.isMobileDevice();
     if (window._isDesktop) document.documentElement.classList.add('is-desktop');
     else document.documentElement.classList.remove('is-desktop');
+
+    if (window._isAndroid) document.documentElement.classList.add('is-android');
+    else document.documentElement.classList.remove('is-android');
 
     // ---- CONTROLS: Show device-specific controls only (No Tabs, No Flash) ----
     window.showControls = function() {
@@ -335,33 +353,31 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // ---- LEADERBOARD: Universal for CrazyGames and Google Play Store ----
+    // ---- LEADERBOARD: LootLocker Global Leaderboard Integration ----
     window.LeaderboardAPI = {
-        // Plug-and-play Cloud Configuration
-        config: {
-            // Dreamlo is 100% free with zero backend setup (http://dreamlo.com)
-            // Enter your keys here to enable live cross-platform cloud sync:
-            dreamloPublicKey: '', // Public code (safe in frontend, e.g. "65a...")
-            dreamloPrivateKey: '', // Private code for score posting
-            // Or Firebase Realtime Database endpoint:
-            firebaseUrl: '' // e.g. "https://YOUR-APP-default-rtdb.firebaseio.com"
-        },
         syncCrazyGamesUser: function() {
-            // Never overwrite if player customized their callsign
             if (localStorage.getItem('floaty_pilot_customized') === 'true') return;
             const existing = localStorage.getItem('floaty_player_name');
             if (existing && existing !== 'CYBER_PILOT' && existing !== 'PILOT' && existing !== 'User1') return;
 
-            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.user && typeof window.CrazyGames.SDK.user.getUser === 'function') {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.user) {
                 try {
-                    const res = window.CrazyGames.SDK.user.getUser();
-                    if (res && typeof res.then === 'function') {
-                        res.then(u => {
+                    const getUserPromise = (typeof window.CrazyGames.SDK.user.getUser === 'function') 
+                        ? window.CrazyGames.SDK.user.getUser() 
+                        : null;
+                    if (getUserPromise && typeof getUserPromise.then === 'function') {
+                        getUserPromise.then(u => {
                             if (u && u.username && localStorage.getItem('floaty_pilot_customized') !== 'true') {
-                                localStorage.setItem('floaty_player_name', u.username);
-                                if (window.updatePilotDisplay) window.updatePilotDisplay();
+                                const sanitized = u.username.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().slice(0, 16).toUpperCase();
+                                if (sanitized) {
+                                    localStorage.setItem('floaty_player_name', sanitized);
+                                    if (window.updatePilotDisplay) window.updatePilotDisplay();
+                                    if (window.LootLocker && typeof window.LootLocker.setPlayerName === 'function') {
+                                        window.LootLocker.setPlayerName(sanitized).catch(() => {});
+                                    }
+                                }
                             }
-                        }).catch(()=>{});
+                        }).catch(() => {});
                     }
                 } catch(e) {}
             }
@@ -370,45 +386,29 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             const pilotName = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
             if (!score || score <= 0) return;
 
-            // Submit to Dreamlo REST if configured
-            if (this.config.dreamloPrivateKey) {
-                try {
-                    const url = `https://dreamlo.com/lb/${this.config.dreamloPrivateKey}/add/${encodeURIComponent(pilotName)}/${score}/${chapter || 1}`;
-                    fetch(url, { mode: 'no-cors' }).catch(()=>{});
-                } catch(e) {}
+            // 1. Submit to LootLocker Global Leaderboard (Non-blocking)
+            if (window.LootLocker && typeof window.LootLocker.submitScore === 'function') {
+                window.LootLocker.submitScore(score, chapter).then(res => {
+                    if (res && res.success) {
+                        console.log('[Leaderboard] Score submitted to LootLocker:', res.score, 'Rank:', res.rank);
+                    }
+                }).catch(() => {});
             }
 
-            // Submit to Firebase REST if configured
-            if (this.config.firebaseUrl) {
-                try {
-                    fetch(`${this.config.firebaseUrl}/scores/${encodeURIComponent(pilotName)}.json`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: pilotName, score: score, chapter: chapter || 1, timestamp: Date.now() })
-                    }).catch(()=>{});
-                } catch(e) {}
-            }
+            // 2. Submit to local dev server if online
+            try {
+                fetch('/api/score', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: pilotName, score: score, chapter: chapter || 1 })
+                }).catch(() => {});
+            } catch(e) {}
         },
-        fetchScores: async function() {
-            if (this.config.dreamloPublicKey) {
-                try {
-                    const res = await fetch(`https://dreamlo.com/lb/${this.config.dreamloPublicKey}/json`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        let entries = data && data.dreamlo && data.dreamlo.leaderboard && data.dreamlo.leaderboard.entry;
-                        if (entries) {
-                            if (!Array.isArray(entries)) entries = [entries];
-                            return entries.map(e => ({
-                                name: e.name,
-                                score: parseInt(e.score, 10) || 0,
-                                chapter: parseInt(e.seconds, 10) || 1,
-                                tag: 'ACE'
-                            }));
-                        }
-                    }
-                } catch(e) {}
+        fetchScores: async function(count = 100) {
+            if (window.LootLocker && typeof window.LootLocker.getTopScores === 'function') {
+                return await window.LootLocker.getTopScores(count);
             }
-            return null;
+            return { success: false, error: 'LootLocker module not loaded' };
         }
     };
 
@@ -419,7 +419,16 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             if (window.showToast) window.showToast('⚠️ Read the mission first!');
             return;
         }
-        window.closeAllPopups();
+
+        const isGameOver = (window.game && window.game.state === 'gameOver');
+        if (!isGameOver) {
+            window.closeAllPopups();
+        } else {
+            // Close other popups but leave game-over overlay intact underneath
+            const list = ['controls-popup','history-popup','stats-popup','privacy-popup','terms-popup','store-overlay','trial-popup','collection-popup','daily-reward-popup','edit-pilot-popup','fun-level-popup'];
+            list.forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+        }
+
         const p = document.getElementById('leaderboard-popup');
         if (!p) return;
         p.classList.remove('hidden');
@@ -454,110 +463,181 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         const sd = (typeof window.getSaveData === 'function') ? window.getSaveData() : { stats: {}, chapterProgress: {} };
         const history = (typeof window.getHistory === 'function') ? window.getHistory() : [];
         const bestRunScore = history.reduce((max, h) => Math.max(max, h.score || 0), 0);
-        const playerScore = Math.max(bestRunScore, (sd.stats && sd.stats.totalScore) || 0);
+        const localBestScore = Math.max(bestRunScore, (sd.stats && sd.stats.totalScore) || 0);
         const playerChapter = Math.min(6, (sd.stats && sd.stats.chaptersCompleted) || 1);
 
-        let roster = [
-            { name: 'CYBER_VALKYRIE', score: 148500, chapter: 6, tag: 'ACE' },
-            { name: 'NEON_PHANTOM',  score: 122800, chapter: 5, tag: 'ELITE' },
-            { name: 'VOID_REAPER',   score: 98400,  chapter: 5, tag: 'HUNTER' },
-            { name: 'CHROME_BLADE',  score: 82100,  chapter: 4, tag: 'ACE' },
-            { name: 'APEX_GUNNER',   score: 69500,  chapter: 4, tag: 'VET' },
-            { name: 'GLITCH_RUNNER', score: 56200,  chapter: 3, tag: 'PILOT' },
-            { name: 'SOLAR_PULSE',   score: 44800,  chapter: 3, tag: 'CADET' },
-            { name: 'ZERO_COOL',     score: 35900,  chapter: 2, tag: 'PILOT' },
-            { name: 'BYTE_HAWK',     score: 26400,  chapter: 2, tag: 'CADET' },
-            { name: 'TURBO_FALCON',  score: 18200,  chapter: 1, tag: 'ROOKIE' },
-            { name: 'AERO_BLAST',    score: 12500,  chapter: 1, tag: 'ROOKIE' },
-            { name: 'NOVA_STORM',    score: 7400,   chapter: 1, tag: 'TRAINEE' }
-        ];
+        // Helper to update Pinned My Rank Card
+        function updateMyRankCard(rankValue, scoreValue) {
+            if (!myRankCard) return;
+            const rankNum = parseInt(rankValue, 10);
+            let myBadge = isNaN(rankNum) || rankNum <= 0 ? '#--' : `#${rankNum}`;
+            let myBadgeClass = 'lb-my-rank-badge';
+            if (rankNum === 1) { myBadge = '🥇'; myBadgeClass += ' top-1'; }
+            else if (rankNum === 2) { myBadge = '🥈'; myBadgeClass += ' top-2'; }
+            else if (rankNum === 3) { myBadge = '🥉'; myBadgeClass += ' top-3'; }
 
-        function drawRoster(currRoster) {
-            const playerEntry = {
-                name: pilotName,
-                score: playerScore,
-                chapter: playerChapter,
-                tag: 'YOU',
-                isPlayer: true
-            };
+            const displayScore = (scoreValue !== undefined && scoreValue !== null && scoreValue > 0) 
+                ? scoreValue 
+                : localBestScore;
 
-            // Filter out duplicate if player already exists in roster
-            const filtered = currRoster.filter(e => e.name.toUpperCase() !== pilotName.toUpperCase());
-            const all = [...filtered, playerEntry].sort((a, b) => b.score - a.score);
-
-            // Find player's calculated rank
-            const playerIdx = all.findIndex(e => e.isPlayer || (e.name.toUpperCase() === pilotName.toUpperCase()));
-            const playerRank = playerIdx >= 0 ? (playerIdx + 1) : '-';
-
-            // Render Pinned My Rank Card on Top
-            if (myRankCard) {
-                let myBadge = `#${playerRank}`;
-                let myBadgeClass = 'lb-my-rank-badge';
-                if (playerRank === 1) { myBadge = '🥇'; myBadgeClass += ' top-1'; }
-                else if (playerRank === 2) { myBadge = '🥈'; myBadgeClass += ' top-2'; }
-                else if (playerRank === 3) { myBadge = '🥉'; myBadgeClass += ' top-3'; }
-
-                myRankCard.innerHTML = `
-                    <div class="${myBadgeClass}">${myBadge}</div>
-                    <div class="lb-my-rank-info">
-                        <div class="lb-my-name-row">
-                            <span class="lb-my-name">${escapeHtml(pilotName)}</span>
-                            <span class="lb-me-tag">YOU</span>
-                            <button class="lb-my-edit-callsign" onclick="openEditPilotPopup(event); event.stopPropagation();" title="Edit Callsign">
-                                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
-                                    <rect x="2" y="20" width="20" height="2.2" rx="1.1"/>
-                                    <g transform="translate(9.5, 19) rotate(45)">
-                                        <polygon points="0,0 -2.2,-4.2 2.2,-4.2"/>
-                                        <rect x="-2.2" y="-12.8" width="4.4" height="8.6" rx="0.4"/>
-                                        <rect x="-2.2" y="-17.8" width="4.4" height="3.8" rx="1.2"/>
-                                    </g>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="lb-my-sub">CH.${playerChapter} • ${playerScore > 0 ? 'ACTIVE ACE' : 'RECRUIT'}</div>
+            myRankCard.innerHTML = `
+                <div class="${myBadgeClass}">${myBadge}</div>
+                <div class="lb-my-rank-info">
+                    <div class="lb-my-name-row">
+                        <span class="lb-my-name">${escapeHtml(pilotName)}</span>
+                        <span class="lb-me-tag">YOU</span>
+                        <button class="lb-my-edit-callsign" onclick="openEditPilotPopup(event); event.stopPropagation();" title="Edit Callsign">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                <rect x="2" y="20" width="20" height="2.2" rx="1.1"/>
+                                <g transform="translate(9.5, 19) rotate(45)">
+                                    <polygon points="0,0 -2.2,-4.2 2.2,-4.2"/>
+                                    <rect x="-2.2" y="-12.8" width="4.4" height="8.6" rx="0.4"/>
+                                    <rect x="-2.2" y="-17.8" width="4.4" height="3.8" rx="1.2"/>
+                                </g>
+                            </svg>
+                        </button>
                     </div>
-                    <div class="lb-my-score-wrap">
-                        <span class="lb-my-score-label">BEST SCORE</span>
-                        <span class="lb-my-score-val">★ ${(playerScore || 0).toLocaleString()}</span>
-                    </div>
-                `;
-            }
-
-            if (!list) return;
-            list.innerHTML = all.map((entry, idx) => {
-                const rank = idx + 1;
-                const isMe = entry.isPlayer || (entry.name.toUpperCase() === pilotName.toUpperCase());
-                let rankBadge = `#${rank}`;
-                let rowClass = 'lb-row';
-                if (rank === 1) { rankBadge = '🥇'; rowClass += ' lb-top1'; }
-                else if (rank === 2) { rankBadge = '🥈'; rowClass += ' lb-top2'; }
-                else if (rank === 3) { rankBadge = '🥉'; rowClass += ' lb-top3'; }
-                if (isMe) rowClass += ' lb-me';
-
-                return `
-                    <div class="${rowClass}">
-                        <div class="lb-rank">${rankBadge}</div>
-                        <div class="lb-pilot-info">
-                            <span class="lb-name">${escapeHtml(entry.name)} ${isMe ? '<span class="lb-me-tag">YOU</span>' : ''}</span>
-                            <span class="lb-ch">CH.${entry.chapter || 1} • ${entry.tag || 'ACE'}</span>
-                        </div>
-                        <div class="lb-score">★ ${(entry.score || 0).toLocaleString()}</div>
-                    </div>
-                `;
-            }).join('');
+                    <div class="lb-my-sub">CH.${playerChapter} • ${displayScore > 0 ? 'ACTIVE ACE' : 'RECRUIT'}</div>
+                </div>
+                <div class="lb-my-score-wrap">
+                    <span class="lb-my-score-label">BEST SCORE</span>
+                    <span class="lb-my-score-val">★ ${(displayScore || 0).toLocaleString()}</span>
+                </div>
+            `;
         }
 
-        // Render synchronously immediately for zero delay
-        drawRoster(roster);
+        // Initially render player's card with local best
+        updateMyRankCard('-', localBestScore);
 
-        // Fetch fresh cloud scores in background if available
-        if (window.LeaderboardAPI) {
-            try {
-                const cloudScores = await window.LeaderboardAPI.fetchScores();
-                if (cloudScores && cloudScores.length) {
-                    drawRoster(cloudScores);
+        if (!list) return;
+
+        // Render Loading State
+        list.innerHTML = `
+            <div class="lb-state-box lb-loading">
+                <div class="lb-spinner"></div>
+                <div class="lb-state-title">SYNCING WITH LOOTLOCKER</div>
+                <div class="lb-state-sub">Retrieving global leaderboard standings...</div>
+            </div>
+        `;
+
+        // Fetch Live Scores from LootLocker
+        try {
+            const res = await window.LeaderboardAPI.fetchScores(100);
+
+            if (res && res.success) {
+                // Filter out any dummy / automated test pilots
+                const items = (res.items || []).filter(e => {
+                    const name = (e.name || '').toUpperCase();
+                    return !name.includes('PILOT_TEST') && !name.startsWith('TEST_');
+                });
+
+                if (items.length === 0) {
+                    list.innerHTML = `
+                        <div class="lb-state-box" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:1.2rem 1rem; border-radius:10px; background:rgba(15,23,42,0.7); border:1px solid rgba(56,189,248,0.25); margin:0.4rem 0; gap:0.35rem;">
+                            <div style="display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.35); margin-bottom:0.15rem;">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="22" y1="12" x2="18" y2="12"/>
+                                    <line x1="6" y1="12" x2="2" y2="12"/>
+                                    <line x1="12" y1="6" x2="12" y2="2"/>
+                                    <line x1="12" y1="22" x2="12" y2="18"/>
+                                </svg>
+                            </div>
+                            <div style="font-family:var(--font-head); font-size:0.78rem; font-weight:800; color:#F1F5F9; letter-spacing:1.2px;">
+                                NO SCORES YET
+                            </div>
+                            <div style="font-family:var(--font-head); font-size:0.62rem; color:#94A3B8; line-height:1.4;">
+                                Be the first pilot to score and take Rank #1.
+                            </div>
+                            <button class="lb-launch-btn" onclick="closePopup('leaderboard-popup'); if(window.startGame) window.startGame();" style="margin-top:0.35rem; padding:0.4rem 1.1rem; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border:1px solid #38bdf8; border-radius:6px; color:#FFFFFF; font-family:var(--font-head); font-size:0.65rem; font-weight:700; letter-spacing:0.8px; cursor:pointer;">
+                                PLAY TO CLAIM RANK #1
+                            </button>
+                        </div>
+                    `;
+                    return;
                 }
-            } catch(e) {}
+
+                // Check if current player is in the list
+                const meInList = items.find(e => e.isMe || (e.name && e.name.toUpperCase() === pilotName.toUpperCase()));
+                if (meInList) {
+                    updateMyRankCard(meInList.rank, meInList.score);
+                } else if (window.LootLocker && typeof window.LootLocker.getPlayerRank === 'function') {
+                    // Query player's standalone rank asynchronously
+                    window.LootLocker.getPlayerRank().then(pr => {
+                        if (pr && pr.success && pr.rank) {
+                            updateMyRankCard(pr.rank, pr.score);
+                        }
+                    }).catch(() => {});
+                }
+
+                // Render Live LootLocker Leaderboard Rows
+                list.innerHTML = items.map((entry, idx) => {
+                    const rank = entry.rank || (idx + 1);
+                    const isMe = entry.isMe || (entry.name && entry.name.toUpperCase() === pilotName.toUpperCase());
+                    let rankBadge = `#${rank}`;
+                    let rowClass = 'lb-row';
+                    if (rank === 1) { rankBadge = '🥇'; rowClass += ' lb-top1'; }
+                    else if (rank === 2) { rankBadge = '🥈'; rowClass += ' lb-top2'; }
+                    else if (rank === 3) { rankBadge = '🥉'; rowClass += ' lb-top3'; }
+                    if (isMe) rowClass += ' lb-me';
+
+                    return `
+                        <div class="${rowClass}">
+                            <div class="lb-rank">${rankBadge}</div>
+                            <div class="lb-pilot-info">
+                                <span class="lb-name">${escapeHtml(entry.name || 'PILOT')} ${isMe ? '<span class="lb-me-tag">YOU</span>' : ''}</span>
+                                <span class="lb-ch">CH.${entry.chapter || 1} • ${entry.tag || 'ACE'}</span>
+                            </div>
+                            <div class="lb-score">★ ${(entry.score || 0).toLocaleString()}</div>
+                        </div>
+                    `;
+                }).join('');
+
+            } else {
+                // Graceful Error / Offline / Config State
+                const isConfig = res && res.isConfigIssue;
+                const isOffline = res && res.isOffline;
+                const errMsg = res && res.error ? res.error : 'Connection to LootLocker failed.';
+
+                if (isConfig) {
+                    list.innerHTML = `
+                        <div class="lb-state-box">
+                            <div class="lb-state-icon">⚠️</div>
+                            <div class="lb-state-title">PLATFORM SETUP REQUIRED</div>
+                            <div class="lb-state-sub" style="color:#fde047; margin-bottom:4px;">${escapeHtml(errMsg)}</div>
+                            <div class="lb-state-sub">In LootLocker Console → Settings → Platforms, enable <b>Guest</b> for this game.</div>
+                            <button class="lb-retry-btn" onclick="renderLeaderboardGlobal()">RETRY CONNECTION</button>
+                        </div>
+                    `;
+                } else if (isOffline) {
+                    list.innerHTML = `
+                        <div class="lb-state-box">
+                            <div class="lb-state-icon">📡</div>
+                            <div class="lb-state-title">OFFLINE MODE</div>
+                            <div class="lb-state-sub">Unable to connect to LootLocker servers. Gameplay remains fully functional offline.</div>
+                            <button class="lb-retry-btn" onclick="renderLeaderboardGlobal()">RECONNECT</button>
+                        </div>
+                    `;
+                } else {
+                    list.innerHTML = `
+                        <div class="lb-state-box">
+                            <div class="lb-state-icon">⚡</div>
+                            <div class="lb-state-title">LEADERBOARD UNAVAILABLE</div>
+                            <div class="lb-state-sub">${escapeHtml(errMsg)}</div>
+                            <button class="lb-retry-btn" onclick="renderLeaderboardGlobal()">TRY AGAIN</button>
+                        </div>
+                    `;
+                }
+            }
+        } catch (fetchErr) {
+            list.innerHTML = `
+                <div class="lb-state-box">
+                    <div class="lb-state-icon">📡</div>
+                    <div class="lb-state-title">NETWORK INTERRUPTED</div>
+                    <div class="lb-state-sub">${escapeHtml(fetchErr.message || 'Network request failed')}</div>
+                    <button class="lb-retry-btn" onclick="renderLeaderboardGlobal()">RETRY</button>
+                </div>
+            `;
         }
     };
 
@@ -638,15 +718,22 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         const input = document.getElementById('edit-pilot-input');
         const counter = document.getElementById('edit-pilot-counter');
         const err = document.getElementById('edit-pilot-error');
+        const livePlate = document.getElementById('edit-pilot-live-callsign');
+        const meterBar = document.getElementById('edit-pilot-meter-bar');
         if (!popup || !input) return;
 
         const current = localStorage.getItem('floaty_player_name') || 'CYBER_PILOT';
         input.value = current;
         if (counter) counter.textContent = `${current.length}/16`;
+        if (livePlate) livePlate.textContent = current;
+        if (meterBar) meterBar.style.width = `${Math.min(100, (current.length / 16) * 100)}%`;
         if (err) { err.textContent = ''; err.classList.add('hidden'); }
 
         input.oninput = function() {
-            if (counter) counter.textContent = `${input.value.length}/16`;
+            const val = input.value;
+            if (counter) counter.textContent = `${val.length}/16`;
+            if (meterBar) meterBar.style.width = `${Math.min(100, (val.length / 16) * 100)}%`;
+            if (livePlate) livePlate.textContent = val.trim() ? val.toUpperCase() : 'CYBER_PILOT';
             if (err) err.classList.add('hidden');
         };
 
@@ -701,6 +788,9 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
         localStorage.setItem('floaty_player_name', cleaned);
         localStorage.setItem('floaty_pilot_customized', 'true');
         if (window.updatePilotDisplay) window.updatePilotDisplay();
+        if (window.LootLocker && typeof window.LootLocker.setPlayerName === 'function') {
+            window.LootLocker.setPlayerName(cleaned).catch(() => {});
+        }
 
         // Refresh Leaderboard if currently visible
         const lb = document.getElementById('leaderboard-popup');
@@ -737,7 +827,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
     window.closePopup = function(id){
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
-        if (id === 'controls-popup' && (window._pcControlsOnDone || window._mobControlsOnDone)) {
+        if (id === 'controls-popup') {
             if (typeof window.closePcControls === 'function') window.closePcControls();
         }
     };
@@ -772,7 +862,7 @@ resize();window.addEventListener('resize',()=>{initBg();resize();});
             game.doubleBulletTimer = POWERUP_CONFIG.doubleBullet.duration;
             playCustomSound('music/double_fire.ogg', 3, 0.8);
             if (window.showToast) window.showToast("\uD83D\uDD25 DOUBLE FIRE ACTIVATED!");
-            window.updateHUD();
+            if (typeof updateHUD === 'function') updateHUD();
         } else {
             // No item — offer to watch ad
             window.showInGameAdPrompt('doubleBullet');
@@ -1187,14 +1277,15 @@ function spawnEnemy(ch,lvl,type){
     const cfg=getEnemyConfig(ch,lvl);
     let hp=et.hp;
     if(type==='tank')hp=Math.ceil(et.hp*cfg.tankHpMult);
-    if(type==='miniboss')hp=et.hp+ch*3;
-    if(type==='bossTankA'||type==='bossTankB')hp=Math.ceil(et.hp*(0.8+ch*0.25));
+    if(type==='miniboss')hp=et.hp+Math.max(0, ch-2)*2;
+    if(type==='bossTankA'||type==='bossTankB')hp=Math.ceil(et.hp*(0.8+ch*0.2));
     
     const e = acquireEnemy();
     e.id='e_'+Math.random().toString(36).substr(2,8);
     e.x=bx; e.y=by; e.vx=0; e.vy=0; e.angle=0; e.radius=et.radius; e.hp=hp; e.maxHp=hp;
     e.speed=et.speed*cfg.speedMult; e.fireRate=Math.ceil(et.fireRate*cfg.fireRateMult);
-    e.shootCooldown=Math.floor(Math.random()*60)+60; e.type=type;
+    e.shootCooldown=Math.floor(Math.random()*60)+Math.max(90, Math.floor(et.fireRate*cfg.fireRateMult*0.4)); e.type=type;
+    e.pushbackTimer=0;
     e.color=et.color; e.bodyColor=et.bodyColor; e.accentColor=et.accentColor;
     e.isTank=et.isTank||false; e.isMiniboss=et.isMiniboss||false; e.isBossTank=et.isBossTank||false;
     
@@ -1255,8 +1346,9 @@ function spawnPickup(x,y,type){
         spawned++;
     }
     
-    // Spawn up to max concurrent (6 + 1 every 5 levels)
-    game.maxConcurrentEnemies = Math.min(6 + Math.floor(level/5), game.mission ? 8 : cfg.count);
+    // Spawn up to max concurrent (scaled smoothly by chapter)
+    const chCap = Math.min(8, 2 + chapter + Math.floor(level / 12));
+    game.maxConcurrentEnemies = Math.min(chCap, game.mission ? chCap : cfg.count);
     for(let i=spawned;i<game.maxConcurrentEnemies && game.enemiesPending>0;i++){
         const t=cfg.types[Math.floor(Math.random()*cfg.types.length)];
         spawnEnemy(chapter,level,t);
@@ -1270,6 +1362,7 @@ function spawnPickup(x,y,type){
     document.getElementById('game-over-overlay').classList.add('hidden');
     document.getElementById('level-complete-overlay').classList.add('hidden');
     document.getElementById('chapter-complete-overlay').classList.add('hidden');
+    if (typeof window.closeAllPopups === 'function') window.closeAllPopups();
     camera.x=game.player.x-canvas.width/2;camera.y=game.player.y-canvas.height/2;
     setupMobileControls();
     // Controls Popup — PC gets keyboard guide, Mobile gets touch guide (each shown once)
@@ -1285,6 +1378,7 @@ function spawnPickup(x,y,type){
             document.getElementById('fun-level-objective').textContent=game.mission.displayText;
             flPop.classList.remove('hidden');
             updateMissionHUD();
+            updateHUD();
             audio.music.pause();
             // ⚠️ CRITICAL: Always ensure the loop is alive after showing the popup.
             // Cancel any stale rAF and force a fresh one so RESUME always works.
@@ -1299,29 +1393,11 @@ function spawnPickup(x,y,type){
             if(flPop) flPop.classList.add('hidden');
             tryPlayBg();
             updateMissionHUD();
+            updateHUD();
             showLevelIntro(game.chapter, game.level);
         }
     };
-    const isMob = typeof window.isMobileDevice === 'function' ? window.isMobileDevice() : !window._isDesktop;
-    const seenKey = isMob ? 'fs_mob_ctrl_seen' : 'fs_pc_ctrl_seen';
-    const alreadySeen = (localStorage.getItem(seenKey) === '1');
-
-    if (!alreadySeen && !window._controlsShownThisSession) {
-        window._controlsShownThisSession = true;
-        window._pcControlsShown = true;
-        window._mobControlsShown = true;
-        game.state = 'pc_controls';
-        window._pcControlsOnDone = _afterControls;
-        window._mobControlsOnDone = _afterControls;
-        if (typeof window.showControls === 'function') {
-            window.showControls();
-        } else {
-            const cp = document.getElementById('controls-popup');
-            if (cp) cp.classList.remove('hidden');
-        }
-    } else {
-        _afterControls();
-    }
+    _afterControls();
     // Start loop if not running. Note: if mission_popup was shown above,
     // _afterControls already restarted the loop with a fresh rAF.
     if (!gameLoopRunning) {
@@ -1460,7 +1536,7 @@ function useMissile(){
     
     if(window.showToast) window.showToast("\uD83D\uDE80 MISSILE STRIKE INITIALIZED!");
     screenShake=20;
-    updateHudInventory();
+    if(typeof updateHUD === 'function') updateHUD();
 }
 
 function processMissileStrike(now) {
@@ -1517,6 +1593,7 @@ function useShield(){
     }
     game.shieldActive=true;game.shieldHits=3;game.shieldTimer=15000;
     if(window.showToast) window.showToast("\uD83D\uDEE1\uFE0F SHIELD ACTIVATED (15 SECS)");
+    if(typeof updateHUD === 'function') updateHUD();
 }
 
 // =====================================================================
@@ -1598,35 +1675,56 @@ function gameLoop(timestamp){
         const e=game.enemies[i];
         const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy);
         e.angle=Math.atan2(dy,dx);
-        const eAccel=(18+e.speed*12)*dt,eMax=75+e.speed*35;
-        e.vx+=Math.cos(e.angle)*eAccel;e.vy+=Math.sin(e.angle)*eAccel;
-        const es=Math.hypot(e.vx,e.vy);if(es>eMax){e.vx*=eMax/es;e.vy*=eMax/es;}
-        const ef=Math.exp(-5.5*dt);e.vx*=ef;e.vy*=ef;
-        e.x=Math.max(e.radius,Math.min(MAP_W-e.radius,e.x+e.vx*dt*60));
-        e.y=Math.max(e.radius,Math.min(MAP_H-e.radius,e.y+e.vy*dt*60));
-        // Body collision
-        const cd=e.radius+p.radius;
-        if(dist<cd&&dist>0){
-            const ol=cd-dist,nvx=dx/(dist||1),nvy=dy/(dist||1);
-            e.x-=nvx*ol*0.5;e.y-=nvy*ol*0.5;p.x+=nvx*ol*0.5;p.y+=nvy*ol*0.5;
-            e.vx -= nvx * 250; e.vy -= nvy * 250; 
-            p.vx += nvx * 250; p.vy += nvy * 250;
-            if(!game.shieldActive){
-                p.hp--; p._hpM=p.hp; hitFlash=0.45; screenShake=8;
-                spawnHitSpark(p.x, p.y, '#ff3a22');
-                if(game.mission && game.mission.id==='no_damage'){
-                    showToast('❌ RULE BROKEN — Enemy rammed into you! Mission failed.');
-                    game.mission = null;
-                    triggerGameOver();
-                }
-                if(p.hp<=0){spawnExplosion(p.x,p.y,p.color); audio.play('playerDeath', 1.0); triggerGameOver();}
-            }
+        const eMax = 75 + e.speed * 35;
+        if (e.pushbackTimer > 0) {
+            e.pushbackTimer -= dt;
+        } else {
+            const eAccel = (18 + e.speed * 12) * dt;
+            e.vx += Math.cos(e.angle) * eAccel;
+            e.vy += Math.sin(e.angle) * eAccel;
+        }
+        const es = Math.hypot(e.vx, e.vy);
+        if (es > eMax && (!e.pushbackTimer || e.pushbackTimer <= 0)) {
+            e.vx *= eMax / es;
+            e.vy *= eMax / es;
+        }
+        const ef = Math.exp(-5.5 * dt);
+        e.vx *= ef;
+        e.vy *= ef;
+        e.x = Math.max(e.radius, Math.min(MAP_W - e.radius, e.x + e.vx * dt * 60));
+        e.y = Math.max(e.radius, Math.min(MAP_H - e.radius, e.y + e.vy * dt * 60));
+        // Body collision: player plane touches enemy -> push enemy 2 steps back on every level, NO damage, NO game over
+        const cd = e.radius + p.radius;
+        if (dist < cd) {
+            const nvx = dist > 0 ? dx / dist : Math.cos(Math.random() * Math.PI * 2);
+            const nvy = dist > 0 ? dy / dist : Math.sin(Math.random() * Math.PI * 2);
+            // 2 full steps pushback distance (approx 130px) + separation
+            const pushDist = (cd - dist) + 130;
+            
+            // Push enemy 2 steps away from player
+            e.x = Math.max(e.radius, Math.min(MAP_W - e.radius, e.x - nvx * pushDist));
+            e.y = Math.max(e.radius, Math.min(MAP_H - e.radius, e.y - nvy * pushDist));
+            e.vx = -nvx * 550;
+            e.vy = -nvy * 550;
+            e.pushbackTimer = 0.45; // 0.45s recoil stun so enemy visibly steps back
+            e.shootCooldown = Math.max(e.shootCooldown, 90); // prevent point-blank snapshot
+            
+            // Player gets kinetic bounce away
+            p.vx += nvx * 150;
+            p.vy += nvy * 150;
+            
+            // Kinetic impact feedback (sparks & screen shake, but NO game over)
+            screenShake = Math.max(screenShake, 6);
+            spawnHitSpark((p.x + e.x) * 0.5, (p.y + e.y) * 0.5, '#00eaff');
+            if (audio && audio.play) audio.play('hit', 0.5);
         }
         // Enemy shoot
         if(game.safeTimer<=0){e.shootCooldown--;
             if(dist<650&&e.shootCooldown<=0){e.shootCooldown=e.fireRate;
-                const bs=8.5+Math.min(game.level*0.15, 5.0); // Faster, arcade-speed enemy bullets
-                const shootAngle=Math.atan2(p.y-e.y, p.x-e.x); // Aim directly at player's current position
+                const baseSpd = 4.2 + (game.chapter - 1) * 0.75;
+                const bs = baseSpd + Math.min(game.level * 0.06, 1.8);
+                const aimSpread = Math.max(0, (3 - game.chapter) * 0.12);
+                const shootAngle = Math.atan2(p.y - e.y, p.x - e.x) + (Math.random() - 0.5) * aimSpread;
                 const eox=e.x+Math.cos(shootAngle)*(e.radius+6), eoy=e.y+Math.sin(shootAngle)*(e.radius+6);
 
                 const addEnemyBullet = (ang, color, shadow, shape, spd) => {
@@ -1703,11 +1801,9 @@ function gameLoop(timestamp){
                         if(game.chapter>1&&Math.random()<0.05)spawnPickup(e.x,e.y,Math.random()<0.5?'speedBoost':'shield');
                         if(game.mission&&(game.mission.id==='kill_count'||game.mission.id==='time_kill'))game.missionProgress++;
                         // ★ RULE ENFORCEMENT: Pacifist — instant fail on any kill
-                        // NOTE: No 'return' here — returning from inside the bullet loop
-                        // would break the requestAnimationFrame chain, freezing the game.
-                        if(game.mission&&game.mission.id==='pacifist'){
-                            showToast('❌ RULE BROKEN — You killed an enemy! Mission failed.');
-                            game.mission = null; // prevent re-trigger
+                        if(game.mission && game.mission.id==='pacifist'){
+                            showToast('❌ RULE BROKEN — You killed an enemy! Game Over.');
+                            game.mission = null;
                             triggerGameOver();
                         }
                         spawnCoinFloat(e.x-camera.x,e.y-camera.y,coins);
@@ -1733,19 +1829,20 @@ function gameLoop(timestamp){
                     audio.play('shoot', 0.3); // "Ping" reflection sound
                 } else {
                     dead=true;
-                    p.hp--; p._hpM=p.hp; // sync shadow immediately after taking damage
-                    hitFlash=0.45; screenShake=6;
+                    p.hp = 0; p._hpM = 0; // Instant elimination on bullet hit
+                    hitFlash = 0.5; screenShake = 12;
                     spawnHitSpark(b.x, b.y, b.color || '#ff3a22');
-                    if(navigator.vibrate)navigator.vibrate(40);
+                    spawnExplosion(p.x, p.y, p.color);
+                    if(navigator.vibrate) navigator.vibrate(50);
                     if(window.playCustomSound) playCustomSound('music/shooter_destoyed.ogg', 4, 0.5);
-                    // ★ RULE ENFORCEMENT: Untouchable — instant fail on ANY damage
-                    // NOTE: No 'return' here — returning inside the bullet loop kills the rAF chain.
-                    if(game.mission && game.mission.id==='no_damage'){
-                        showToast('❌ RULE BROKEN — You took damage! Mission failed.');
-                        game.mission = null; // prevent re-trigger
-                        triggerGameOver();
+                    audio.play('playerDeath', 1.0);
+                    if(game.mission && game.mission.id === 'no_damage'){
+                        showToast('❌ RULE BROKEN — You took damage! Game Over.');
+                    } else {
+                        showToast('💥 GAME OVER — Bullet hit shooter!');
                     }
-                    if(p.hp<=0){spawnExplosion(p.x,p.y,p.color); audio.play('playerDeath', 1.0); triggerGameOver();}
+                    game.mission = null;
+                    triggerGameOver();
                 }
             }
         }
@@ -1904,21 +2001,26 @@ function updateHUD(){
         
         // Final count logic (Handle pluralization)
         let finalCount = count;
-        if (btnInfo.type === 'doubleBullet') finalCount = _sd.doubleBullets;
-        else if (btnInfo.type === 'missile') finalCount = _sd.missiles;
-        else if (btnInfo.type === 'shield') finalCount = _sd.shields;
+        if (btnInfo.type === 'doubleBullet') finalCount = _sd.doubleBullets !== undefined ? _sd.doubleBullets : 0;
+        else if (btnInfo.type === 'missile') finalCount = _sd.missiles !== undefined ? _sd.missiles : 0;
+        else if (btnInfo.type === 'shield') finalCount = _sd.shields !== undefined ? _sd.shields : 0;
 
         if (window.DEBUG_MODE) finalCount = 99;
 
-        // Visibility
-        if (window.DEBUG_MODE || finalCount > 0) btn.classList.remove('hidden');
-        else btn.classList.add('hidden');
+        // Visibility: Always show buttons on both mobile & desktop so players can use them or tap to get items
+        btn.classList.remove('hidden');
+        if (finalCount > 0) {
+            btn.classList.remove('is-empty');
+        } else {
+            btn.classList.add('is-empty');
+        }
 
         // Update Count Badge
         const badge = btn.querySelector('.btn-count');
         if (badge) badge.textContent = finalCount;
     });
 }
+window.updateHUD = updateHUD;
 
 function updateMissionHUD(){
     const md=document.getElementById('mission-display');
@@ -2452,7 +2554,7 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{if(e.code==='Space')isShooting=false;const k=e.key.toLowerCase();if(k==='w'||k==='arrowup')keys.w=false;if(k==='a'||k==='arrowleft')keys.a=false;if(k==='s'||k==='arrowdown')keys.s=false;if(k==='d'||k==='arrowright')keys.d=false;});
 window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
-window.addEventListener('mousedown',e=>{if(e.button===0&&isPlaying)isShooting=true;});
+window.addEventListener('mousedown',e=>{if(e.button===0&&isPlaying&&!e.target.closest('#mobile-controls, .action-btn, .joystick-zone, .popup-box, .popup-overlay, .hud-btn, .settings-panel, .btn, .btn-play, button'))isShooting=true;});
 window.addEventListener('mouseup',e=>{if(e.button===0)isShooting=false;});
 
 // =====================================================================
@@ -2472,20 +2574,139 @@ function setupMobileControls(){
     const jHandle = document.getElementById('joystick-handle');
     const canvas = document.getElementById('gameCanvas');
 
-    if(window._isDesktop) {
-        // Desktop: show combat buttons for mouse clicks, joystick hidden via CSS
-        if(mc) mc.classList.remove('hidden');
-        if(btnFire) {
-            btnFire.addEventListener('mousedown', e => { e.preventDefault(); isShooting = true; });
-            btnFire.addEventListener('mouseup',   e => { e.preventDefault(); isShooting = false; });
-            btnFire.addEventListener('mouseleave',e => { isShooting = false; });
+    if(mc) mc.classList.remove('hidden');
+
+    // Movement joystick is strictly for Android devices; hide for PC
+    if (jZone) {
+        if (window.isAndroidDevice && window.isAndroidDevice()) {
+            jZone.style.setProperty('display', 'flex', 'important');
+        } else {
+            jZone.style.setProperty('display', 'none', 'important');
         }
-        return;
     }
 
-    // --- MOBILE SETUP ---
-    if(mc) mc.classList.remove('hidden');
-    const MAX = 36;
+    // Dual-stick directional fire drag state
+    let fireTouchId = null;
+    let isFireDragging = false;
+    let fireOriginX = 0, fireOriginY = 0;
+    const FIRE_MAX_OFFSET = 24;
+
+    function handleFireStart(cx, cy) {
+        if (!btnFire) return;
+        const r = btnFire.getBoundingClientRect();
+        fireOriginX = r.left + r.width / 2;
+        fireOriginY = r.top + r.height / 2;
+        isShooting = true;
+        btnFire.classList.add('is-firing');
+        handleFireDrag(cx, cy);
+    }
+
+    function handleFireDrag(cx, cy) {
+        if (!isShooting) return;
+        const dx = cx - fireOriginX;
+        const dy = cy - fireOriginY;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > 6) {
+            const ang = Math.atan2(dy, dx);
+            mouse.aimAngle = ang;
+            mouse.useMobileAim = true;
+            if (game.player) {
+                game.player.angle = ang;
+            }
+            // Visual drag knob feedback on fire button
+            const visualDist = Math.min(dist, FIRE_MAX_OFFSET);
+            const ox = Math.cos(ang) * visualDist;
+            const oy = Math.sin(ang) * visualDist;
+            if (btnFire) {
+                btnFire.style.transform = `translate(${ox.toFixed(1)}px, ${oy.toFixed(1)}px)`;
+            }
+        }
+    }
+
+    function handleFireEnd() {
+        isShooting = false;
+        fireTouchId = null;
+        isFireDragging = false;
+        if (btnFire) {
+            btnFire.style.transform = '';
+            btnFire.classList.remove('is-firing');
+        }
+        if (window._isDesktop) {
+            mouse.useMobileAim = false;
+        }
+    }
+
+    // --- FIRE BUTTON TOUCH & MOUSE LISTENERS ---
+    if (btnFire) {
+        // Touch events (Mobile drag-to-aim)
+        btnFire.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (fireTouchId === null && e.changedTouches.length > 0) {
+                fireTouchId = e.changedTouches[0].identifier;
+                handleFireStart(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+            }
+        }, {passive: false});
+
+        window.addEventListener('touchmove', e => {
+            if (fireTouchId !== null) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const t = e.changedTouches[i];
+                    if (t.identifier === fireTouchId) {
+                        e.preventDefault();
+                        handleFireDrag(t.clientX, t.clientY);
+                        break;
+                    }
+                }
+            }
+        }, {passive: false});
+
+        window.addEventListener('touchend', e => {
+            if (fireTouchId !== null) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === fireTouchId) {
+                        handleFireEnd();
+                        break;
+                    }
+                }
+            }
+        }, {passive: false});
+
+        window.addEventListener('touchcancel', e => {
+            if (fireTouchId !== null) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === fireTouchId) {
+                        handleFireEnd();
+                        break;
+                    }
+                }
+            }
+        }, {passive: false});
+
+        // Mouse events (Desktop drag-to-aim)
+        btnFire.addEventListener('mousedown', e => {
+            if (e.button === 0) {
+                e.preventDefault();
+                isFireDragging = true;
+                handleFireStart(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (isFireDragging) {
+                handleFireDrag(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('mouseup', e => {
+            if (isFireDragging && e.button === 0) {
+                handleFireEnd();
+            }
+        });
+    }
+
+    // --- MOVEMENT JOYSTICK SETUP ---
+    const MAX = 44;
     let jId = null;
 
     function moveJ(cx, cy) {
@@ -2507,16 +2728,26 @@ function setupMobileControls(){
         keys.w = oy < -deadZone;
         keys.s = oy > deadZone;
 
-        mouse.aimAngle = ang;
-        mouse.useMobileAim = true;
+        // If fire button is NOT actively aiming, face movement direction
+        if (fireTouchId === null && !isFireDragging) {
+            mouse.aimAngle = ang;
+            mouse.useMobileAim = true;
+            if (game.player) {
+                game.player.angle = ang;
+            }
+        }
     }
 
     function resetJ() {
         if (jHandle) jHandle.style.transform = 'translate(-50%, -50%)';
         keys.a = keys.d = keys.w = keys.s = false;
-        mouse.useMobileAim = false;
+        if (fireTouchId === null && !isFireDragging) {
+            mouse.useMobileAim = false;
+        }
         jId = null;
     }
+
+    let isJoyMouseDragging = false;
 
     if (jZone) {
         jZone.addEventListener('touchstart', e => {
@@ -2541,12 +2772,30 @@ function setupMobileControls(){
             e.preventDefault();
             resetJ();
         }, {passive: false});
+
+        // Mouse Drag on Joystick Zone (Desktop & Laptop)
+        jZone.addEventListener('mousedown', e => {
+            if (e.button === 0) {
+                e.preventDefault();
+                isJoyMouseDragging = true;
+                moveJ(e.clientX, e.clientY);
+            }
+        });
     }
 
-    // Touch screen aiming (touch right half of screen to aim cannons)
+    // Canvas steering & aiming
     if (canvas) {
+        // Desktop mouse steering on left side of screen
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 0 && e.clientX <= window.innerWidth * 0.45 && !isFireDragging) {
+                isJoyMouseDragging = true;
+                moveJ(e.clientX, e.clientY);
+            }
+        });
+
+        // Touch screen aiming (touch right half of screen if not on fire button)
         canvas.addEventListener('touchstart', e => {
-            if (!isPlaying || !game.player) return;
+            if (!isPlaying || !game.player || fireTouchId !== null) return;
             for (const t of e.changedTouches) {
                 if (t.clientX > window.innerWidth * 0.35 && t.identifier !== jId) {
                     const scx = game.player.x - camera.x;
@@ -2558,7 +2807,7 @@ function setupMobileControls(){
         }, {passive: true});
 
         canvas.addEventListener('touchmove', e => {
-            if (!isPlaying || !game.player) return;
+            if (!isPlaying || !game.player || fireTouchId !== null) return;
             for (const t of e.changedTouches) {
                 if (t.clientX > window.innerWidth * 0.35 && t.identifier !== jId) {
                     const scx = game.player.x - camera.x;
@@ -2570,12 +2819,19 @@ function setupMobileControls(){
         }, {passive: true});
     }
 
-    // Rapid Fire Button
-    if (btnFire) {
-        btnFire.addEventListener('touchstart', e => { e.preventDefault(); isShooting = true; }, {passive: false});
-        btnFire.addEventListener('touchend', e => { e.preventDefault(); isShooting = false; }, {passive: false});
-        btnFire.addEventListener('touchcancel', e => { e.preventDefault(); isShooting = false; }, {passive: false});
-    }
+    // Global listeners for mouse steering drag
+    window.addEventListener('mousemove', e => {
+        if (isJoyMouseDragging) {
+            moveJ(e.clientX, e.clientY);
+        }
+    });
+
+    window.addEventListener('mouseup', e => {
+        if (isJoyMouseDragging && e.button === 0) {
+            isJoyMouseDragging = false;
+            resetJ();
+        }
+    });
 
     // Tactical Missile Button
     if (btnMissile) {
@@ -2617,8 +2873,11 @@ function closeControlsPopup() {
         game.state = 'playing';
         if (audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
         fn();
-    } else if (isPlaying && audio.musicEnabled && typeof tryPlayBg === 'function') {
-        tryPlayBg();
+    } else {
+        if (game.state === 'pc_controls') game.state = 'playing';
+        if (isPlaying && audio.musicEnabled && typeof tryPlayBg === 'function') {
+            tryPlayBg();
+        }
     }
 }
 window.closeControlsPopup = closeControlsPopup;

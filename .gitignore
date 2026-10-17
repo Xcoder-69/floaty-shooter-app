@@ -1,3 +1,8 @@
 node_modules/
 gradle-8.14.3-all (1)/
 .idea/
+vexa-full/
+*.apk
+*.aab
+*.idsig
+*.zip

@@ -1,4 +1,4 @@
-﻿=====================================================
+=====================================================
   FLOATY SHOOTER -- ALL FUN LEVELS REFERENCE
 =====================================================
 
@@ -6,95 +6,74 @@ Fun levels are special challenge levels that appear at
 fixed intervals in each chapter. Completing the objective
 earns bonus coins!
 
+RATIO:
+  10 Levels  -> 2 Fun Levels
+  15 Levels  -> 3 Fun Levels
+  20 Levels  -> 4 Fun Levels
+  25 Levels  -> 5 Fun Levels
+  30 Levels  -> 6 Fun Levels
+  40 Levels  -> 8 Fun Levels
+  * Fun levels never appear on Level 1 or Boss levels!
+
 MISSION TYPES:
   [skull]  Elimination   -- Kill N enemies
   [timer]  Endurance     -- Survive for N seconds
   [shield] Untouchable   -- Take no damage for N seconds
-  [clock]  Time Attack   -- Kill 30 enemies in 60 seconds
-  [dove]   Pacifist      -- Survive 20s without killing
+  [clock]  Time Attack   -- Kill N enemies in 60 seconds
+  [dove]   Pacifist      -- Survive Ns without killing
 
 -----------------------------------------------------
-CHAPTER 1 -- Genesis Protocol  (10 Levels, 4 Fun Levels)
+CHAPTER 1 -- Genesis Protocol  (10 Levels, 2 Fun Levels)
 -----------------------------------------------------
-  Level  2   [shield] Untouchable  -- Take no damage for 23 seconds
-  Level  4   [dove]   Pacifist     -- Survive 20s without killing
-  Level  6   [timer]  Endurance    -- Survive for 75 seconds
-  Level  8   [clock]  Time Attack  -- Kill 30 enemies in 60s
+  Level  4   [shield] Untouchable  -- Take no damage for 10 seconds
+  Level  8   [clock]  Time Attack  -- Kill 10 enemies in 60s
 
 -----------------------------------------------------
-CHAPTER 2 -- Neon Uprising  (15 Levels, 6 Fun Levels)
+CHAPTER 2 -- Neon Uprising  (15 Levels, 3 Fun Levels)
 -----------------------------------------------------
-  Level  2   [shield] Untouchable  -- Take no damage for 26 seconds
-  Level  4   [dove]   Pacifist     -- Survive 20s without killing
-  Level  6   [timer]  Endurance    -- Survive for 90 seconds
-  Level  8   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 10   [skull]  Elimination  -- Kill 45 enemies
-  Level 12   [shield] Untouchable  -- Take no damage for 26 seconds
+  Level  4   [dove]   Pacifist     -- Survive 14s without killing
+  Level  8   [timer]  Endurance    -- Survive for 30 seconds
+  Level 12   [skull]  Elimination  -- Kill 15 enemies
 
 -----------------------------------------------------
-CHAPTER 3 -- Crimson Siege  (20 Levels, 8 Fun Levels)
+CHAPTER 3 -- Crimson Siege  (20 Levels, 4 Fun Levels)
 -----------------------------------------------------
-  Level  2   [shield] Untouchable  -- Take no damage for 29 seconds
-  Level  4   [dove]   Pacifist     -- Survive 20s without killing
-  Level  6   [timer]  Endurance    -- Survive for 105 seconds
-  Level  8   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 10   [skull]  Elimination  -- Kill 50 enemies
-  Level 12   [shield] Untouchable  -- Take no damage for 29 seconds
-  Level 14   [dove]   Pacifist     -- Survive 20s without killing
-  Level 16   [timer]  Endurance    -- Survive for 105 seconds
+  Level  5   [shield] Untouchable  -- Take no damage for 14 seconds
+  Level  9   [clock]  Time Attack  -- Kill 14 enemies in 60s
+  Level 14   [dove]   Pacifist     -- Survive 16s without killing
+  Level 18   [skull]  Elimination  -- Kill 17 enemies
 
 -----------------------------------------------------
-CHAPTER 4 -- Void Dominion  (25 Levels, 10 Fun Levels)
+CHAPTER 4 -- Void Dominion  (25 Levels, 5 Fun Levels)
 -----------------------------------------------------
-  Level  2   [shield] Untouchable  -- Take no damage for 32 seconds
-  Level  4   [dove]   Pacifist     -- Survive 20s without killing
-  Level  6   [timer]  Endurance    -- Survive for 120 seconds
-  Level  8   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 10   [skull]  Elimination  -- Kill 55 enemies
-  Level 12   [shield] Untouchable  -- Take no damage for 32 seconds
-  Level 14   [dove]   Pacifist     -- Survive 20s without killing
-  Level 16   [timer]  Endurance    -- Survive for 120 seconds
-  Level 18   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 20   [skull]  Elimination  -- Kill 75 enemies
+  Level  5   [timer]  Endurance    -- Survive for 40 seconds
+  Level  9   [clock]  Time Attack  -- Kill 16 enemies in 60s
+  Level 14   [shield] Untouchable  -- Take no damage for 16 seconds
+  Level 18   [dove]   Pacifist     -- Survive 18s without killing
+  Level 22   [skull]  Elimination  -- Kill 24 enemies
 
 -----------------------------------------------------
-CHAPTER 5 -- Inferno Core  (30 Levels, 12 Fun Levels)
+CHAPTER 5 -- Inferno Core  (30 Levels, 6 Fun Levels)
 -----------------------------------------------------
-  Level  2   [shield] Untouchable  -- Take no damage for 35 seconds
-  Level  4   [dove]   Pacifist     -- Survive 20s without killing
-  Level  6   [timer]  Endurance    -- Survive for 135 seconds
-  Level  8   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 10   [skull]  Elimination  -- Kill 60 enemies
-  Level 12   [shield] Untouchable  -- Take no damage for 35 seconds
-  Level 14   [dove]   Pacifist     -- Survive 20s without killing
-  Level 16   [timer]  Endurance    -- Survive for 135 seconds
-  Level 18   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 20   [skull]  Elimination  -- Kill 80 enemies
-  Level 22   [shield] Untouchable  -- Take no damage for 35 seconds
-  Level 24   [dove]   Pacifist     -- Survive 20s without killing
+  Level  4   [shield] Untouchable  -- Take no damage for 18 seconds
+  Level  9   [dove]   Pacifist     -- Survive 20s without killing
+  Level 14   [timer]  Endurance    -- Survive for 45 seconds
+  Level 19   [clock]  Time Attack  -- Kill 18 enemies in 60s
+  Level 24   [skull]  Elimination  -- Kill 25 enemies
+  Level 28   [shield] Untouchable  -- Take no damage for 18 seconds
 
 -----------------------------------------------------
-CHAPTER 6 -- Omega Extinction  (40 Levels, 18 Fun Levels)
+CHAPTER 6 -- Omega Extinction  (40 Levels, 8 Fun Levels)
 -----------------------------------------------------
-  Level  2   [shield] Untouchable  -- Take no damage for 38 seconds
-  Level  4   [dove]   Pacifist     -- Survive 20s without killing
-  Level  6   [timer]  Endurance    -- Survive for 150 seconds
-  Level  8   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 10   [skull]  Elimination  -- Kill 65 enemies
-  Level 12   [shield] Untouchable  -- Take no damage for 38 seconds
-  Level 14   [dove]   Pacifist     -- Survive 20s without killing
-  Level 16   [timer]  Endurance    -- Survive for 150 seconds
-  Level 18   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 20   [skull]  Elimination  -- Kill 85 enemies
-  Level 22   [shield] Untouchable  -- Take no damage for 38 seconds
-  Level 24   [dove]   Pacifist     -- Survive 20s without killing
-  Level 26   [timer]  Endurance    -- Survive for 150 seconds
-  Level 28   [clock]  Time Attack  -- Kill 30 enemies in 60s
-  Level 30   [skull]  Elimination  -- Kill 105 enemies
-  Level 32   [shield] Untouchable  -- Take no damage for 38 seconds
-  Level 34   [dove]   Pacifist     -- Survive 20s without killing
-  Level 36   [timer]  Endurance    -- Survive for 150 seconds
+  Level  4   [dove]   Pacifist     -- Survive 22s without killing
+  Level  8   [shield] Untouchable  -- Take no damage for 20 seconds
+  Level 14   [timer]  Endurance    -- Survive for 50 seconds
+  Level 18   [clock]  Time Attack  -- Kill 20 enemies in 60s
+  Level 24   [skull]  Elimination  -- Kill 25 enemies
+  Level 28   [shield] Untouchable  -- Take no damage for 20 seconds
+  Level 34   [timer]  Endurance    -- Survive for 50 seconds
+  Level 38   [clock]  Time Attack  -- Kill 20 enemies in 60s
 
 =====================================================
-  TOTAL: 58 Fun Levels across 6 Chapters
+  TOTAL: 28 Fun Levels across 6 Chapters
 =====================================================
