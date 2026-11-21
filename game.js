@@ -1868,6 +1868,10 @@ function gameLoop(timestamp){
     
     p.x=Math.max(p.radius,Math.min(MAP_W-p.radius,p.x+p.vx*dt*60));
     p.y=Math.max(p.radius,Math.min(MAP_H-p.radius,p.y+p.vy*dt*60));
+    // Fail-safe: immediately stop shooting if no key/mouse/touch input is actively held
+    if (isShooting && !isSpaceDown && !isLeftMouseDown && !isRightMouseDown && !isFireDragging && fireTouchId === null) {
+        isShooting = false;
+    }
     // Shoot — per-chapter unique fire patterns
     const fireMs=game.doubleBulletTimer>0?80:120;
     if(isShooting&&timestamp-p.lastShootTime>fireMs){
@@ -1993,8 +1997,8 @@ function gameLoop(timestamp){
         // Enemy shoot
         if(game.safeTimer<=0){e.shootCooldown--;
             if(dist<750&&e.shootCooldown<=0){e.shootCooldown=e.fireRate;
-                const baseSpd = 11.0 + (game.chapter - 1) * 1.0;
-                const bs = baseSpd + Math.min(game.level * 0.08, 2.5);
+                const baseSpd = (11.0 + (game.chapter - 1) * 1.0) * 0.60; // Decreased by 40%
+                const bs = baseSpd + Math.min(game.level * 0.08, 2.5) * 0.60;
                 const aimSpread = Math.max(0.01, (3 - game.chapter) * 0.025);
                 const shootAngle = Math.atan2(p.y - e.y, p.x - e.x) + (Math.random() - 0.5) * aimSpread;
                 const eox=e.x+Math.cos(shootAngle)*(e.radius+6), eoy=e.y+Math.sin(shootAngle)*(e.radius+6);
@@ -2005,7 +2009,7 @@ function gameLoop(timestamp){
                     const s = spd || bs;
                     b.vx = Math.cos(ang) * s;
                     b.vy = Math.sin(ang) * s;
-                    b.life = 180; // Extended lifetime ensures bullets cross full screen and hit player
+                    b.life = 240; // Extended lifetime ensures slower bullets cross full screen
                     b.ownerType = 'enemy';
                     b.color = color; b.shadow = shadow;
                     b.size = shape === 'bossBeam' ? 8 : 5;
@@ -2843,6 +2847,8 @@ function spawnCoinFloat(sx,sy,amount){
 let isLeftMouseDown = false;
 let isRightMouseDown = false;
 let isSpaceDown = false;
+let isFireDragging = false;
+let fireTouchId = null;
 
 window.addEventListener('keydown', e => {
     if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
@@ -2873,7 +2879,7 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => {
     if (e.code === 'Space') {
         isSpaceDown = false;
-        if (!isLeftMouseDown && !isRightMouseDown && !isFireDragging) isShooting = false;
+        if (!isLeftMouseDown && !isRightMouseDown && !isFireDragging && fireTouchId === null) isShooting = false;
     }
     const k = e.key.toLowerCase();
     if (k === 'w' || k === 'arrowup') keys.w = false;
@@ -2888,13 +2894,22 @@ window.addEventListener('mousemove', e => {
     if (window._isDesktop) {
         mouse.useMobileAim = false;
     }
+    // Safety sync: If no mouse buttons are pressed, clear mouse firing flags
+    if (e.buttons !== undefined && (e.buttons & 3) === 0) {
+        isLeftMouseDown = false;
+        isRightMouseDown = false;
+        if (isFireDragging && fireTouchId === null) {
+            isFireDragging = false;
+            if (typeof window.handleFireEnd === 'function') window.handleFireEnd();
+        }
+    }
 });
 
 // PC & Mouse firing: Left-Click & Right-Click both fire weapons
 window.addEventListener('mousedown', e => {
     if ((e.button === 0 || e.button === 2) && isPlaying) {
-        // Ignore clicks on UI elements (popups, HUD chips, settings panel, powerup buttons)
-        if (e.target.closest('.popup-box, .popup-overlay, .hud-btn, .settings-panel, .btn, .btn-play, #btn-shield-mobile, #btn-double-mobile, #btn-missile-mobile, .shield-mobile-btn, .double-mobile-btn, .missile-mobile-btn')) {
+        // Ignore clicks on UI elements (popups, HUD chips, settings panel, powerup buttons, mobile fire button)
+        if (e.target.closest('.popup-box, .popup-overlay, .hud-btn, .settings-panel, .btn, .btn-play, #btn-shield-mobile, #btn-double-mobile, #btn-missile-mobile, .shield-mobile-btn, .double-mobile-btn, .missile-mobile-btn, #btn-fire, .fire-btn')) {
             return;
         }
         if (e.button === 0) isLeftMouseDown = true;
@@ -2912,7 +2927,15 @@ window.addEventListener('mouseup', e => {
         isRightMouseDown = false;
         e.preventDefault();
     }
-    if (!isLeftMouseDown && !isRightMouseDown && !isFireDragging && !isSpaceDown) {
+    if (e.buttons !== undefined && (e.buttons & 3) === 0) {
+        isLeftMouseDown = false;
+        isRightMouseDown = false;
+    }
+    if (isFireDragging && fireTouchId === null) {
+        isFireDragging = false;
+        if (typeof window.handleFireEnd === 'function') window.handleFireEnd();
+    }
+    if (!isLeftMouseDown && !isRightMouseDown && !isFireDragging && !isSpaceDown && fireTouchId === null) {
         isShooting = false;
     }
 });
@@ -2924,11 +2947,18 @@ window.addEventListener('contextmenu', e => {
     }
 });
 
-window.addEventListener('blur', () => {
+function clearAllFiringState() {
     isLeftMouseDown = false;
     isRightMouseDown = false;
     isSpaceDown = false;
+    isFireDragging = false;
+    fireTouchId = null;
     isShooting = false;
+    if (typeof window.handleFireEnd === 'function') window.handleFireEnd();
+}
+window.addEventListener('blur', clearAllFiringState);
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearAllFiringState();
 });
 
 // =====================================================================
@@ -2959,9 +2989,9 @@ function setupMobileControls(){
         }
     }
 
-    // Dual-stick directional fire drag state
-    let fireTouchId = null;
-    let isFireDragging = false;
+    // Dual-stick directional fire drag state (uses top-level variables)
+    fireTouchId = null;
+    isFireDragging = false;
     let fireOriginX = 0, fireOriginY = 0;
     const FIRE_MAX_OFFSET = 24;
 
@@ -2976,7 +3006,7 @@ function setupMobileControls(){
     }
 
     function handleFireDrag(cx, cy) {
-        if (!isShooting) return;
+        if (!isShooting && !isFireDragging && fireTouchId === null) return;
         const dx = cx - fireOriginX;
         const dy = cy - fireOriginY;
         const dist = Math.hypot(dx, dy);
@@ -3014,10 +3044,38 @@ function setupMobileControls(){
             isShooting = false;
         }
     }
+    window.handleFireEnd = handleFireEnd;
 
-    // --- FIRE BUTTON TOUCH & MOUSE LISTENERS ---
+    // --- FIRE BUTTON TOUCH, POINTER & MOUSE LISTENERS ---
     if (btnFire) {
-        // Touch events (Mobile drag-to-aim)
+        btnFire.addEventListener('dragstart', e => e.preventDefault());
+        btnFire.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Unified Pointer Events (works for both touch & mouse with reliable capture)
+        btnFire.addEventListener('pointerdown', e => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            try { btnFire.setPointerCapture(e.pointerId); } catch (_) {}
+            isFireDragging = true;
+            handleFireStart(e.clientX, e.clientY);
+        });
+
+        btnFire.addEventListener('pointermove', e => {
+            if (isFireDragging) {
+                handleFireDrag(e.clientX, e.clientY);
+            }
+        });
+
+        btnFire.addEventListener('pointerup', e => {
+            try { btnFire.releasePointerCapture(e.pointerId); } catch (_) {}
+            handleFireEnd();
+        });
+
+        btnFire.addEventListener('pointercancel', e => {
+            try { btnFire.releasePointerCapture(e.pointerId); } catch (_) {}
+            handleFireEnd();
+        });
+
+        // Touch events fallback
         btnFire.addEventListener('touchstart', e => {
             e.preventDefault();
             if (fireTouchId === null && e.changedTouches.length > 0) {
@@ -3040,7 +3098,9 @@ function setupMobileControls(){
         }, {passive: false});
 
         window.addEventListener('touchend', e => {
-            if (fireTouchId !== null) {
+            if (e.touches.length === 0) {
+                handleFireEnd();
+            } else if (fireTouchId !== null) {
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     if (e.changedTouches[i].identifier === fireTouchId) {
                         handleFireEnd();
@@ -3050,18 +3110,11 @@ function setupMobileControls(){
             }
         }, {passive: false});
 
-        window.addEventListener('touchcancel', e => {
-            if (fireTouchId !== null) {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === fireTouchId) {
-                        handleFireEnd();
-                        break;
-                    }
-                }
-            }
+        window.addEventListener('touchcancel', () => {
+            handleFireEnd();
         }, {passive: false});
 
-        // Mouse events (Desktop drag-to-aim)
+        // Mouse events fallback
         btnFire.addEventListener('mousedown', e => {
             if (e.button === 0) {
                 e.preventDefault();
@@ -3070,14 +3123,8 @@ function setupMobileControls(){
             }
         });
 
-        window.addEventListener('mousemove', e => {
+        window.addEventListener('mouseup', () => {
             if (isFireDragging) {
-                handleFireDrag(e.clientX, e.clientY);
-            }
-        });
-
-        window.addEventListener('mouseup', e => {
-            if (isFireDragging && e.button === 0) {
                 handleFireEnd();
             }
         });
