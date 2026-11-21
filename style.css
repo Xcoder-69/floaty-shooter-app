@@ -5055,34 +5055,35 @@ html.is-desktop #btn-double-mobile.hidden {
         letter-spacing: 0.5px !important;
     }
 
-    /* Daily Login Reward Modal */
+    /* Daily Login Reward Modal — sleek, compact & centered on mobile landscape */
     .daily-reward-box {
-        padding: 0.45rem 0.75rem 0.55rem !important;
-        width: min(470px, 94vw) !important;
-        max-width: 480px !important;
-        max-height: 93vh !important;
-        border-radius: 16px !important;
+        padding: 0.38rem 0.65rem 0.45rem !important;
+        width: min(430px, 90vw) !important;
+        max-width: 440px !important;
+        max-height: 94vh !important;
+        border-radius: 14px !important;
     }
-    .dr-header { margin-bottom: 0.25rem !important; }
-    .dr-title { font-size: 0.88rem !important; letter-spacing: 1.5px !important; }
-    .dr-subtitle { font-size: 0.52rem !important; margin-bottom: 0.1rem !important; }
-    .dr-streak-info { font-size: 0.48rem !important; margin-top: 0.1rem !important; }
-    .dr-crates { gap: 0.2rem !important; margin-bottom: 0.35rem !important; }
-    .dr-crate { padding: 0.25rem 0.08rem !important; border-radius: 7px !important; }
-    .dr-crate-box, .dr-box-lid { font-size: 0.95rem !important; }
-    .dr-crate-day { font-size: 0.38rem !important; }
-    .dr-crate-label { font-size: 0.38rem !important; }
-    .dr-crate-tag { font-size: 0.36rem !important; }
+    .dr-header { margin-bottom: 0.18rem !important; }
+    .dr-title { font-size: 0.8rem !important; letter-spacing: 1.5px !important; }
+    .dr-subtitle { font-size: 0.46rem !important; margin-bottom: 0.08rem !important; }
+    .dr-streak-info { font-size: 0.44rem !important; margin-top: 0.05rem !important; letter-spacing: 1px !important; }
+    .dr-crates { gap: 0.18rem !important; margin-bottom: 0.22rem !important; }
+    .dr-crate { padding: 0.2rem 0.06rem 0.22rem !important; border-radius: 6px !important; gap: 0.12rem !important; }
+    .dr-crate-box, .dr-box-lid { font-size: 0.88rem !important; }
+    .dr-crate-day { font-size: 0.36rem !important; }
+    .dr-crate-label { font-size: 0.36rem !important; }
+    .dr-crate-tag { font-size: 0.34rem !important; }
     .dr-tomorrow-banner {
-        padding: 0.28rem 0.6rem !important;
-        margin: 0.12rem 0 0.35rem !important;
+        padding: 0.22rem 0.55rem !important;
+        margin: 0.1rem 0 0.25rem !important;
         gap: 0.45rem !important;
+        border-radius: 8px !important;
     }
-    .dr-tomorrow-icon { font-size: 1.1rem !important; }
-    .dr-tomorrow-badge { font-size: 0.5rem !important; }
-    .dr-tomorrow-sub { font-size: 0.62rem !important; }
-    .dr-tomorrow-timer-wrap { font-size: 0.5rem !important; }
-    .dr-claim-btn { padding: 0.35rem 0.85rem !important; font-size: 0.68rem !important; border-radius: 6px !important; }
+    .dr-tomorrow-icon { font-size: 1.05rem !important; }
+    .dr-tomorrow-badge { font-size: 0.46rem !important; }
+    .dr-tomorrow-sub { font-size: 0.54rem !important; line-height: 1.15 !important; }
+    .dr-tomorrow-timer-wrap { font-size: 0.46rem !important; }
+    .dr-claim-btn { padding: 0.28rem 0.75rem !important; font-size: 0.62rem !important; border-radius: 6px !important; }
 
     /* Edit Pilot Callsign Modal */
     .edit-pilot-box {
@@ -5193,24 +5194,24 @@ html.is-desktop #btn-double-mobile.hidden {
    DAILY REWARD v2 — Box Opening + Missile Mega Animation
    =========================================================== */
 .daily-reward-box {
-    max-width: 640px !important;
-    width: 96vw !important;
-    padding: 1.6rem 1.4rem 1.8rem !important;
-    background: linear-gradient(160deg, #0d1b2e 0%, #0a1628 60%, #0d1020 100%) !important;
-    border-color: rgba(255, 200, 60, 0.55) !important;
-    box-shadow: 0 0 100px rgba(255, 180, 0, 0.22), 0 0 40px rgba(155, 89, 255, 0.12) !important;
+    max-width: 520px;
+    width: min(520px, 94vw);
+    padding: 1.2rem 1.2rem 1.4rem;
+    background: linear-gradient(160deg, #0d1b2e 0%, #0a1628 60%, #0d1020 100%);
+    border-color: rgba(255, 200, 60, 0.55);
+    box-shadow: 0 0 100px rgba(255, 180, 0, 0.22), 0 0 40px rgba(155, 89, 255, 0.12);
     position: relative; overflow: hidden;
     transition: border-color 0.5s, box-shadow 0.5s;
 }
 /* Bonus week — cyan/purple theme */
 .daily-reward-box.bonus-week {
-    border-color: rgba(0, 234, 255, 0.6) !important;
-    box-shadow: 0 0 100px rgba(0,234,255,0.2), 0 0 40px rgba(155,89,255,0.25) !important;
+    border-color: rgba(0, 234, 255, 0.6);
+    box-shadow: 0 0 100px rgba(0,234,255,0.2), 0 0 40px rgba(155,89,255,0.25);
 }
 .daily-reward-box.bonus-week::before {
-    background: radial-gradient(ellipse at 50% 0%, rgba(0,234,255,0.12) 0%, transparent 70%) !important;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,234,255,0.12) 0%, transparent 70%);
 }
-.daily-reward-box.bonus-week .dr-star { color: var(--cyan) !important; }
+.daily-reward-box.bonus-week .dr-star { color: var(--cyan); }
 
 .daily-reward-box::before {
     content: ''; position: absolute; top: -60px; left: -60px; right: -60px; height: 130px;
@@ -5569,7 +5570,7 @@ html.is-desktop #btn-double-mobile.hidden {
 
 /* ─── Responsive ─── */
 @media (max-width: 600px) {
-    .daily-reward-box { padding: 1rem 0.6rem 1.2rem !important; }
+    .daily-reward-box { width: min(360px, 92vw) !important; max-width: 380px !important; padding: 0.6rem 0.6rem 0.8rem !important; }
     .dr-crates { gap: 0.3rem; }
     .dr-crate { padding: 0.4rem 0.1rem; border-radius: 8px; }
     .dr-crate-box { font-size: 1.2rem; }
