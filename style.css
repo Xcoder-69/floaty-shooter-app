@@ -2976,11 +2976,11 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     position: relative;
     background: linear-gradient(165deg, rgba(8, 16, 32, 0.96) 0%, rgba(4, 10, 20, 0.98) 100%) !important;
     border: 1.5px solid rgba(0, 234, 255, 0.4) !important;
-    border-radius: 20px !important;
-    padding: 1.8rem 1.6rem 1.4rem !important;
-    max-width: 380px !important;
-    width: 90% !important;
-    box-shadow: 0 0 50px rgba(0, 234, 255, 0.18), 0 20px 60px rgba(0, 0, 0, 0.9) !important;
+    border-radius: 16px !important;
+    padding: 0.85rem 1.1rem 0.75rem !important;
+    max-width: 310px !important;
+    width: min(310px, 90vw) !important;
+    box-shadow: 0 0 35px rgba(0, 234, 255, 0.18), 0 16px 50px rgba(0, 0, 0, 0.9) !important;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     text-align: center;
@@ -3011,15 +3011,15 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 
 .replenish-close-btn {
     position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 32px;
-    height: 32px;
+    top: 10px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.18);
     color: #fff;
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -3040,73 +3040,73 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.2rem;
-    padding-right: 2.2rem;
+    margin-bottom: 0.45rem;
+    padding-right: 2rem;
 }
 
 .replenish-badge {
     font-family: var(--font-head);
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     font-weight: 800;
-    letter-spacing: 2px;
+    letter-spacing: 1.2px;
     color: #00eaff;
     background: rgba(0, 234, 255, 0.12);
     border: 1px solid rgba(0, 234, 255, 0.3);
-    border-radius: 6px;
-    padding: 3px 8px;
+    border-radius: 5px;
+    padding: 2px 7px;
     text-transform: uppercase;
 }
 
 .replenish-coin-chip {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     background: rgba(255, 215, 0, 0.12);
     border: 1px solid rgba(255, 215, 0, 0.4);
-    border-radius: 20px;
-    padding: 3px 10px;
+    border-radius: 16px;
+    padding: 2px 8px;
     font-family: var(--font-head);
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 800;
     color: #ffd700;
 }
 
 .replenish-coin-chip .ui-icon {
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
 }
 
 .replenish-icon-wrap {
-    width: 78px;
-    height: 78px;
-    margin: 0 auto 0.7rem;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 0.35rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     background: radial-gradient(circle, rgba(0, 234, 255, 0.22) 0%, rgba(10, 25, 45, 0.7) 80%);
-    border: 2px solid rgba(0, 234, 255, 0.5);
-    box-shadow: 0 0 25px rgba(0, 234, 255, 0.35);
+    border: 1.5px solid rgba(0, 234, 255, 0.5);
+    box-shadow: 0 0 16px rgba(0, 234, 255, 0.3);
     transition: all 0.3s ease;
 }
 
 .replenish-card.theme-double .replenish-icon-wrap {
     background: radial-gradient(circle, rgba(186, 85, 211, 0.25) 0%, rgba(20, 10, 40, 0.7) 80%);
     border-color: rgba(186, 85, 211, 0.6);
-    box-shadow: 0 0 25px rgba(186, 85, 211, 0.35);
+    box-shadow: 0 0 16px rgba(186, 85, 211, 0.3);
 }
 
 .replenish-card.theme-missile .replenish-icon-wrap {
     background: radial-gradient(circle, rgba(255, 94, 58, 0.25) 0%, rgba(40, 15, 10, 0.7) 80%);
     border-color: rgba(255, 94, 58, 0.6);
-    box-shadow: 0 0 25px rgba(255, 94, 58, 0.38);
+    box-shadow: 0 0 16px rgba(255, 94, 58, 0.3);
 }
 
 .replenish-img {
-    width: 46px;
-    height: 46px;
+    width: 28px;
+    height: 28px;
     object-fit: contain;
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
     animation: pulseIcon 2s infinite ease-in-out;
 }
 
@@ -3117,34 +3117,34 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 
 .replenish-title {
     font-family: var(--font-head);
-    font-size: 1.35rem;
+    font-size: 1.05rem;
     font-weight: 900;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     color: #ffffff;
-    margin-bottom: 0.25rem;
-    text-shadow: 0 0 14px rgba(255, 255, 255, 0.35);
+    margin-bottom: 0.15rem;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
 }
 
 .replenish-subtitle {
     font-family: var(--font-head);
-    font-size: 0.68rem;
+    font-size: 0.55rem;
     font-weight: 800;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     color: #ff5252;
     background: rgba(255, 82, 82, 0.12);
     border: 1px solid rgba(255, 82, 82, 0.3);
     border-radius: 4px;
     display: inline-block;
-    padding: 3px 9px;
-    margin-bottom: 0.65rem;
+    padding: 2px 7px;
+    margin-bottom: 0.3rem;
 }
 
 .replenish-desc {
-    font-size: 0.78rem;
-    line-height: 1.4;
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 1.3rem;
-    max-width: 320px;
+    font-size: 0.68rem;
+    line-height: 1.35;
+    color: #cbd5e1;
+    margin-bottom: 0.55rem;
+    max-width: 260px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -3152,17 +3152,17 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .replenish-actions {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.45rem;
     width: 100%;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.55rem;
 }
 
 .replenish-action-btn {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
-    border-radius: 12px;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
     font-family: var(--font-head);
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -3173,10 +3173,27 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .btn-action-main {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.86rem;
+    gap: 6px;
+    font-size: 0.76rem;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
+}
+
+.btn-action-main .ui-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.ad-film-icon {
+    font-size: 0.95rem;
+}
+
+.btn-action-cost {
+    border-radius: 6px;
+    padding: 3px 7px;
+    font-size: 0.66rem;
+    font-weight: 900;
+    letter-spacing: 0.5px;
 }
 
 .btn-action-main .ui-icon {
@@ -4961,30 +4978,45 @@ html.is-desktop #btn-double-mobile.hidden {
         letter-spacing: 0.5px !important;
     }
 
-    /* In-Game Replenish Card */
+    /* In-Game Replenish Card — compact & ergonomic */
     .replenish-card {
-        padding: 0.65rem 1.1rem 0.55rem !important;
-        max-width: 360px !important;
+        padding: 0.35rem 0.75rem 0.35rem !important;
+        max-width: 280px !important;
+        width: min(280px, 86vw) !important;
+        border-radius: 12px !important;
+    }
+    .replenish-header {
+        margin-bottom: 0.15rem !important;
+        padding-right: 1.8rem !important;
     }
     .replenish-close-btn {
-        top: 8px !important;
-        right: 8px !important;
-        width: 26px !important;
-        height: 26px !important;
-        font-size: 1.1rem !important;
+        top: 6px !important;
+        right: 6px !important;
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 0.95rem !important;
     }
-    .replenish-badge { font-size: 0.55rem !important; }
+    .replenish-badge { font-size: 0.5rem !important; padding: 1px 5px !important; }
+    .replenish-coin-chip { font-size: 0.6rem !important; padding: 1px 6px !important; }
+    .replenish-coin-chip .ui-icon { width: 12px !important; height: 12px !important; }
     .replenish-icon-wrap {
-        width: 40px !important;
-        height: 40px !important;
-        margin: 0.15rem auto 0.25rem !important;
+        width: 32px !important;
+        height: 32px !important;
+        margin: 0.05rem auto 0.15rem !important;
     }
-    .replenish-title { font-size: 0.98rem !important; margin: 0 0 2px 0 !important; }
-    .replenish-subtitle { font-size: 0.58rem !important; }
-    .replenish-desc { font-size: 0.62rem !important; margin-bottom: 0.35rem !important; line-height: 1.25 !important; }
-    .replenish-actions { gap: 0.35rem !important; margin-bottom: 0.35rem !important; }
-    .replenish-action-btn { padding: 0.38rem 0.55rem !important; font-size: 0.68rem !important; }
-    .replenish-resume-btn { padding: 0.28rem !important; font-size: 0.65rem !important; }
+    .replenish-img {
+        width: 18px !important;
+        height: 18px !important;
+    }
+    .replenish-title { font-size: 0.8rem !important; margin: 0 0 1px 0 !important; }
+    .replenish-subtitle { font-size: 0.46rem !important; padding: 1px 5px !important; margin-bottom: 0.15rem !important; }
+    .replenish-desc { font-size: 0.52rem !important; margin-bottom: 0.25rem !important; line-height: 1.2 !important; max-width: 230px !important; }
+    .replenish-actions { gap: 0.22rem !important; margin-bottom: 0.25rem !important; }
+    .replenish-action-btn { padding: 0.25rem 0.5rem !important; border-radius: 6px !important; }
+    .btn-action-main { font-size: 0.62rem !important; gap: 4px !important; }
+    .btn-action-main .ui-icon { width: 12px !important; height: 12px !important; }
+    .btn-action-cost { font-size: 0.52rem !important; padding: 2px 5px !important; }
+    .replenish-resume-btn { padding: 0.2rem !important; font-size: 0.55rem !important; }
 
     /* Match History Modal — compact & responsive */
     .history-box {
@@ -5679,5 +5711,6 @@ html.is-desktop #btn-double-mobile.hidden {
     .history-empty-btn { padding: 0.28rem 0.9rem !important; font-size: 0.62rem !important; }
     #stats-popup .popup-box { width: min(360px, 92vw) !important; padding: 0.6rem 0.85rem !important; }
     .controls-modal-box { width: min(360px, 92vw) !important; padding: 0.6rem 0.85rem !important; }
+    .replenish-card { max-width: 290px !important; padding: 0.7rem 0.9rem 0.6rem !important; }
 }
 
