@@ -1,4 +1,4 @@
-const CACHE_NAME = 'floaty-shooter-v25';
+const CACHE_NAME = 'floaty-shooter-v26';
 const ASSETS = [
   './',
   './index.html',
@@ -42,11 +42,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const isCode = url.pathname.endsWith('.js') || 
-                 url.pathname.endsWith('.html') || 
-                 url.pathname.endsWith('.css') || 
-                 url.pathname.endsWith('/') || 
-                 !url.pathname.includes('.');
+  const isCode = url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('/') ||
+    !url.pathname.includes('.');
 
   if (isCode) {
     // Network first — always get fresh code

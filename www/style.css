@@ -2836,14 +2836,14 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .game-over-box {
     background: linear-gradient(160deg, rgba(14, 18, 30, 0.96) 0%, rgba(8, 10, 18, 0.98) 100%) !important;
     border: 1.5px solid rgba(255, 58, 92, 0.45) !important;
-    border-radius: clamp(14px, 2.5vw, 18px) !important;
+    border-radius: 16px !important;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 58, 92, 0.18) !important;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    padding: clamp(0.7rem, 2.4vh, 1.3rem) clamp(1rem, 3.5vw, 1.8rem) !important;
+    padding: 0.75rem 1rem 0.7rem !important;
     min-width: unset !important;
-    width: min(420px, 90vw) !important;
-    max-width: 420px !important;
+    width: min(290px, 88vw) !important;
+    max-width: 290px !important;
     max-height: calc(100vh - 24px) !important;
     overflow-y: auto !important;
     overscroll-behavior: contain;
@@ -2854,23 +2854,23 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 }
 .game-over-box h2 {
     font-family: var(--font-head);
-    font-size: clamp(1.2rem, 4vh, 1.55rem) !important;
+    font-size: 1.15rem !important;
     font-weight: 900;
     letter-spacing: 2px;
     color: #ff3a5c !important;
-    text-shadow: 0 0 20px rgba(255, 58, 92, 0.7) !important;
-    margin: 0 0 clamp(0.25rem, 1.2vh, 0.5rem) 0 !important;
+    text-shadow: 0 0 16px rgba(255, 58, 92, 0.7) !important;
+    margin: 0 0 0.25rem 0 !important;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     animation: pulse 1.8s ease-in-out infinite;
 }
 .game-over-box p {
     font-family: var(--font-body, 'Inter', sans-serif);
     color: rgba(255, 255, 255, 0.72) !important;
-    font-size: clamp(0.72rem, 2.2vh, 0.86rem) !important;
-    margin: clamp(1px, 0.5vh, 3px) 0 !important;
+    font-size: 0.72rem !important;
+    margin: 1px 0 !important;
     line-height: 1.35;
 }
 .game-over-box p span {
@@ -2881,23 +2881,23 @@ kbd { background:rgba(0,234,255,.12); border:1px solid rgba(0,234,255,.3); paddi
 .gameover-buttons {
     display: flex !important;
     flex-direction: column !important;
-    gap: clamp(5px, 1.4vh, 8px) !important;
-    margin-top: clamp(0.5rem, 1.8vh, 0.85rem) !important;
+    gap: 5px !important;
+    margin-top: 0.45rem !important;
     width: 100% !important;
 }
 .gameover-buttons .btn {
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: clamp(0.44rem, 1.6vh, 0.65rem) 1rem !important;
-    font-size: clamp(0.74rem, 2.1vh, 0.85rem) !important;
+    padding: 0.38rem 0.8rem !important;
+    font-size: 0.72rem !important;
     font-family: var(--font-head);
     font-weight: 800;
     letter-spacing: 0.8px;
-    border-radius: 10px !important;
+    border-radius: 8px !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
     cursor: pointer;
     min-height: unset !important;
@@ -4666,54 +4666,58 @@ html.is-desktop #btn-double-mobile.hidden {
         font-size: 0.95rem !important;
     }
 
-    /* Game Over Modal (Landscape Compact — Exact UI) */
+    /* Game Over Modal (Compact & Narrower — Decreased Width) */
     .game-over-box {
-        padding: clamp(0.45rem, 1.8vh, 0.75rem) clamp(0.8rem, 2.5vw, 1.2rem) !important;
-        width: min(390px, 92vw) !important;
-        max-width: 390px !important;
+        padding: 0.35rem 0.75rem 0.35rem !important;
+        width: min(270px, 85vw) !important;
+        max-width: 275px !important;
+        border-radius: 12px !important;
     }
     .game-over-box h2 {
-        font-size: clamp(1.05rem, 3.2vh, 1.25rem) !important;
-        margin: 0 0 clamp(0.12rem, 0.6vh, 0.25rem) 0 !important;
-        gap: 6px !important;
+        font-size: 0.95rem !important;
+        margin: 0 0 2px 0 !important;
+        gap: 5px !important;
     }
     .game-over-box p {
-        font-size: clamp(0.66rem, 1.8vh, 0.78rem) !important;
+        font-size: 0.62rem !important;
         margin: 1px 0 !important;
+        line-height: 1.2 !important;
     }
     .gameover-buttons {
         display: flex !important;
         flex-direction: column !important;
-        gap: clamp(4px, 1.1vh, 6px) !important;
+        gap: 4px !important;
         width: 100% !important;
-        margin-top: clamp(0.35rem, 1.2vh, 0.55rem) !important;
+        margin-top: 0.3rem !important;
     }
     .gameover-buttons .btn {
         width: 100% !important;
-        padding: clamp(0.38rem, 1.4vh, 0.48rem) 0.8rem !important;
-        font-size: clamp(0.68rem, 1.8vh, 0.78rem) !important;
+        padding: 0.28rem 0.6rem !important;
+        font-size: 0.64rem !important;
+        border-radius: 6px !important;
     }
 
     @media (max-height: 380px) {
         .game-over-box {
-            padding: 0.35rem 0.75rem !important;
-            width: min(360px, 94vw) !important;
+            padding: 0.28rem 0.65rem 0.28rem !important;
+            width: min(255px, 85vw) !important;
+            max-width: 260px !important;
         }
         .game-over-box h2 {
-            font-size: 0.96rem !important;
+            font-size: 0.9rem !important;
             margin-bottom: 1px !important;
         }
         .game-over-box p {
-            font-size: 0.62rem !important;
+            font-size: 0.58rem !important;
             margin: 0 !important;
         }
         .gameover-buttons {
             gap: 3px !important;
-            margin-top: 0.25rem !important;
+            margin-top: 0.22rem !important;
         }
         .gameover-buttons .btn {
-            padding: 0.3rem 0.5rem !important;
-            font-size: 0.64rem !important;
+            padding: 0.24rem 0.5rem !important;
+            font-size: 0.6rem !important;
         }
     }
 
@@ -5712,5 +5716,6 @@ html.is-desktop #btn-double-mobile.hidden {
     #stats-popup .popup-box { width: min(360px, 92vw) !important; padding: 0.6rem 0.85rem !important; }
     .controls-modal-box { width: min(360px, 92vw) !important; padding: 0.6rem 0.85rem !important; }
     .replenish-card { max-width: 290px !important; padding: 0.7rem 0.9rem 0.6rem !important; }
+    .game-over-box { width: min(280px, 86vw) !important; max-width: 285px !important; padding: 0.7rem 0.85rem 0.65rem !important; }
 }
 
