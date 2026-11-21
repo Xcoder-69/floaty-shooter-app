@@ -48,7 +48,9 @@
     function loadSave() {
         try {
             const rawData = localStorage.getItem(SAVE_KEY);
-            if (!rawData) return getDefaultSave();
+            if (!rawData) {
+                return getDefaultSave();
+            }
             
             const parts = rawData.split('.');
             if (parts.length !== 2) throw new Error("Invalid format");
@@ -61,7 +63,7 @@
             
             const defaults = getDefaultSave();
             const loaded = { ...defaults, ...parsed, stats: { ...defaults.stats, ...parsed.stats } };
-
+            
             // Ensure every pilot receives 3 starter supplies if newly starting or empty
             if (!loaded._starterPackGiven || (loaded.missiles === 0 && loaded.shields === 0 && loaded.doubleBullets === 0)) {
                 loaded.missiles = Math.max(3, loaded.missiles || 0);
@@ -70,13 +72,16 @@
                 loaded._starterPackGiven = true;
                 setTimeout(() => saveSave(loaded), 300);
             }
-
+            
             return loaded;
         } catch (e) {
             console.warn('Sync ignored: Using defaults.');
             return getDefaultSave();
         }
     }
+
+    // Session-based state — does NOT persist to localStorage (relocks on close)
+    let sessionUnlockedShips = [];
 
     function saveSave(data) {
         try {
@@ -103,6 +108,7 @@
             d.stats.chaptersCompleted = CHAPTERS.length;
             d.stats.levelsCompleted = CHAPTERS.reduce((a,b)=>a+b.levels, 0);
             d.equippedShip = saveData.equippedShip;
+            d.equippedShip = saveData.equippedShip;
             return d;
         }
         return { ...saveData }; 
@@ -117,6 +123,7 @@
     };
 
     window.spendCoins = function(amount) {
+        if (window.DEBUG_MODE) return true;
         if (saveData.coins < amount) return false;
         saveData.coins -= amount;
         saveSave(saveData);
@@ -133,6 +140,7 @@
     };
 
     window.useItem = function(itemType) {
+        if (window.DEBUG_MODE) return true;
         let used = false;
         if (itemType === 'missile' && saveData.missiles > 0) { saveData.missiles--; used = true; }
         else if (itemType === 'shield' && saveData.shields > 0) { saveData.shields--; used = true; }
@@ -267,7 +275,9 @@
     };
 
     window.isChapterUnlocked = function(chapter) {
+        if (window.DEBUG_MODE) return true;
         if (chapter === 1) return true;
+        if (sessionUnlockedShips.includes(chapter)) return true;
         const prevProgress = saveData.chapterProgress[chapter - 1] || 0;
         return prevProgress >= CHAPTERS[chapter - 2].levels;
     };
@@ -324,7 +334,7 @@
 
         const delta = Math.abs(diff);
         const isDecrease = diff < 0;
-        _lastStoreCoins = targetCoins;
+        _lastStoreCoins = targetCoins; // Update immediately so synchronous re-entrant calls don't duplicate
 
         // Visual coin container pulse & floating delta badge
         const container = el.closest('.store-coins');
@@ -416,13 +426,35 @@
         container.innerHTML = cards.map(c => `<div class="stats-card"><span class="stats-icon">${c.icon}</span><div class="stats-val">${c.val}</div><div class="stats-label">${c.label}</div></div>`).join('');
     };
 
+    window.unlockShipWithAd = function(chId) {
+        window.showRewardAd('ship', (ok) => {
+            if (ok) {
+                if (!sessionUnlockedShips.includes(chId)) {
+                    sessionUnlockedShips.push(chId);
+                    window.showToast(`SHIP UNLOCKED: Session Access Granted!`);
+                }
+                window.renderCollectionUI();
+            }
+        });
+    };
+
     window.renderCollectionUI = function() {
         const grid = document.getElementById('collection-grid'); if (!grid) return;
         grid.innerHTML = CHAPTERS.map(ch => {
             const unlocked = window.isChapterUnlocked(ch.id);
             const currentCh = (window.game && window.game.chapter) || 1;
             const isEquipped = saveData.equippedShip ? (saveData.equippedShip === ch.id) : (currentCh === ch.id);
-            const btn = !unlocked ? `<button class="ci-btn locked" disabled>LOCKED</button>` : isEquipped ? `<button class="ci-btn equipped" disabled>ACTIVE</button>` : `<button class="ci-btn equip-action" onclick="equipShip(${ch.id})">EQUIP</button>`;
+            
+            let btn;
+            if (isEquipped) {
+                btn = `<button class="ci-btn equipped" disabled>ACTIVE</button>`;
+            } else if (unlocked) {
+                btn = `<button class="ci-btn equip-action" onclick="equipShip(${ch.id})">EQUIP</button>`;
+            } else {
+                // Not unlocked by progress OR session — show ad button
+                btn = `<button class="ci-btn ad-unlock-btn" onclick="unlockShipWithAd(${ch.id})">📺 WATCH AD</button>`;
+            }
+
             const shipSvg = `
                 <svg viewBox="-50 -50 100 100" style="width:100%; height:100%; filter:drop-shadow(0 0 10px ${ch.shooterColor});">
                     <g fill="${ch.shooterColor}" stroke="${ch.shooterColor}" stroke-width="2">
@@ -430,19 +462,64 @@
                     </g>
                     <path d="M0 -16 L16 16 L0 8 L-16 16 Z" fill="#0a1520" />
                 </svg>`;
-            return `<div class="collection-item ${unlocked ? '' : 'locked'} ${isEquipped ? 'active' : ''}"><div class="ci-preview" style="background:${ch.themeGradient[0]}; border-color:${ch.accent}"><div class="ci-ship-icon" style="display:flex; justify-content:center; align-items:center; width:60px; height:60px;">${shipSvg}</div></div><div class="ci-info"><div class="ci-text"><span class="ci-name">${ch.name}</span><span class="ci-status">${unlocked ? 'COLLECTED' : 'LOCKED'}</span></div>${btn}</div></div>`;
+            
+            return `
+                <div class="collection-item ${unlocked ? '' : 'locked'} ${isEquipped ? 'active' : ''}">
+                    <div class="ci-preview" style="background:${ch.themeGradient[0]}; border-color:${ch.accent}">
+                        <div class="ci-ship-icon">
+                            ${shipSvg}
+                        </div>
+                    </div>
+                    <div class="ci-info">
+                        <div class="ci-text">
+                            <span class="ci-name">${ch.name}</span>
+                            <span class="ci-status">${unlocked ? (sessionUnlockedShips.includes(ch.id) ? 'TRIAL ACTIVE' : 'COLLECTED') : 'LOCKED'}</span>
+                        </div>
+                        ${btn}
+                    </div>
+                </div>`;
         }).join('');
     };
 
-    window.showRewardAd = function(itemType, cb) {
-        const overlay = document.getElementById('ad-overlay');
+    // ---- AD HELPERS: Mute game audio around ads ----
+    function _pauseForAd() {
+        const engine = window._gameAudioEngine;
+        if (engine && engine.music) engine.music.pause();
+    }
+    function _resumeAfterAd() {
+        const engine = window._gameAudioEngine;
+        if (engine && engine.musicEnabled && engine.music) {
+            engine.music.play().catch(() => {});
+        }
+    }
+    function _isCrazyGamesReady() {
+        return typeof window.CrazyGames !== 'undefined' &&
+               window.CrazyGames.SDK &&
+               typeof window.CrazyGames.SDK.ad !== 'undefined';
+    }
+    // Fallback: show local simulated ad overlay (used on localhost / non-CrazyGames domains)
+    function _simulatedAdFallback(durationMs, onDone) {
+        const overlay = document.getElementById('simulated-ad-overlay');
         if (overlay) {
             overlay.classList.remove('hidden');
-            let timer = 3;
-            const interval = setInterval(() => {
-                if (--timer <= 0) {
-                    clearInterval(interval);
-                    overlay.classList.add('hidden');
+            setTimeout(() => { overlay.classList.add('hidden'); onDone(); }, durationMs);
+        } else {
+            onDone();
+        }
+    }
+
+    // =====================================================
+    // REWARD AD — CrazyGames SDK (items: missile / shield / doubleBullet / ship)
+    // On localhost the SDK shows a placeholder overlay automatically.
+    // On ad error / ad blocker: reward is NOT granted (cb(false)).
+    // =====================================================
+    window.showRewardAd = function(itemType, cb) {
+        if (_isCrazyGamesReady()) {
+            _pauseForAd();
+            window.CrazyGames.SDK.ad.requestAd('rewarded', {
+                adStarted:  () => { /* SDK already shows its overlay */ },
+                adFinished: () => {
+                    _resumeAfterAd();
                     if (itemType === 'missile') saveData.missileAdTimestamps.push(Date.now());
                     window.addItem(itemType, 1);
                     const adBtn = document.getElementById('ad-' + (itemType === 'doubleBullet' ? 'double' : itemType));
@@ -455,32 +532,55 @@
                     }
                     playPurchaseChime();
                     if (cb) cb(true);
+                },
+                adError: () => {
+                    // Ad blocked or unavailable — resume but do NOT grant reward
+                    _resumeAfterAd();
+                    if (window.showToast) window.showToast('⚠️ Ad unavailable. Try again later.');
+                    if (cb) cb(false);
                 }
-            }, 1000);
+            });
         } else {
-            window.addItem(itemType, 1);
-            const adBtn = document.getElementById('ad-' + (itemType === 'doubleBullet' ? 'double' : itemType));
-            window.spawnStorePlusAnimation(adBtn, 1, itemType);
-            const tag = document.getElementById('owned-tag-' + itemType);
-            if (tag) {
-                tag.classList.remove('bounce');
-                void tag.offsetWidth;
-                tag.classList.add('bounce');
-            }
-            playPurchaseChime();
-            if (cb) cb(true);
+            // Local testing fallback (3-second simulated ad)
+            _pauseForAd();
+            _simulatedAdFallback(3000, () => {
+                _resumeAfterAd();
+                if (itemType === 'missile') saveData.missileAdTimestamps.push(Date.now());
+                window.addItem(itemType, 1);
+                const adBtn = document.getElementById('ad-' + (itemType === 'doubleBullet' ? 'double' : itemType));
+                window.spawnStorePlusAnimation(adBtn, 1, itemType);
+                const tag = document.getElementById('owned-tag-' + itemType);
+                if (tag) {
+                    tag.classList.remove('bounce');
+                    void tag.offsetWidth;
+                    tag.classList.add('bounce');
+                }
+                playPurchaseChime();
+                if (cb) cb(true);
+            });
         }
     };
 
+    // =====================================================
+    // RESPAWN AD — CrazyGames SDK (shown on Game Over "Watch Ad to Respawn")
+    // =====================================================
     window.showRespawnAd = function(cb) {
-        const overlay = document.getElementById('ad-overlay');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-            let timer = 3;
-            const interval = setInterval(() => {
-                if (--timer <= 0) { clearInterval(interval); overlay.classList.add('hidden'); if (cb) cb(true); }
-            }, 1000);
-        } else if (cb) cb(true);
+        if (_isCrazyGamesReady()) {
+            _pauseForAd();
+            window.CrazyGames.SDK.ad.requestAd('rewarded', {
+                adStarted:  () => {},
+                adFinished: () => { _resumeAfterAd(); if (cb) cb(true); },
+                adError:    () => {
+                    _resumeAfterAd();
+                    if (window.showToast) window.showToast('⚠️ Ad unavailable. Please retry.');
+                    if (cb) cb(false);
+                }
+            });
+        } else {
+            // Local testing fallback
+            _pauseForAd();
+            _simulatedAdFallback(3000, () => { _resumeAfterAd(); if (cb) cb(true); });
+        }
     };
 
     // Developer keyword hidden check

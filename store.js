@@ -466,7 +466,7 @@
             return `
                 <div class="collection-item ${unlocked ? '' : 'locked'} ${isEquipped ? 'active' : ''}">
                     <div class="ci-preview" style="background:${ch.themeGradient[0]}; border-color:${ch.accent}">
-                        <div class="ci-ship-icon" style="display:flex; justify-content:center; align-items:center; width:60px; height:60px;">
+                        <div class="ci-ship-icon">
                             ${shipSvg}
                         </div>
                     </div>
