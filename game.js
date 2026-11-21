@@ -1859,7 +1859,7 @@ function gameLoop(timestamp){
     const fric=Math.exp(-DECAY*dt);p.vx*=fric;p.vy*=fric;
     // Aim
     const scx=p.x-camera.x,scy=p.y-camera.y;
-    p.angle=(mouse.useMobileAim&&mouse.aimAngle!=null)?mouse.aimAngle:Math.atan2(mouse.y-scy,mouse.x-scx);
+    p.angle=(window._isDesktop||!mouse.useMobileAim||mouse.aimAngle==null)?Math.atan2(mouse.y-scy,mouse.x-scx):mouse.aimAngle;
     // Move
     const nx=p.x+p.vx*dt*60,ny=p.y+p.vy*dt*60;
     if(nx<p.radius||nx>MAP_W-p.radius)p.vx*=-0.35;
@@ -2840,29 +2840,96 @@ function spawnCoinFloat(sx,sy,amount){
 // =====================================================================
 // INPUT
 // =====================================================================
-window.addEventListener('keydown',e=>{
-    if(e.code==='Space'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();if(isPlaying)isShooting=true;}
-    const k=e.key.toLowerCase();
-    if(k==='w'||k==='arrowup')keys.w=true;if(k==='a'||k==='arrowleft')keys.a=true;
-    if(k==='s'||k==='arrowdown')keys.s=true;if(k==='d'||k==='arrowright')keys.d=true;
-    if(e.key==='Escape'){
-        const rep = document.getElementById('ingame-ad-prompt');
-        if(rep && !rep.classList.contains('hidden')){ window.closeInGameAdPrompt(); return; }
+let isLeftMouseDown = false;
+let isRightMouseDown = false;
+let isSpaceDown = false;
+
+window.addEventListener('keydown', e => {
+    if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        isSpaceDown = true;
+        if (isPlaying) isShooting = true;
     }
-    if(k==='p'&&isPlaying)togglePause();
+    const k = e.key.toLowerCase();
+    if (k === 'w' || k === 'arrowup') keys.w = true;
+    if (k === 'a' || k === 'arrowleft') keys.a = true;
+    if (k === 's' || k === 'arrowdown') keys.s = true;
+    if (k === 'd' || k === 'arrowright') keys.d = true;
+    if (e.key === 'Escape') {
+        const rep = document.getElementById('ingame-ad-prompt');
+        if (rep && !rep.classList.contains('hidden')) { window.closeInGameAdPrompt(); return; }
+    }
+    if (k === 'p' && isPlaying) togglePause();
     // Missile: M, Shift, or L
-    if((k==='m'||k==='l'||(e.code==='ShiftLeft'||e.code==='ShiftRight'))&&isPlaying&&game.state==='playing'){e.preventDefault();useMissile();}
+    if ((k === 'm' || k === 'l' || (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) && isPlaying && game.state === 'playing') { e.preventDefault(); useMissile(); }
     // Shield: R (when playing)
-    if(k==='r'&&isPlaying&&game.state==='playing'){e.preventDefault();useShield();}
+    if (k === 'r' && isPlaying && game.state === 'playing') { e.preventDefault(); useShield(); }
     // Double Fire: Q
-    if(k==='q'&&isPlaying&&game.state==='playing'){e.preventDefault();if(window.useDoubleFire)window.useDoubleFire();}
+    if (k === 'q' && isPlaying && game.state === 'playing') { e.preventDefault(); if (window.useDoubleFire) window.useDoubleFire(); }
     // Retry on game over
-    if(k==='r'&&game.state==='gameOver')retryLevel();
+    if (k === 'r' && game.state === 'gameOver') retryLevel();
 });
-window.addEventListener('keyup',e=>{if(e.code==='Space')isShooting=false;const k=e.key.toLowerCase();if(k==='w'||k==='arrowup')keys.w=false;if(k==='a'||k==='arrowleft')keys.a=false;if(k==='s'||k==='arrowdown')keys.s=false;if(k==='d'||k==='arrowright')keys.d=false;});
-window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
-window.addEventListener('mousedown',e=>{if(e.button===0&&isPlaying&&!e.target.closest('#mobile-controls, .action-btn, .joystick-zone, .popup-box, .popup-overlay, .hud-btn, .settings-panel, .btn, .btn-play, button'))isShooting=true;});
-window.addEventListener('mouseup',e=>{if(e.button===0)isShooting=false;});
+
+window.addEventListener('keyup', e => {
+    if (e.code === 'Space') {
+        isSpaceDown = false;
+        if (!isLeftMouseDown && !isRightMouseDown && !isFireDragging) isShooting = false;
+    }
+    const k = e.key.toLowerCase();
+    if (k === 'w' || k === 'arrowup') keys.w = false;
+    if (k === 'a' || k === 'arrowleft') keys.a = false;
+    if (k === 's' || k === 'arrowdown') keys.s = false;
+    if (k === 'd' || k === 'arrowright') keys.d = false;
+});
+
+window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    if (window._isDesktop) {
+        mouse.useMobileAim = false;
+    }
+});
+
+// PC & Mouse firing: Left-Click & Right-Click both fire weapons
+window.addEventListener('mousedown', e => {
+    if ((e.button === 0 || e.button === 2) && isPlaying) {
+        // Ignore clicks on UI elements (popups, HUD chips, settings panel, powerup buttons)
+        if (e.target.closest('.popup-box, .popup-overlay, .hud-btn, .settings-panel, .btn, .btn-play, #btn-shield-mobile, #btn-double-mobile, #btn-missile-mobile, .shield-mobile-btn, .double-mobile-btn, .missile-mobile-btn')) {
+            return;
+        }
+        if (e.button === 0) isLeftMouseDown = true;
+        if (e.button === 2) {
+            isRightMouseDown = true;
+            e.preventDefault();
+        }
+        isShooting = true;
+    }
+});
+
+window.addEventListener('mouseup', e => {
+    if (e.button === 0) isLeftMouseDown = false;
+    if (e.button === 2) {
+        isRightMouseDown = false;
+        e.preventDefault();
+    }
+    if (!isLeftMouseDown && !isRightMouseDown && !isFireDragging && !isSpaceDown) {
+        isShooting = false;
+    }
+});
+
+// Prevent browser context menu during gameplay so right-click is dedicated to firing
+window.addEventListener('contextmenu', e => {
+    if (isPlaying && game && game.state === 'playing') {
+        e.preventDefault();
+    }
+});
+
+window.addEventListener('blur', () => {
+    isLeftMouseDown = false;
+    isRightMouseDown = false;
+    isSpaceDown = false;
+    isShooting = false;
+});
 
 // =====================================================================
 // MOBILE CONTROLS
@@ -2916,10 +2983,12 @@ function setupMobileControls(){
 
         if (dist > 6) {
             const ang = Math.atan2(dy, dx);
-            mouse.aimAngle = ang;
-            mouse.useMobileAim = true;
-            if (game.player) {
-                game.player.angle = ang;
+            if (!window._isDesktop) {
+                mouse.aimAngle = ang;
+                mouse.useMobileAim = true;
+                if (game.player) {
+                    game.player.angle = ang;
+                }
             }
             // Visual drag knob feedback on fire button
             const visualDist = Math.min(dist, FIRE_MAX_OFFSET);
@@ -2932,7 +3001,6 @@ function setupMobileControls(){
     }
 
     function handleFireEnd() {
-        isShooting = false;
         fireTouchId = null;
         isFireDragging = false;
         if (btnFire) {
@@ -2941,6 +3009,9 @@ function setupMobileControls(){
         }
         if (window._isDesktop) {
             mouse.useMobileAim = false;
+        }
+        if (!isLeftMouseDown && !isRightMouseDown && !isSpaceDown) {
+            isShooting = false;
         }
     }
 
@@ -3035,8 +3106,8 @@ function setupMobileControls(){
         keys.w = oy < -deadZone;
         keys.s = oy > deadZone;
 
-        // If fire button is NOT actively aiming, face movement direction
-        if (fireTouchId === null && !isFireDragging) {
+        // If fire button is NOT actively aiming, face movement direction (mobile touch only)
+        if (fireTouchId === null && !isFireDragging && !window._isDesktop) {
             mouse.aimAngle = ang;
             mouse.useMobileAim = true;
             if (game.player) {
@@ -3080,9 +3151,9 @@ function setupMobileControls(){
             resetJ();
         }, {passive: false});
 
-        // Mouse Drag on Joystick Zone (Desktop & Laptop)
+        // Mouse Drag on Joystick Zone (Only on mobile/touch emulation)
         jZone.addEventListener('mousedown', e => {
-            if (e.button === 0) {
+            if (!window._isDesktop && e.button === 0) {
                 e.preventDefault();
                 isJoyMouseDragging = true;
                 moveJ(e.clientX, e.clientY);
@@ -3092,9 +3163,9 @@ function setupMobileControls(){
 
     // Canvas steering & aiming
     if (canvas) {
-        // Desktop mouse steering on left side of screen
+        // Desktop mouse steering on left side of screen (disabled on desktop PC where mouse movement aims)
         canvas.addEventListener('mousedown', e => {
-            if (e.button === 0 && e.clientX <= window.innerWidth * 0.45 && !isFireDragging) {
+            if (!window._isDesktop && e.button === 0 && e.clientX <= window.innerWidth * 0.45 && !isFireDragging) {
                 isJoyMouseDragging = true;
                 moveJ(e.clientX, e.clientY);
             }
