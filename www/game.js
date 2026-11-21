@@ -2159,7 +2159,7 @@ function gameLoop(timestamp){
     // ---- Pickups ----
     for(let i=game.pickups.length-1;i>=0;i--){
         const pk=game.pickups[i];pk.life-=dt*1000;if(pk.life<=0){game.pickups.splice(i,1);continue;}
-        if(Math.hypot(p.x-pk.x,p.y-pk.y)<p.radius+20){
+        if(Math.hypot(p.x-pk.x,p.y-pk.y)<p.radius+36){
             // Collect
             switch(pk.type){
                 case'doubleBullet':game.doubleBulletTimer=POWERUP_CONFIG.doubleBullet.duration; playCustomSound('music/double_fire.ogg', 3, 0.8); break;
@@ -2172,16 +2172,69 @@ function gameLoop(timestamp){
         }
     }
 
-    // ---- Clones (combo x3+) ----
+    // ---- Clones / Wingman Multiply (combo x3+) ----
     if(game.combo.count>=COMBO_CONFIG.cloneSpawnThreshold&&game.clones.length<COMBO_CONFIG.cloneMaxCount){
-        game.clones.push({x:p.x+(Math.random()-0.5)*80,y:p.y+(Math.random()-0.5)*80,angle:Math.random()*Math.PI*2,shootTimer:0});
+        const sideOffset = game.clones.length === 0 ? -48 : 48;
+        game.clones.push({
+            x: p.x + sideOffset,
+            y: p.y,
+            angle: p.angle,
+            shootTimer: 100 + Math.random() * 150
+        });
     }
     if(game.combo.count<COMBO_CONFIG.cloneSpawnThreshold)game.clones=[];
-    for(const cl of game.clones){
-        cl.x+=(Math.random()-0.5)*COMBO_CONFIG.cloneSpeed*60*dt;cl.y+=(Math.random()-0.5)*COMBO_CONFIG.cloneSpeed*60*dt;
-        cl.angle+=0.02;cl.shootTimer-=dt*1000;
-        if(cl.shootTimer<=0){cl.shootTimer=COMBO_CONFIG.cloneFireRate;const ch=CHAPTERS[game.chapter-1];
-            game.bullets.push({x:cl.x+Math.cos(cl.angle)*28,y:cl.y+Math.sin(cl.angle)*28,vx:Math.cos(cl.angle)*15,vy:Math.sin(cl.angle)*15,life:60,ownerType:'player',color:ch.fireColor,shadow:ch.fireShadow});
+    for(let ci = 0; ci < game.clones.length; ci++){
+        const cl = game.clones[ci];
+        // Wingman formation: lock to left/right flank of player
+        const side = (ci === 0) ? -1 : 1;
+        const perpAngle = p.angle + Math.PI / 2;
+        const targetX = p.x + Math.cos(perpAngle) * (side * 48) - Math.cos(p.angle) * 16;
+        const targetY = p.y + Math.sin(perpAngle) * (side * 48) - Math.sin(p.angle) * 16;
+        cl.x += (targetX - cl.x) * 0.18;
+        cl.y += (targetY - cl.y) * 0.18;
+
+        // Auto-Target Nearest Active Enemy
+        let nearestEnemy = null;
+        let minDist = (COMBO_CONFIG && COMBO_CONFIG.cloneTargetRadius) || 750;
+        for(const eid in game.enemies){
+            const e = game.enemies[eid];
+            if(e && e.hp > 0){
+                const d = Math.hypot(e.x - cl.x, e.y - cl.y);
+                if(d < minDist){ minDist = d; nearestEnemy = e; }
+            }
+        }
+
+        if(nearestEnemy){
+            // Turn smoothly to track and destroy target enemy
+            const targetAng = Math.atan2(nearestEnemy.y - cl.y, nearestEnemy.x - cl.x);
+            let diff = targetAng - cl.angle;
+            while(diff < -Math.PI) diff += Math.PI * 2;
+            while(diff > Math.PI) diff -= Math.PI * 2;
+            cl.angle += diff * 0.25;
+        } else {
+            // Align with player flight direction
+            let diff = p.angle - cl.angle;
+            while(diff < -Math.PI) diff += Math.PI * 2;
+            while(diff > Math.PI) diff -= Math.PI * 2;
+            cl.angle += diff * 0.18;
+        }
+
+        // Automatic Rapid Firing
+        cl.shootTimer -= dt * 1000;
+        if(cl.shootTimer <= 0){
+            cl.shootTimer = (COMBO_CONFIG && COMBO_CONFIG.cloneFireRate) || 350;
+            const ch = CHAPTERS[game.chapter-1] || CHAPTERS[0];
+            const bSpd = 16;
+            game.bullets.push({
+                x: cl.x + Math.cos(cl.angle) * 26,
+                y: cl.y + Math.sin(cl.angle) * 26,
+                vx: Math.cos(cl.angle) * bSpd,
+                vy: Math.sin(cl.angle) * bSpd,
+                life: 70,
+                ownerType: 'player',
+                color: ch.fireColor || '#00eaff',
+                shadow: ch.fireShadow || '#00ffff'
+            });
         }
     }
 
@@ -2366,10 +2419,23 @@ function renderFrame(dt,now){
         drawShip(dx,dy,p.angle,p.radius,p.color,true,false, 'player');
         drawHPBar(dx,dy,p.hp,p.maxHp,p.radius,true);
     }
-    // Clones
+    // Clones (Multiplied Shooter Wingmen — fully visible with tactical cyber aura)
     for(const cl of game.clones){
-        const dx=cl.x-camera.x,dy=cl.y-camera.y;
-        ctx.globalAlpha=0.35;drawShip(dx,dy,cl.angle,18,p?p.color:'#00eaff',false,false);ctx.globalAlpha=1;
+        const dx = cl.x - camera.x, dy = cl.y - camera.y;
+        ctx.save();
+        // Glowing wingman energy ring
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = p ? p.color : '#00eaff';
+        ctx.strokeStyle = p ? p.color : '#00eaff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(dx, dy, (p ? p.radius : 22) + 4, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 100% full opacity, full player ship design
+        ctx.globalAlpha = 1.0;
+        drawShip(dx, dy, cl.angle, p ? p.radius : 22, p ? p.color : '#00eaff', true, false, 'player');
+        ctx.restore();
     }
     // Enemies
     for(const eid in game.enemies){const e=game.enemies[eid];drawShip(e.x-camera.x,e.y-camera.y,e.angle,e.radius,e.bodyColor,false,true,e.type);drawHPBar(e.x-camera.x,e.y-camera.y,e.hp,e.maxHp,e.radius,false,e.type);}
@@ -2393,19 +2459,34 @@ function renderFrame(dt,now){
             ctx.restore();
         });
     }
-    // Pickups
+    // Pickups (Enlarged Rewards with Glowing Beacon Aura)
     for(const pk of game.pickups){
-        const dx=pk.x-camera.x,dy=pk.y-camera.y;
-        const bounce=Math.sin(now*PICKUP_BOUNCE_SPEED)*4;
+        const dx = pk.x - camera.x, dy = pk.y - camera.y;
+        const bounce = Math.sin(now * PICKUP_BOUNCE_SPEED) * 5;
+        const pSize = 52; // Increased size from 32 to 52
+        const pHalf = pSize / 2;
         const imgKey = pk.type === 'doubleBullet' ? 'double_fire' : pk.type;
         const img = gameAssets.images[imgKey];
+
+        ctx.save();
+        // Radiant beacon ring
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = pk.color || '#00eaff';
+        ctx.strokeStyle = pk.color || '#00eaff';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(dx, dy + bounce, pHalf + 3, 0, Math.PI * 2);
+        ctx.stroke();
+
         if (img) {
-            ctx.drawImage(img, dx-16, dy+bounce-16, 32, 32); 
+            ctx.drawImage(img, dx - pHalf, dy + bounce - pHalf, pSize, pSize); 
         } else {
-            ctx.save();ctx.shadowBlur=PICKUP_GLOW_SIZE;ctx.shadowColor=pk.color;
-            ctx.font='1.2rem sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pk.icon,dx,dy+bounce);
-            ctx.restore();
+            ctx.font = '2.2rem sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pk.icon, dx, dy + bounce);
         }
+        ctx.restore();
     }
     // Bullets
     for(const b of game.bullets){

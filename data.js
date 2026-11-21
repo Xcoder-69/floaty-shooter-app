@@ -558,10 +558,11 @@ const COMBO_CONFIG = {
         { combo: 4, multiplier: 3, label: 'x3' },
         { combo: 7, multiplier: 5, label: 'x5' },
     ],
-    cloneSpawnThreshold: 3, // spawn shadow clones at x3+
+    cloneSpawnThreshold: 3, // spawn wingman clones at x3+
     cloneMaxCount: 2,
-    cloneSpeed: 0.4,        // slow movement multiplier
-    cloneFireRate: 800,     // ms between clone shots
+    cloneSpeed: 0.8,        // wingman response speed
+    cloneFireRate: 350,     // ms between clone shots (rapid auto-fire)
+    cloneTargetRadius: 750, // max enemy detection range
 };
 
 // ======================== SAFE START DELAY ========================
@@ -570,7 +571,7 @@ const SAFE_START_DELAY = 2000; // 2.0 seconds before enemies start firing
 // ======================== PICKUP CONFIG ========================
 const PICKUP_DESPAWN_TIME = 8000; // 8 seconds
 const PICKUP_BOUNCE_SPEED = 0.003; // visual bounce frequency
-const PICKUP_GLOW_SIZE = 28;
+const PICKUP_GLOW_SIZE = 36;
 
 // ======================== MAP SIZE ========================
 const MAP_W = 2400;
