@@ -26,7 +26,7 @@ class AudioEngine {
         this.music = document.createElement('audio');
         this.music.src = 'music/background.mp3';
         this.music.loop = true;
-        this.music.volume = 0.8;
+        this.music.volume = 0.64; // Decreased by 20% from 0.8
     }
 
     async load(name, url) {

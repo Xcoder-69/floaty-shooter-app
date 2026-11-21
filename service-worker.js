@@ -1,4 +1,4 @@
-const CACHE_NAME = 'floaty-shooter-v23';
+const CACHE_NAME = 'floaty-shooter-v24';
 const ASSETS = [
   './',
   './index.html',
