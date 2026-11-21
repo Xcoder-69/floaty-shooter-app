@@ -325,10 +325,10 @@
                 labelText = reward.label;
                 tagText = '<div class="dr-crate-tag" style="color:#2ecc71;">✓ DONE</div>';
             } else {
-                // Upcoming: reward unlocked and clearly previewed
-                boxContent = '<div class="dr-crate-box">' + reward.icon + '</div>';
-                labelText = reward.label;
-                tagText = '<div class="dr-crate-tag">UPCOMING</div>';
+                // Upcoming: show mystery gift box instead of revealing the prize
+                boxContent = '<div class="dr-crate-box">🎁</div>';
+                labelText = 'GIFT BOX';
+                tagText = '<div class="dr-crate-tag">LOCKED</div>';
             }
 
             card.innerHTML =
