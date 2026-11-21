@@ -327,13 +327,13 @@ window.addEventListener('orientationchange',()=>{
         const mobView = document.getElementById('ctrl-view-mobile');
 
         if (isMob) {
-            if (badge) badge.textContent = '📱';
+            if (badge) badge.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`;
             if (title) title.textContent = 'MOBILE CONTROLS';
             if (sub) sub.textContent = 'Virtual Joystick & Tactical Touch Buttons';
             if (pcView) pcView.classList.add('hidden');
             if (mobView) mobView.classList.remove('hidden');
         } else {
-            if (badge) badge.textContent = '⌨️';
+            if (badge) badge.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="10" y1="16" x2="14" y2="16"/></svg>`;
             if (title) title.textContent = 'PC CONTROLS';
             if (sub) sub.textContent = 'Keyboard & Mouse Navigation';
             if (pcView) pcView.classList.remove('hidden');
@@ -716,7 +716,7 @@ window.addEventListener('orientationchange',()=>{
         if (!history.length) {
             list.innerHTML = `
                 <div class="history-empty">
-                    <div class="history-empty-icon">🚀</div>
+                    <div class="history-empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
                     <div class="history-empty-title">NO BATTLES RECORDED YET</div>
                     <div class="history-empty-sub">Play missions to log your scores on the Leaderboard!</div>
                     <button class="history-empty-btn" onclick="historyPlayRedirect()">
@@ -1154,7 +1154,7 @@ function renderHistoryUI(){
         if (clearBtn) clearBtn.style.display = 'none';
         list.innerHTML = `
             <div class="history-empty">
-                <div class="history-empty-icon">🚀</div>
+                <div class="history-empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
                 <div class="history-empty-title">NO BATTLE LOGS YET</div>
                 <div class="history-empty-desc">Your combat record is clear. Take flight and defeat enemy squadrons to record your stats!</div>
                 <button class="history-empty-btn" onclick="historyPlayRedirect()">

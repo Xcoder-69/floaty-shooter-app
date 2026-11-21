@@ -34,10 +34,11 @@
             });
         }
     </script>
+    <!-- CrazyGames SDK is loaded at the bottom of body -->
     <script>
-        window.DEBUG_MODE = false; // [SET TO FALSE FOR PRODUCTION]
+        window.DEBUG_MODE = false; // [SET TO true ONLY FOR LOCAL DEV TESTING]
         
-    // ---- STARTUP: Video → Loading → Game ----
+    // ---- STARTUP: Video ? Loading ? Game ----
     (function() {
         var videoGone = false;
         var loadingGone = false;
@@ -83,14 +84,6 @@
                 // If game's AudioEngine is ready, resume it
                 if (window._gameAudioEngine && window._gameAudioEngine.ctx) {
                     window._gameAudioEngine.ctx.resume().catch(function(){});
-                    // Try playing background music silently
-                    var music = window._gameAudioEngine.music;
-                    if (music && window._gameAudioEngine.musicEnabled && music.paused) {
-                        music.volume = 0;
-                        music.play().then(function() {
-                            music.volume = 0.8;
-                        }).catch(function() { music.volume = 0.8; });
-                    }
                 }
                 // Create a silent AudioContext to unlock on iOS/Android
                 try {
@@ -117,7 +110,7 @@
 
             if (!vid || !overlay) { dismissVideo(); return; }
 
-            // Safety timeout — never freeze longer than 8 seconds
+            // Safety timeout ? never freeze longer than 8 seconds
             var safetyTimeout = setTimeout(dismissVideo, 8000);
 
             // Try to play WITH sound first (works on Capacitor/native WebView)
@@ -125,10 +118,10 @@
             var playPromise = vid.play();
             if (playPromise !== undefined) {
                 playPromise.catch(function() {
-                    // Browser blocked unmuted autoplay — retry muted and add tap-to-unmute
+                    // Browser blocked unmuted autoplay ? retry muted and add tap-to-unmute
                     vid.muted = true;
                     vid.play().then(function() {
-                        // Video playing muted — unmute on first user interaction
+                        // Video playing muted ? unmute on first user interaction
                         var unmuteHandler = function() {
                             vid.muted = false;
                             document.removeEventListener('click', unmuteHandler, true);
@@ -169,29 +162,12 @@
     </script>
 </head>
 <body oncontextmenu="return false;">
-    <!-- INTRO VIDEO OVERLAY -->
-    <div id="intro-video-overlay" style="background: #000;">
-        <video id="intro-video" autoplay muted playsinline webkit-playsinline preload="auto" style="width:100%; height:100%; object-fit:cover;">
-            <source src="video/hyperflux_studio.mp4" type="video/mp4">
-        </video>
-        <!-- Simulated Ad Overlay -->
-        <div id="simulated-ad-overlay" class="big-overlay hidden">
-            <div class="loader-content">
-                <div class="loader-icon">📺</div>
-                <div class="loader-title">WATCHING AD...</div>
-                <div class="loader-sub">NEURAL LINK SYNCING</div>
-                <div class="loader-bar-wrap"><div class="loader-bar ad-progress"></div></div>
-            </div>
-        </div>
 
-        <!-- Debug Indicator -->
-        <div id="debug-indicator" style="position:fixed; top:10px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:white; padding:4px 12px; border-radius:4px; font-family:var(--font-head); font-size:10px; z-index:10000; pointer-events:none; display:none; letter-spacing:1px; box-shadow:0 0 15px rgba(255,0,0,0.5);">🛠️ TEST MODE ACTIVE</div>
-    </div>
 
     <!-- PREMIUM LOADING SCREEN -->
     <div id="loading-overlay">
         <div class="loader-content">
-            <div class="loader-icon">🎮</div>
+            <div class="loader-icon">🚀</div>
             <div class="loader-title">FLOATY SHOOTER</div>
             <div class="loader-sub">LOADING SYSTEMS...</div>
             <div class="loader-bar-wrap">
@@ -245,6 +221,26 @@
             </div>
         </div>
 
+        <!-- ========== SCREEN 1b: NAME ENTRY (First-time players) ========== -->
+        <div id="screen-name" class="screen">
+            <div class="name-entry-box">
+                <div class="name-entry-icon">🚀</div>
+                <div class="name-entry-title">WELCOME, PILOT!</div>
+                <div class="name-entry-sub">Enter your callsign to begin</div>
+                <div class="name-input-wrap">
+                    <input id="player-name-input" class="name-input" type="text" maxlength="16"
+                        placeholder="Your name..." autocomplete="off" spellcheck="false"
+                        onkeydown="if(event.key==='Enter')confirmPlayerName()" />
+                    <div class="name-input-line"></div>
+                </div>
+                <div id="name-entry-error" class="name-entry-error"></div>
+                <button class="name-confirm-btn" onclick="confirmPlayerName()">
+                    <span class="play-shine"></span>
+                    LET'S GO!
+                </button>
+            </div>
+        </div>
+
         <!-- ========== GLOBAL POPUPS & OVERLAYS ========== -->
         <!-- Settings Panel (dropdown) -->
             <div id="settings-panel" class="settings-panel hidden">
@@ -253,9 +249,9 @@
                     <button class="settings-item" onclick="showControls()">🎮 Controls</button>
                     <button class="settings-item" onclick="openLeaderboard()">🏆 Leaderboard</button>
                     <button class="settings-item" onclick="showHistory()">📜 History</button>
-                    <button class="settings-item" onclick="if(window.showDailyReward) window.showDailyReward();">🎁 Daily Reward</button>
                     <button class="settings-item" onclick="openPopup('collection-popup');renderCollectionUI();">🚀 Collection</button>
-                    <button id="music-toggle-btn" class="settings-item" onclick="toggleMusic()">🔊 Music: ON</button>
+                    <button class="settings-item" onclick="if(window.showDailyReward) window.showDailyReward();">🎁 Daily Reward</button>
+                    <button id="music-toggle-btn" class="settings-item" onclick="toggleMusic()">🎵 Music: ON</button>
                     <button class="settings-item" onclick="showStats()">📊 Stats</button>
                 </div>
             </div>
@@ -265,7 +261,9 @@
                 <div class="popup-box popup-box-large controls-modal-box">
                     <button class="popup-close" onclick="closePopup('controls-popup')"></button>
                     <div class="ctrl-modal-header">
-                        <span id="ctrl-modal-badge" class="ctrl-modal-badge">⌨️</span>
+                        <span id="ctrl-modal-badge" class="ctrl-modal-badge">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="3"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="12" r="1" fill="#00f0ff"/><circle cx="18" cy="12" r="1" fill="#00f0ff"/></svg>
+                        </span>
                         <h3 id="ctrl-modal-title" class="ctrl-modal-title">PC CONTROLS</h3>
                         <p id="ctrl-modal-sub" class="ctrl-modal-sub">Keyboard & Mouse Navigation</p>
                     </div>
@@ -284,17 +282,17 @@
                             <!-- FIRE -->
                             <div class="pc-ctrl-item">
                                 <div class="pc-key pc-key-space">R-CLICK / L-CLICK / SPACE</div>
-                                <div class="pc-ctrl-label">🔥 PRIMARY FIRE</div>
+                                <div class="pc-ctrl-label">PRIMARY FIRE</div>
                             </div>
                             <!-- DOUBLE FIRE -->
                             <div class="pc-ctrl-item">
                                 <div class="pc-key pc-key-gold">Q</div>
-                                <div class="pc-ctrl-label">⚡ DOUBLE FIRE</div>
+                                <div class="pc-ctrl-label">DOUBLE FIRE</div>
                             </div>
                             <!-- SHIELD -->
                             <div class="pc-ctrl-item">
                                 <div class="pc-key pc-key-blue">R</div>
-                                <div class="pc-ctrl-label">🛡️ SHIELD</div>
+                                <div class="pc-ctrl-label">SHIELD</div>
                             </div>
                             <!-- MISSILE -->
                             <div class="pc-ctrl-item">
@@ -303,17 +301,17 @@
                                     <span class="pc-key-or">or</span>
                                     <div class="pc-key pc-key-red">L</div>
                                 </div>
-                                <div class="pc-ctrl-label">🚀 MISSILE STRIKE</div>
+                                <div class="pc-ctrl-label">MISSILE STRIKE</div>
                             </div>
                             <!-- PAUSE -->
                             <div class="pc-ctrl-item">
                                 <div class="pc-key">P / ESC</div>
-                                <div class="pc-ctrl-label">⏸️ PAUSE</div>
+                                <div class="pc-ctrl-label">PAUSE</div>
                             </div>
                         </div>
 
                         <div class="pc-ctrl-mouse-tip">
-                            🖱️ <strong>Mouse Aiming</strong> → Cursor sets direction • Right/Left-Click to fire
+                            <strong>Mouse Aiming</strong> → Cursor sets direction • Right/Left-Click to fire
                         </div>
                     </div>
 
@@ -328,14 +326,18 @@
                                             <div class="mob-ctrl-joy-knob"></div>
                                         </div>
                                     </div>
-                                    <div class="mob-ctrl-zone-label">🕹️ VIRTUAL JOYSTICK<br><span>Drag left side to fly & steer 360°</span></div>
+                                    <div class="mob-ctrl-zone-label">VIRTUAL JOYSTICK<span>Drag left side to fly & steer 360°</span></div>
                                 </div>
                                 <div class="mob-ctrl-zone-wrap">
                                     <div class="mob-ctrl-powerup-row">
-                                        <div class="mob-ctrl-mini-btn mob-ctrl-shield-demo">🛡️</div>
-                                        <div class="mob-ctrl-mini-btn mob-ctrl-double-demo">⚡</div>
+                                        <div class="mob-ctrl-mini-btn mob-ctrl-shield-demo">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                        </div>
+                                        <div class="mob-ctrl-mini-btn mob-ctrl-double-demo">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                        </div>
                                     </div>
-                                    <div class="mob-ctrl-zone-label">DEFENSE & CANNONS<br><span>Tap Shield or Double Fire</span></div>
+                                    <div class="mob-ctrl-zone-label">DEFENSE & CANNONS<span>Tap Shield or Double Fire</span></div>
                                 </div>
                             </div>
 
@@ -345,25 +347,29 @@
                             <div class="mob-ctrl-side mob-ctrl-right">
                                 <div class="mob-ctrl-zone-wrap">
                                     <div class="mob-ctrl-fire-demo">
-                                        <div class="mob-ctrl-fire-ring">🔥</div>
+                                        <div class="mob-ctrl-fire-ring">
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1.38 0 2.5-1.12 2.5-2.5 0-1.63-1.07-2.73-1.6-3.41-.43-.55-.9-.99-.9-1.59 0-.8.6-1.5 1.5-1.5 1.7 0 3 1.3 3 3a5.5 5.5 0 1 1-11 0c0-1.8.8-3.4 2.1-4.5.3 1.2 1.3 2.5 2.4 3.5.7.6 1.4 1.4 1.4 2.4z"/></svg>
+                                        </div>
                                     </div>
-                                    <div class="mob-ctrl-zone-label">🔥 RAPID FIRE<br><span>Hold button for laser autofire</span></div>
+                                    <div class="mob-ctrl-zone-label">RAPID FIRE<span>Hold button for laser autofire</span></div>
                                 </div>
                                 <div class="mob-ctrl-zone-wrap">
-                                    <div class="mob-ctrl-mini-btn mob-ctrl-missile-demo">🚀</div>
-                                    <div class="mob-ctrl-zone-label">🚀 TACTICAL MISSILE<br><span>Tap to wipe all enemies</span></div>
+                                    <div class="mob-ctrl-mini-btn mob-ctrl-missile-demo">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+                                    </div>
+                                    <div class="mob-ctrl-zone-label">TACTICAL MISSILE<span>Tap to wipe all enemies</span></div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mob-ctrl-tip">
-                            💡 <strong>Smooth Control</strong>: Virtual joystick responds dynamically wherever your thumb touches on the left!
+                            <strong>Smooth Control</strong>: Virtual joystick responds dynamically wherever your thumb touches on the left!
                         </div>
                     </div>
 
                     <div class="ctrl-modal-footer">
                         <button class="btn primary ctrl-confirm-btn" onclick="closePopup('controls-popup')">
-                            🚀 UNDERSTOOD
+                            UNDERSTOOD
                         </button>
                     </div>
                 </div>
@@ -416,44 +422,41 @@
                     <button class="popup-close" onclick="closePopup('privacy-popup')"></button>
                     <h3>🔒 Privacy Policy</h3>
                     <div class="legal-text">
-                        <p class="legal-date">Last Updated: 3/31/2026</p>
-                        <p>This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile or web-based game application ("Game"). By accessing or using the Game, you agree to the terms of this Privacy Policy.</p>
+                        <p class="legal-date">Last Updated: July 11, 2026</p>
+                        <p>This Privacy Policy describes how <strong>Floaty Shooter</strong> ("Game") handles information when you play on <strong>CrazyGames</strong> or any web platform.</p>
 
-                        <h5>1. INFORMATION WE COLLECT</h5>
-                        <p><strong>a) Personal Information</strong><br>We do not require users to provide personal information such as name, email address, or phone number to play the Game. However, such information may be collected if voluntarily provided by the user (for example, through support requests).</p>
-                        <p><strong>b) Non-Personal Information</strong><br>We may collect non-personal information automatically, including:</p>
-                        <ul><li>Device type and operating system</li><li>Game usage data and interactions</li><li>Performance and crash reports</li><li>Anonymous identifiers</li></ul>
-                        <p><strong>c) Advertising Data</strong><br>Third-party advertising providers may collect information such as device identifiers, IP address, and interaction with advertisements for the purpose of delivering relevant ads.</p>
+                        <h5>1. DATA WE COLLECT</h5>
+                        <p><strong>a) Data collected directly by us:</strong> None. We do not collect your name, email, phone number, or any personally identifiable information.</p>
+                        <p><strong>b) Locally stored data:</strong> The game saves your progress (coins, level, items) to your browser's <code>localStorage</code>. This data stays on your device only and is never transmitted to us.</p>
+                        <p><strong>c) Platform data:</strong> When played on CrazyGames, the CrazyGames platform may collect analytics and advertising data under their own Privacy Policy. We do not control or access this data. See <a href="https://www.crazygames.com/privacy-policy" target="_blank">CrazyGames Privacy Policy</a>.</p>
 
-                        <h5>2. HOW WE USE YOUR INFORMATION</h5>
-                        <p>We use collected information to:</p>
-                        <ul><li>Improve game performance and user experience</li><li>Fix bugs and technical issues</li><li>Analyze usage trends</li><li>Provide customer support</li><li>Deliver advertisements</li></ul>
+                        <h5>2. HOW WE USE DATA</h5>
+                        <p>We do not collect or process any personal data. Local game data is used solely to save your gameplay progress on your device.</p>
 
                         <h5>3. THIRD-PARTY SERVICES</h5>
-                        <p>We may use third-party services, including analytics and advertising networks. These third parties may collect and process data in accordance with their own privacy policies. We do not control how third-party services use your data.</p>
+                        <p>The game may use the <strong>CrazyGames SDK</strong> for analytics and ad delivery, managed entirely by CrazyGames. We have no access to data collected through that SDK.</p>
 
-                        <h5>4. DATA SECURITY</h5>
-                        <p>We take reasonable measures to protect your information. However, no method of transmission over the internet or electronic storage is 100% secure. We cannot guarantee absolute security.</p>
+                        <h5>4. ADVERTISING</h5>
+                        <p>Advertisements (if any) are served by the CrazyGames platform and governed by their ad policies. We do not serve or control ads directly.</p>
 
-                        <h5>5. CHILDREN'S PRIVACY</h5>
-                        <p>The Game is not intended for children under the age required by applicable laws in their country. We do not knowingly collect personal information from children. If such data is discovered, it will be removed promptly.</p>
+                        <h5>5. CHILDREN'S PRIVACY (COPPA / GDPR-K)</h5>
+                        <p>This game is not directed at children under 13 (or under 16 in the EU/EEA). We do not knowingly collect any data from children. Since we collect no personal data at all, this game is inherently compliant with COPPA and GDPR children's provisions.</p>
 
-                        <h5>6. DATA RETENTION</h5>
-                        <p>We retain non-personal data only as long as necessary for analytics, performance improvement, and legal compliance.</p>
+                        <h5>6. YOUR RIGHTS (GDPR / CCPA)</h5>
+                        <p>Since we collect no personal data, there is nothing to access, rectify, or delete on our end. For data collected by CrazyGames, please exercise your rights through their platform at <a href="https://www.crazygames.com/privacy-policy" target="_blank">crazygames.com/privacy-policy</a>.</p>
 
-                        <h5>7. YOUR RIGHTS</h5>
-                        <p>Depending on your location, you may have rights regarding your data, including:</p>
-                        <ul><li>Access to collected data</li><li>Request deletion of data</li><li>Restrict or object to processing</li></ul>
-                        <p>Requests can be made through the contact information below.</p>
+                        <h5>7. DATA SECURITY</h5>
+                        <p>All game progress is stored locally in your browser. We transmit no data. You can clear your progress anytime by clearing your browser's local storage.</p>
 
                         <h5>8. CHANGES TO THIS POLICY</h5>
-                        <p>We may update this Privacy Policy at any time. Updates will be reflected by the "Last Updated" date. Continued use of the Game means you accept the updated policy.</p>
+                        <p>We may update this Privacy Policy. The "Last Updated" date reflects any changes. Continued use of the Game constitutes acceptance.</p>
 
                         <h5>9. CONTACT</h5>
-                        <p>If you have any questions about this Privacy Policy, please contact us at: craze777@gmail.com (for when user finds an issue or to share feedback)</p>
+                        <p>Questions? Contact us at: <strong>craze77789@gmail.com</strong></p>
                     </div>
                 </div>
             </div>
+
 
             <!-- Terms & Conditions Popup -->
             <div id="terms-popup" class="popup-overlay hidden">
@@ -522,24 +525,24 @@
             <div class="cs-topbar">
                 <!-- Left: Back Arrow -->
                 <div class="cs-topbar-left">
-                    <button class="cs-back-btn" onclick="goToStart()">◀</button>
+                        <button class="cs-back-btn" onclick="goToStart()">◀</button>
                 </div>
 
                 <!-- Center: Inventory Items -->
                 <div class="cs-topbar-center">
-                    <span class="cs-inv-item"><img src="image/coin.png" class="ui-icon-inv"><b id="inv-coins">0</b></span>
-                    <span class="cs-inv-item"><img src="image/missile.png" class="ui-icon-inv"><b id="inv-missiles">0</b></span>
-                    <span class="cs-inv-item"><img src="image/shield.png" class="ui-icon-inv"><b id="inv-shields">0</b></span>
-                    <span class="cs-inv-item"><img src="image/double_fire.png" class="ui-icon-inv"><b id="inv-double">0</b></span>
+                    <span class="cs-inv-item"><img src="image/coin.png" class="ui-icon-inv" alt=""><b id="inv-coins">0</b></span>
+                    <span class="cs-inv-item"><img src="image/missile.png" class="ui-icon-inv" alt=""><b id="inv-missiles">0</b></span>
+                    <span class="cs-inv-item"><img src="image/shield.png" class="ui-icon-inv" alt=""><b id="inv-shields">0</b></span>
+                    <span class="cs-inv-item"><img src="image/double_fire.png" class="ui-icon-inv" alt=""><b id="inv-double">0</b></span>
                 </div>
 
-                <!-- Right: Store + Settings -->
+                <!-- Right: Collection + Store + Settings -->
                 <div class="cs-topbar-right">
                     <button class="cs-trial-btn" onclick="openPopup('collection-popup');renderCollectionUI();">
                         <span>🚀 COLLECTION</span>
                     </button>
                     <button class="cs-store-btn" onclick="openStore()">
-                        <span class="cs-store-label">🏪 STORE</span>
+                        <span class="cs-store-label"><img src="image/store_icon.png" class="ui-icon" alt=""> STORE</span>
                     </button>
                     <button class="cs-leaderboard-btn" onclick="openLeaderboard(event); event.stopPropagation();" title="Leaderboard">🏆</button>
                     <button class="cs-gear-btn" onclick="toggleSettings(); event.stopPropagation();">⚙️</button>
@@ -562,6 +565,9 @@
                     </svg>
                 </span>
             </div>
+
+            <!-- Returning User Greeting -->
+            <div id="cs-greeting" class="cs-greeting hidden"></div>
 
             <!-- CHAPTER CARDS AREA -->
             <div class="cs-stages-area">
@@ -641,31 +647,31 @@
                         <div class="edit-pilot-badge-glow"></div>
                         <svg class="pilot-vector-badge" viewBox="0 0 64 64" width="56" height="56" fill="none">
                             <defs>
-                                <linearGradient id="pBadgeGrad_www" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <linearGradient id="pBadgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                                     <stop offset="0%" stop-color="#00eaff"/>
                                     <stop offset="50%" stop-color="#38bdf8"/>
                                     <stop offset="100%" stop-color="#818cf8"/>
                                 </linearGradient>
-                                <linearGradient id="pShieldGrad_www" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <linearGradient id="pShieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                                     <stop offset="0%" stop-color="rgba(14, 165, 233, 0.3)"/>
                                     <stop offset="100%" stop-color="rgba(2, 6, 23, 0.85)"/>
                                 </linearGradient>
-                                <linearGradient id="pGoldGrad_www" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <linearGradient id="pGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                                     <stop offset="0%" stop-color="#fde047"/>
                                     <stop offset="100%" stop-color="#eab308"/>
                                 </linearGradient>
                             </defs>
                             <!-- Cyber Shield Outer Frame -->
-                            <polygon points="32,4 58,16 58,38 32,60 6,38 6,16" stroke="url(#pBadgeGrad_www)" stroke-width="2.2" fill="url(#pShieldGrad_www)" filter="drop-shadow(0 0 8px rgba(0,234,255,0.4))"/>
+                            <polygon points="32,4 58,16 58,38 32,60 6,38 6,16" stroke="url(#pBadgeGrad)" stroke-width="2.2" fill="url(#pShieldGrad)" filter="drop-shadow(0 0 8px rgba(0,234,255,0.4))"/>
                             <!-- Inner Flight Wings -->
                             <path d="M12 24 L24 28 L32 20 L40 28 L52 24" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
                             <path d="M10 32 L22 35 L32 46 L42 35 L54 32" stroke="#00eaff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                             <!-- Pilot Helmet Visor Emblem -->
-                            <path d="M22 28 C22 20 42 20 42 28 C42 34 38 38 32 39 C26 38 22 34 22 28 Z" fill="#0f172a" stroke="url(#pBadgeGrad_www)" stroke-width="1.8"/>
+                            <path d="M22 28 C22 20 42 20 42 28 C42 34 38 38 32 39 C26 38 22 34 22 28 Z" fill="#0f172a" stroke="url(#pBadgeGrad)" stroke-width="1.8"/>
                             <!-- Glowing Visor Slit -->
                             <path d="M25 28 Q32 25 39 28" stroke="#00eaff" stroke-width="2.5" stroke-linecap="round" filter="drop-shadow(0 0 4px #00eaff)"/>
                             <!-- Core Star Pip -->
-                            <polygon points="32,44 34.5,49 40,49.5 36,53 37.2,58 32,55 26.8,58 28,53 24,49.5 29.5,49" fill="url(#pGoldGrad_www)" stroke="#fef08a" stroke-width="0.8"/>
+                            <polygon points="32,44 34.5,49 40,49.5 36,53 37.2,58 32,55 26.8,58 28,53 24,49.5 29.5,49" fill="url(#pGoldGrad)" stroke="#fef08a" stroke-width="0.8"/>
                         </svg>
                     </div>
                     <h3>PILOT CALLSIGN</h3>
@@ -765,7 +771,7 @@
             <!-- NAVBAR -->
             <div class="lm-navbar">
                 <div class="lm-navbar-left">
-                    <button class="lm-back" onclick="goToChapterSelect()">◀</button>
+                        <button class="lm-back" onclick="goToChapterSelect()">◀</button>
                     <div class="lm-chapter-info">
                         <span id="lm-ch-name" class="lm-ch-name">CHAPTER 1</span>
                         <span id="lm-ch-sub" class="lm-ch-sub">GENESIS PROTOCOL</span>
@@ -773,18 +779,18 @@
                 </div>
                 
                 <div class="lm-navbar-center">
-                    <div class="lm-stars">⭐ <b id="lm-star-count">0</b>/<span id="lm-star-total">10</span></div>
+                    <div class="lm-stars"><img src="image/star-removebg.png" class="ui-icon" alt=""> <b id="lm-star-count">0</b>/<span id="lm-star-total">10</span></div>
                     <div class="lm-inv">
-                        <span class="lm-inv-item"><img src="image/coin.png" class="ui-icon"> <b id="lm-coins">0</b></span>
-                        <span class="lm-inv-item"><img src="image/missile.png" class="ui-icon"> <b id="lm-missiles">0</b></span>
-                        <span class="lm-inv-item"><img src="image/shield.png" class="ui-icon"> <b id="lm-shields">0</b></span>
-                        <span class="lm-inv-item"><img src="image/double_fire.png" class="ui-icon"> <b id="lm-dbl">0</b></span>
+                        <span class="lm-inv-item"><img src="image/coin.png" class="ui-icon" alt=""> <b id="lm-coins">0</b></span>
+                        <span class="lm-inv-item"><img src="image/missile.png" class="ui-icon" alt=""> <b id="lm-missiles">0</b></span>
+                        <span class="lm-inv-item"><img src="image/shield.png" class="ui-icon" alt=""> <b id="lm-shields">0</b></span>
+                        <span class="lm-inv-item"><img src="image/double_fire.png" class="ui-icon" alt=""> <b id="lm-dbl">0</b></span>
                     </div>
                 </div>
 
                 <div class="lm-navbar-right">
                     <button class="lm-store-btn" onclick="openStore()">
-                        <span class="lm-store-icon">🏪</span> STORE
+                        <span class="lm-store-icon"><img src="image/store_icon.png" class="ui-icon" alt=""></span> STORE
                     </button>
                     <button class="lm-gear" onclick="toggleSettings()">⚙️</button>
                 </div>
@@ -802,9 +808,9 @@
         <div id="store-overlay" class="popup-overlay hidden">
             <div class="popup-box store-box">
                 <button class="popup-close" onclick="closeStore()"></button>
-                <h3>🏪 STORE</h3>
+                <h3><img src="image/store_icon.png" class="ui-icon" alt=""> STORE</h3>
                 <div class="store-coins-wrap">
-                    <div class="store-coins"><img src="image/coin.png" class="ui-icon"> <span id="store-coins-display">0</span></div>
+                    <div class="store-coins"><img src="image/coin.png" class="ui-icon" alt=""> <span id="store-coins-display">0</span></div>
                 </div>
 
                 <div class="store-grid">
@@ -890,7 +896,7 @@
             <!-- Top Left: Coins -->
             <div class="hud-top-left">
                 <div class="hud-chip hud-coins-chip">
-                    <img src="image/coin.png" class="ui-icon"> <span id="hud-coins">0</span>
+                    <img src="image/coin.png" class="ui-icon" alt=""> <span id="hud-coins">0</span>
                 </div>
                 <div class="hud-chip" id="hud-level-info">
                     <span id="hud-chapter-text">CH.1</span>
@@ -898,7 +904,11 @@
                 </div>
             </div>
 
-            <!-- Top Center: Combo -->
+            <!-- Low HP Warning Banner -->
+            <div id="low-hp-alert" class="low-hp-alert hidden">
+                ⚠️ CRITICAL DAMAGE — HP LOW!
+            </div>
+
             <div class="hud-top-center">
                 <div id="combo-display" class="combo-display hidden">
                     <span id="combo-text" class="combo-text">x2</span>
@@ -914,19 +924,16 @@
                     <span id="hud-enemies-text">3 enemies</span>
                 </div>
                 <div class="hud-chip" id="hud-score-chip">
-                    ⭐ <span id="hud-score-text">0</span>
+                    <img src="image/star-removebg.png" class="ui-icon" alt=""> <span id="hud-score-text">0</span>
                 </div>
-                <button id="btn-sound-hud" class="hud-btn pause-btn" onclick="toggleMusic()">🔊</button>
+                <button id="btn-sound-hud" class="hud-btn pause-btn" onclick="toggleMusic()">🎵</button>
                 <button id="btn-pause" class="hud-btn pause-btn" onclick="togglePause()">⏸</button>
             </div>
 
-            <!-- Bottom Left: Missile Button -->
+            <!-- Bottom Left: Shield Button -->
             <div class="hud-bottom-left">
-                <button id="hud-missile-btn" class="hud-btn missile-btn hidden" onclick="useMissile()">
-                    <img src="image/missile.png" class="ui-icon"> <span class="missile-count">0</span>
-                </button>
                 <button id="hud-shield-btn" class="hud-btn shield-btn hidden" onclick="useShield()">
-                    <img src="image/shield.png" class="ui-icon">
+                    <img src="image/shield.png" class="ui-icon" alt="">
                 </button>
             </div>
 
@@ -941,7 +948,7 @@
 
             <!-- Mission Objective (shown on fun levels) -->
             <div id="mission-display" class="mission-display hidden">
-                <div class="mission-icon" id="mission-icon">💀</div>
+                <div class="mission-icon" id="mission-icon"></div>
                 <div class="mission-text" id="mission-text">Kill 40 enemies</div>
                 <div class="mission-progress" id="mission-progress">0/40</div>
             </div>
@@ -952,13 +959,13 @@
                 <div class="powerups-left">
                     <button id="btn-shield-mobile" class="action-btn shield-mobile-btn hidden" onclick="useShield()">
                         <div class="btn-count">0</div>
-                        <img src="image/shield.png">
+                        <img src="image/shield.png" alt="">
                         <span>SHIELD</span>
                     </button>
 
                     <button id="btn-double-mobile" class="action-btn double-mobile-btn hidden" onclick="useDoubleFire()">
                         <div class="btn-count">0</div>
-                        <img src="image/double_fire.png">
+                        <img src="image/double_fire.png" alt="">
                         <span>DOUBLE</span>
                     </button>
                 </div>
@@ -976,7 +983,7 @@
                     
                     <button id="btn-missile-mobile" class="action-btn missile-mobile-btn hidden" onclick="useMissile()">
                         <div class="btn-count">0</div>
-                        <img src="image/missile.png">
+                        <img src="image/missile.png" alt="">
                         <span>MISSILE</span>
                     </button>
                 </div>
@@ -985,10 +992,10 @@
             <!-- Pause Overlay -->
             <div id="pause-overlay" class="big-overlay hidden">
                 <div class="big-overlay-box pause-box">
-                    <h2>⏸ PAUSED</h2>
+                    <h2>⏸️ PAUSED</h2>
                     <div class="pause-buttons">
-                        <button class="btn primary" onclick="togglePause()">▶️ RESUME</button>
-                        <button class="btn secondary" onclick="exitToMenu()">🏠 EXIT</button>
+                        <button class="btn primary" onclick="togglePause()"><img src="image/play_icon.png" class="ui-icon" alt=""> RESUME</button>
+                        <button class="btn secondary" onclick="exitToMenu()"><img src="image/home_icon.png" class="ui-icon" alt=""> EXIT</button>
                     </div>
                 </div>
             </div>
@@ -1044,10 +1051,10 @@
             <!-- Level Complete Overlay -->
             <div id="level-complete-overlay" class="big-overlay hidden">
                 <div class="big-overlay-box level-complete-box">
-                    <h2 id="level-complete-title">⭐ LEVEL COMPLETE!</h2>
+                    <h2 id="level-complete-title"><img src="image/star-removebg.png" class="ui-icon-large" alt=""> LEVEL COMPLETE!</h2>
                     <p id="level-complete-score">Score: 0</p>
                     <p id="level-complete-coins">Coins: +0</p>
-                    <p id="next-level-text">Entering Level 2…</p>
+                    <p id="next-level-text">Entering Level 2?</p>
                     <div class="overlay-bar-wrap"><div id="overlay-countdown-bar" class="overlay-bar"></div></div>
                 </div>
             </div>
@@ -1076,29 +1083,53 @@
             <!-- Chapter Complete Overlay -->
             <div id="chapter-complete-overlay" class="big-overlay hidden">
                 <div class="big-overlay-box chapter-complete-box">
-                    <div class="win-stars">★ ★ ★</div>
+                    <div class="win-stars">⭐ ⭐ ⭐</div>
                     <h2 id="chapter-win-title">CHAPTER COMPLETE!</h2>
                     <p id="chapter-win-sub" class="win-sub">You conquered all levels!</p>
-                    <button class="btn primary" onclick="exitToMenu()">🏠 Back to Menu</button>
+                    <button class="btn primary" onclick="exitToMenu()"><img src="image/home_icon.png" class="ui-icon" alt=""> Back to Menu</button>
                 </div>
             </div>
 
             <!-- Fun Level Popup -->
             <div id="fun-level-popup" class="big-overlay hidden">
                 <div class="big-overlay-box fun-level-box">
-                    <div class="fun-level-badge">🎯</div>
+                    <div class="fun-level-badge">⭐</div>
                     <h2 id="fun-level-title">FUN LEVEL!</h2>
                     <p id="fun-level-objective" class="fun-level-desc">Kill 40 enemies</p>
                     <p class="fun-level-reward">Complete the objective for bonus coins!</p>
-                    <button class="btn primary" onclick="resumeFromFunLevel()">▶️ RESUME</button>
+                    <button class="btn primary" onclick="resumeFromFunLevel()"><img src="image/play_icon.png" class="ui-icon" alt=""> RESUME</button>
                 </div>
             </div>
+
+            <!-- Simulated Ad Overlay -->
+            <div id="simulated-ad-overlay" class="big-overlay hidden">
+                <div class="loader-content">
+                    <div class="loader-icon">🚀</div>
+                    <div class="loader-title">WATCHING AD...</div>
+                    <div class="loader-sub">NEURAL LINK SYNCING</div>
+                    <div class="loader-bar-wrap"><div class="loader-bar ad-progress"></div></div>
+                </div>
+            </div>
+
+
+
+            <!-- Debug Indicator -->
+            <div id="debug-indicator" style="position:fixed; top:10px; left:50%; transform:translateX(-50%); background:rgba(255,0,0,0.8); color:white; padding:4px 12px; border-radius:4px; font-family:var(--font-head); font-size:10px; z-index:10000; pointer-events:none; display:none; letter-spacing:1px; box-shadow:0 0 15px rgba(255,0,0,0.5);">??? TEST MODE ACTIVE</div>
         </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
-    <script src="admob-manager.js"></script>
+    <!-- =====================================================
+         AdMob ? DISABLED for CrazyGames build.
+         TO RESTORE for Play Store: uncomment the line below
+         and remove the CrazyGames SDK line.
+    ====================================================== -->
+    <!-- <script src="admob-manager.js"></script> -->
+
+    <!-- CrazyGames SDK v2 — Required for web publishing -->
+    <script src="https://sdk.crazygames.com/crazygames-sdk-v2.js"></script>
+
     <script src="daily_reward.js"></script>
     <script src="data.js?v=37216"></script>
     <script src="store.js"></script>
