@@ -2151,9 +2151,11 @@ function gameLoop(timestamp){
                     dead = true; // Absorbed during brief i-frame grace period
                 } else {
                     dead = true;
-                    // Per user spec: enemy bullet deals -2 HP damage (survives fairly, not 18 HP)
-                    let dmg = 2;
-                    if (b.shapeType === 'bossBeam') dmg = 4;
+                    // Chapter-scaled bullet damage:
+                    // Ch. 1: -2 HP | Ch. 2: -3 HP | Ch. 3: -4 HP | Ch. 4: -5 HP | Ch. 5: -6 HP | Ch. 6: -7 HP
+                    const ch = (window.game && window.game.chapter) || p.eqCh || 1;
+                    let dmg = ch + 1;
+                    if (b.shapeType === 'bossBeam') dmg = dmg * 2;
 
                     p.hp = Math.max(0, p.hp - dmg);
                     p._hpM = p.hp;

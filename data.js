@@ -359,9 +359,10 @@ function getTankDrop(chapter) {
 
 // ======================== HP RECOVERY ========================
 function getHpOnKill(chapter, level, enemyType) {
-    // Only heavy miniboss/tank/boss drops give HP on kill (equal to 1 bullet worth of recovery)
+    // Heavy miniboss/tank/boss drops restore 1 enemy bullet's worth of HP
     if (enemyType === 'tank' || enemyType === 'miniboss' || enemyType === 'boss' || enemyType === 'bossTankA' || enemyType === 'bossTankB') {
-        return 2;
+        const ch = Math.max(1, chapter || 1);
+        return ch + 1;
     }
     return 0;
 }
