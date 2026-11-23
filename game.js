@@ -96,12 +96,46 @@ window.addEventListener('load', () => {
     gameAssets.loadImg('missile', 'image/missile.png');
     gameAssets.loadImg('fullHp', 'image/full_hp.png');
     
+    // CrazyGames SDK Lifecycle Helpers
+    window.cgLoadingStart = function() {
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.loadingStart === 'function') {
+                window.CrazyGames.SDK.game.loadingStart();
+            }
+        } catch(e) {}
+    };
+
+    window.cgLoadingStop = function() {
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.loadingStop === 'function') {
+                window.CrazyGames.SDK.game.loadingStop();
+            }
+        } catch(e) {}
+    };
+
+    window.cgGameplayStart = function() {
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.gameplayStart === 'function') {
+                window.CrazyGames.SDK.game.gameplayStart();
+            }
+        } catch(e) {}
+    };
+
+    window.cgGameplayStop = function() {
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.gameplayStop === 'function') {
+                window.CrazyGames.SDK.game.gameplayStop();
+            }
+        } catch(e) {}
+    };
+
     // Initialize CrazyGames SDK for audio muting safely
     if (window.CrazyGames && window.CrazyGames.SDK && typeof window.CrazyGames.SDK.init === 'function') {
         try {
             const initRes = window.CrazyGames.SDK.init();
             if (initRes && typeof initRes.then === 'function') {
                 initRes.then(() => {
+                    window.cgLoadingStart();
                     if (window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.on === 'function') {
                         window.CrazyGames.SDK.game.on('audio', (muted) => {
                             if (muted && audio.musicEnabled) {
@@ -113,6 +147,7 @@ window.addEventListener('load', () => {
                     }
                 }).catch(e => console.warn("CrazyGames SDK init failed", e));
             } else if (window.CrazyGames.SDK.game && typeof window.CrazyGames.SDK.game.on === 'function') {
+                window.cgLoadingStart();
                 window.CrazyGames.SDK.game.on('audio', (muted) => {
                     if (muted && audio.musicEnabled) {
                         audio.toggleMusic(); // Mute
@@ -1405,6 +1440,7 @@ function spawnPickup(x,y,type){
 // =====================================================================
     window.startLevel = function(chapter,level){
         tryLockLandscape();
+        if (typeof window.cgGameplayStart === 'function') window.cgGameplayStart();
         game.chapter=chapter;game.level=level;
         game.player=createPlayer(chapter,level);
         game.enemies=[]; game.bullets=[]; game.pickups=[]; game.clones=[];
@@ -1530,13 +1566,24 @@ function resumeFromFunLevel(){
     if(gameLoopRafId) cancelAnimationFrame(gameLoopRafId);
     gameLoopRafId = requestAnimationFrame(gameLoop);
 }
-function retryLevel(){startLevel(game.chapter,game.level);}
-function exitToMenu(){isPlaying=false;isPaused=false;gameLoopRunning=false;if(gameLoopRafId){cancelAnimationFrame(gameLoopRafId);gameLoopRafId=null;}audio.music.pause();document.getElementById('hud').classList.add('hidden');canvas.style.display='none';document.querySelectorAll('.big-overlay').forEach(o=>o.classList.add('hidden'));goToMainMenu();}
+function retryLevel(){
+    if (typeof window.cgRequestMidroll === 'function') {
+        window.cgRequestMidroll(() => startLevel(game.chapter,game.level));
+    } else {
+        startLevel(game.chapter,game.level);
+    }
+}
+function exitToMenu(){if(typeof window.cgGameplayStop==='function')window.cgGameplayStop();isPlaying=false;isPaused=false;gameLoopRunning=false;if(gameLoopRafId){cancelAnimationFrame(gameLoopRafId);gameLoopRafId=null;}audio.music.pause();document.getElementById('hud').classList.add('hidden');canvas.style.display='none';document.querySelectorAll('.big-overlay').forEach(o=>o.classList.add('hidden'));goToMainMenu();}
 function togglePause(){
     // Cannot pause/unpause during mission popup or game over
     if(game.state==='gameOver' || game.state==='mission_popup' || game.state==='pc_controls') return;
     isPaused=!isPaused;
     document.getElementById('pause-overlay').classList.toggle('hidden',!isPaused);
+    if(isPaused){
+        if(typeof window.cgGameplayStop==='function') window.cgGameplayStop();
+    } else {
+        if(typeof window.cgGameplayStart==='function') window.cgGameplayStart();
+    }
 }
 
 // =====================================================================
@@ -1597,6 +1644,7 @@ window.showInGameAdPrompt = function(itemType) {
     if (!isPaused && game && game.state === 'playing') {
         isPaused = true;
         window._adPromptPaused = true;
+        if (typeof window.cgGameplayStop === 'function') window.cgGameplayStop();
     }
 
     // Populate UI details
@@ -1705,6 +1753,7 @@ window.closeInGameAdPrompt = function() {
     if (window._adPromptPaused) {
         isPaused = false;
         window._adPromptPaused = false;
+        if (typeof window.cgGameplayStart === 'function') window.cgGameplayStart();
     }
 };
 
@@ -1718,6 +1767,7 @@ function watchAdToRespawn(){
                 game.player._hpM=game.player.maxHp; // Update shadow
                 game.player.invulnerableTimer = 1.5; // 1.5s respawn protection
                 game.state='playing';
+                if(typeof window.cgGameplayStart==='function') window.cgGameplayStart();
                 document.getElementById('game-over-overlay').classList.add('hidden');
                 showToast("SYSTEMS REBOOTED: Respawn Successful!");
             }
@@ -1730,6 +1780,7 @@ function watchAdToRespawn(){
                 game.player._hpM=game.player.maxHp;
                 game.player.invulnerableTimer = 1.5;
                 game.state='playing';
+                if(typeof window.cgGameplayStart==='function') window.cgGameplayStart();
                 document.getElementById('game-over-overlay').classList.add('hidden');
             }
         });
@@ -2328,6 +2379,7 @@ function gameLoop(timestamp){
 // TRIGGERS
 // =====================================================================
 function triggerLevelComplete(){
+    if(typeof window.cgGameplayStop==='function') window.cgGameplayStop();
     game.state='levelComplete';completeLevel(game.chapter,game.level);
     addToHistory({chapter:game.chapter,level:game.level,score:game.score,kills:game.levelKills,result:'VICTORY',coins:game.coinsEarned});
     if (window.LeaderboardAPI) window.LeaderboardAPI.submitScore(game.score, game.chapter);
@@ -2344,11 +2396,19 @@ function triggerLevelComplete(){
         const bar=document.getElementById('overlay-countdown-bar');bar.style.animation='none';
         requestAnimationFrame(()=>{bar.style.animation='';});
         document.getElementById('level-complete-overlay').classList.remove('hidden');
-        setTimeout(()=>{document.getElementById('level-complete-overlay').classList.add('hidden');startLevel(game.chapter,game.level+1);},2500);
+        setTimeout(()=>{
+            document.getElementById('level-complete-overlay').classList.add('hidden');
+            if (typeof window.cgRequestMidroll === 'function') {
+                window.cgRequestMidroll(() => startLevel(game.chapter, game.level+1));
+            } else {
+                startLevel(game.chapter,game.level+1);
+            }
+        },2500);
     }
 }
 
 function triggerGameOver(){
+    if(typeof window.cgGameplayStop==='function') window.cgGameplayStop();
     game.state='gameOver';addDeath();
     setTimeout(() => playCustomSound('music/game_over.ogg', 1, 1.0), 900);
     addToHistory({chapter:game.chapter,level:game.level,score:game.score,kills:game.levelKills,result:'DEFEAT',coins:game.coinsEarned});
@@ -3445,10 +3505,14 @@ function closeControlsPopup() {
 
     if (fn) {
         game.state = 'playing';
+        if (typeof window.cgGameplayStart === 'function') window.cgGameplayStart();
         if (audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
         fn();
     } else {
-        if (game.state === 'pc_controls') game.state = 'playing';
+        if (game.state === 'pc_controls') {
+            game.state = 'playing';
+            if (typeof window.cgGameplayStart === 'function') window.cgGameplayStart();
+        }
         if (isPlaying && audio.musicEnabled && typeof tryPlayBg === 'function') {
             tryPlayBg();
         }
@@ -3482,6 +3546,7 @@ function initIntroLogic() {
     if (!loader) {
         // No loader either — just start music and go
         if (audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
+        if (typeof window.cgLoadingStop === 'function') window.cgLoadingStop();
         return;
     }
     // Show loading bar, then fade out and start
@@ -3497,6 +3562,7 @@ function initIntroLogic() {
         setTimeout(() => {
             loader.remove();
             if (audio.musicEnabled && typeof tryPlayBg === 'function') tryPlayBg();
+            if (typeof window.cgLoadingStop === 'function') window.cgLoadingStop();
         }, 400);
     }, 900); // Total: ~1.3s instead of 4s+ for the video
 }

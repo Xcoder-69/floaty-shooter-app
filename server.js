@@ -492,8 +492,7 @@ function requestHandler(req, res) {
         'ETag': asset.etag,
         'Last-Modified': asset.mtime,
         'Access-Control-Allow-Origin': '*',
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'SAMEORIGIN'
+        'X-Content-Type-Options': 'nosniff'
     };
 
     // Cache-Control optimization

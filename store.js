@@ -583,6 +583,22 @@
         }
     };
 
+    // =====================================================
+    // MIDROLL AD — CrazyGames SDK (triggered between levels / retries)
+    // =====================================================
+    window.cgRequestMidroll = function(cb) {
+        if (_isCrazyGamesReady()) {
+            _pauseForAd();
+            window.CrazyGames.SDK.ad.requestAd('midroll', {
+                adStarted:  () => {},
+                adFinished: () => { _resumeAfterAd(); if (cb) cb(); },
+                adError:    () => { _resumeAfterAd(); if (cb) cb(); }
+            });
+        } else {
+            if (cb) cb();
+        }
+    };
+
     // Developer keyword hidden check
     window.addEventListener('DOMContentLoaded', () => {
         if (new URLSearchParams(window.location.search).has('fluxDev')) {
