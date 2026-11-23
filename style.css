@@ -5007,7 +5007,7 @@ kbd {
 .replenish-icon-wrap {
     width: 48px;
     height: 48px;
-    margin: 0 auto 0.35rem;
+    margin: 0.5rem auto 0.4rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -5056,7 +5056,7 @@ kbd {
     font-weight: 900;
     letter-spacing: 1.5px;
     color: #ffffff;
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.85rem;
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
 }
 

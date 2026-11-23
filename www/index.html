@@ -22,7 +22,7 @@
     <meta name="description" content="Floaty Shooter: A premium 2D cyberpunk shooting game with 6 chapters, 140 levels, and intense combat." />
     <link rel="icon" type="image/png" href="icon.png" />
     <link rel="shortcut icon" href="favicon.ico" />
-    <link rel="stylesheet" href="style.css?v=37300" />
+    <link rel="stylesheet" href="style.css?v=37320" />
     <link rel="manifest" href="manifest.json" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
     <script>
@@ -1011,17 +1011,6 @@
             <div id="ingame-ad-prompt" class="big-overlay hidden" onclick="closeInGameAdPrompt()">
                 <div class="big-overlay-box replenish-card" onclick="event.stopPropagation()">
                     <button class="replenish-close-btn" onclick="closeInGameAdPrompt()" title="Resume Combat">&times;</button>
-                    
-                    <div class="replenish-header">
-                        <span class="replenish-badge">
-                            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:2px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                            TACTICAL RESUPPLY
-                        </span>
-                        <div class="replenish-coin-chip">
-                            <img src="image/coin.png" class="ui-icon" alt="">
-                            <span id="replenish-user-coins">0</span>
-                        </div>
-                    </div>
 
                     <div class="replenish-icon-wrap" id="replenish-icon-container">
                         <img id="replenish-item-img" src="image/shield.png" alt="" class="replenish-img">
@@ -1029,26 +1018,24 @@
                     </div>
 
                     <h2 id="ingame-ad-name" class="replenish-title">FORCE SHIELD</h2>
-                    <div class="replenish-subtitle" id="replenish-item-sub">DEPLETED • 0 IN INVENTORY</div>
-                    <p class="replenish-desc" id="replenish-item-desc">Shield absorbs 3 hits for 15s.</p>
 
                     <div class="replenish-actions">
                         <!-- Buy with Coins -->
                         <button id="replenish-buy-coin-btn" class="replenish-action-btn btn-buy-coin" onclick="handleInGameBuyWithCoins()">
                             <div class="btn-action-main">
                                 <img src="image/coin.png" class="ui-icon" alt="">
-                                <span>BUY & DEPLOY</span>
+                                <span id="replenish-buy-text">BUY</span>
                             </div>
-                            <div class="btn-action-cost" id="replenish-coin-cost-badge">75 COINS</div>
+                            <div class="btn-action-cost" id="replenish-coin-cost-badge">0</div>
                         </button>
 
                         <!-- Watch Ad -->
                         <button id="ingame-ad-watch-btn" class="replenish-action-btn btn-watch-ad">
                             <div class="btn-action-main">
                                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon" style="margin-right:2px;"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
-                                <span>WATCH AD (+1 FREE)</span>
+                                <span>WATCH AD (+1)</span>
                             </div>
-                            <div class="btn-action-cost ad-free-badge">FREE DROP</div>
+                            <div class="btn-action-cost ad-free-badge">FREE</div>
                         </button>
                     </div>
 
@@ -1150,6 +1137,6 @@
     <script src="data.js?v=37310"></script>
     <script src="store.js"></script>
     <script src="lootlocker.js?v=37280"></script>
-    <script src="game.js?v=37310"></script>
+    <script src="game.js?v=37320"></script>
 </body>
 </html>

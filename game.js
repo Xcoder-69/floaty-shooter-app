@@ -1544,8 +1544,6 @@ const REPLENISH_ITEMS = {
     shield: {
         id: 'shield',
         name: 'FORCE SHIELD',
-        sub: 'DEPLETED • 0 IN INVENTORY',
-        desc: 'Shield absorbs 3 hits for 15s.',
         img: 'image/shield.png',
         icon: '🛡️',
         price: 75,
@@ -1554,8 +1552,6 @@ const REPLENISH_ITEMS = {
     doubleBullet: {
         id: 'doubleBullet',
         name: 'DOUBLE FIRE',
-        sub: 'DEPLETED • 0 IN INVENTORY',
-        desc: 'Twin cannons with 2x firepower.',
         img: 'image/double_fire.png',
         icon: '⚡',
         price: 50,
@@ -1564,8 +1560,6 @@ const REPLENISH_ITEMS = {
     missile: {
         id: 'missile',
         name: 'MISSILE STRIKE',
-        sub: 'DEPLETED • 0 IN INVENTORY',
-        desc: 'Wipes all enemies on screen.',
         img: 'image/missile.png',
         icon: '🚀',
         price: 100,
@@ -1605,17 +1599,9 @@ window.showInGameAdPrompt = function(itemType) {
 
     // Populate UI details
     const userCoins = (window.getSaveData ? window.getSaveData().coins : (window.saveData ? window.saveData.coins : 0)) || 0;
-    const userCoinsEl = document.getElementById('replenish-user-coins');
-    if (userCoinsEl) userCoinsEl.textContent = userCoins;
 
     const nameEl = document.getElementById('ingame-ad-name');
     if (nameEl) nameEl.textContent = item.name;
-
-    const subEl = document.getElementById('replenish-item-sub');
-    if (subEl) subEl.textContent = item.sub;
-
-    const descEl = document.getElementById('replenish-item-desc');
-    if (descEl) descEl.textContent = item.desc;
 
     const imgEl = document.getElementById('replenish-item-img');
     if (imgEl) imgEl.src = item.img;
@@ -1630,21 +1616,22 @@ window.showInGameAdPrompt = function(itemType) {
         cardEl.classList.add(item.themeClass);
     }
 
-    // Update Coin Buy Button
+    // Update Coin Buy Button: show available coins in badge, item price on label
     const buyBtn = document.getElementById('replenish-buy-coin-btn');
     const costBadge = document.getElementById('replenish-coin-cost-badge');
+    const buyText = document.getElementById('replenish-buy-text');
 
     if (buyBtn && costBadge) {
+        if (buyText) buyText.textContent = `BUY (${item.price})`;
+        costBadge.innerHTML = `<img src="image/coin.png" class="ui-icon" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;">${userCoins}`;
         if (userCoins >= item.price) {
             buyBtn.disabled = false;
             buyBtn.classList.remove('is-disabled');
-            costBadge.textContent = `${item.price} COINS`;
-            buyBtn.title = `Buy and immediately deploy for ${item.price} coins`;
+            buyBtn.title = `Buy and deploy for ${item.price} coins`;
         } else {
             buyBtn.disabled = true;
             buyBtn.classList.add('is-disabled');
-            costBadge.textContent = `NEED ${item.price - userCoins} MORE`;
-            buyBtn.title = `Need ${item.price - userCoins} more coins to purchase`;
+            buyBtn.title = `Need ${item.price - userCoins} more coins`;
         }
     }
 
