@@ -4544,20 +4544,25 @@ kbd {
 }
 
 @keyframes hpCriticalPulseAnim {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow: 0 0 6px rgba(255, 30, 30, 0.4);
         border-color: rgba(255, 60, 60, 0.6);
     }
+
     50% {
         box-shadow: 0 0 16px rgba(255, 30, 30, 0.9), inset 0 0 8px rgba(255, 0, 0, 0.4);
         border-color: rgba(255, 40, 40, 1);
     }
 }
+
 .hud-hp-section.hp-critical-pulse {
     animation: hpCriticalPulseAnim 0.75s ease-in-out infinite !important;
     border: 1px solid rgba(255, 50, 50, 0.8) !important;
     background: rgba(255, 0, 0, 0.12) !important;
 }
+
 .hud-hp-section.hp-critical-pulse .hp-text {
     color: #ff3b30 !important;
     text-shadow: 0 0 8px rgba(255, 0, 0, 0.8) !important;

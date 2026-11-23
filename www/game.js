@@ -1616,14 +1616,14 @@ window.showInGameAdPrompt = function(itemType) {
         cardEl.classList.add(item.themeClass);
     }
 
-    // Update Coin Buy Button: show available coins in badge, item price on label
+    // Update Coin Buy Button: show object price in badge
     const buyBtn = document.getElementById('replenish-buy-coin-btn');
     const costBadge = document.getElementById('replenish-coin-cost-badge');
     const buyText = document.getElementById('replenish-buy-text');
 
     if (buyBtn && costBadge) {
-        if (buyText) buyText.textContent = `BUY (${item.price})`;
-        costBadge.innerHTML = `<img src="image/coin.png" class="ui-icon" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;">${userCoins}`;
+        if (buyText) buyText.textContent = 'BUY';
+        costBadge.innerHTML = `<img src="image/coin.png" class="ui-icon" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;">${item.price}`;
         if (userCoins >= item.price) {
             buyBtn.disabled = false;
             buyBtn.classList.remove('is-disabled');
