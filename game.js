@@ -2151,9 +2151,17 @@ function gameLoop(timestamp){
                     dead = true; // Absorbed during brief i-frame grace period
                 } else {
                     dead = true;
-                    // Standard enemy bullets take 1 HP; boss beams take 2 HP on higher ships
-                    let dmg = 1;
-                    if (b.shapeType === 'bossBeam' && p.hp > 2) dmg = 2;
+                    // Chapter-based damage scaling: Ship can take (chapter + 1) hits before destruction
+                    // Ch.1: 35 HP / 2 hits = 18 dmg/hit (survives 1 hit, dies on 2nd)
+                    // Ch.2: 45 HP / 3 hits = 15 dmg/hit (survives 2 hits, dies on 3rd)
+                    // Ch.3: 55 HP / 4 hits = 14 dmg/hit (survives 3 hits, dies on 4th)
+                    // Ch.4: 65 HP / 5 hits = 13 dmg/hit (survives 4 hits, dies on 5th)
+                    // Ch.5: 75 HP / 6 hits = 13 dmg/hit (survives 5 hits, dies on 6th)
+                    // Ch.6: 85 HP / 7 hits = 13 dmg/hit (survives 6 hits, dies on 7th)
+                    const ch = (window.game && window.game.chapter) || p.eqCh || 1;
+                    const hitsToDestroy = ch + 1;
+                    let dmg = Math.ceil(p.maxHp / hitsToDestroy);
+                    if (b.shapeType === 'bossBeam' && p.hp > dmg) dmg = Math.min(p.hp, dmg * 2);
 
                     p.hp = Math.max(0, p.hp - dmg);
                     p._hpM = p.hp;

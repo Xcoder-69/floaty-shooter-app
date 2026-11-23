@@ -359,9 +359,12 @@ function getTankDrop(chapter) {
 
 // ======================== HP RECOVERY ========================
 function getHpOnKill(chapter, level, enemyType) {
-    // Only heavy miniboss/tank/boss drops give 1 HP on kill to preserve discrete HP balance
+    // Only heavy miniboss/tank/boss drops give HP on kill (equal to 1 hit of recovery)
     if (enemyType === 'tank' || enemyType === 'miniboss' || enemyType === 'boss' || enemyType === 'bossTankA' || enemyType === 'bossTankB') {
-        return 1;
+        const ch = Math.max(1, chapter || 1);
+        const maxHp = getPlayerMaxHp(ch);
+        const hitsToDestroy = ch + 1;
+        return Math.ceil(maxHp / hitsToDestroy);
     }
     return 0;
 }
@@ -484,10 +487,15 @@ function getMissionForLevel(chapter, level) {
 // ======================== PLAYER BASE STATS ========================
 function getPlayerMaxHp(chapter, level) {
     const ch = Math.max(1, chapter || 1);
-    const lvl = Math.max(1, level || 1);
-    // Base scaling: chapter + level
-    // Chapter 1: Level 1 = 2 HP, Level 2 = 3 HP, Level 3 = 4 HP, Level 4 = 5 HP, Level 5 = 6 HP, Level 6 = 7 HP...
-    return ch + lvl;
+    switch (ch) {
+        case 1: return 35; // Scout Interceptor
+        case 2: return 45; // Crimson Vanguard
+        case 3: return 55; // Cobalt Phantom
+        case 4: return 65; // Emerald Storm
+        case 5: return 75; // Violet Valkyrie
+        case 6: return 85; // Solar Sovereign
+        default: return 85 + (ch - 6) * 10;
+    }
 }
 
 // ======================== POWERUP DURATIONS ========================
