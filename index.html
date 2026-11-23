@@ -22,7 +22,7 @@
     <meta name="description" content="Floaty Shooter: A premium 2D cyberpunk shooting game with 6 chapters, 140 levels, and intense combat." />
     <link rel="icon" type="image/png" href="icon.png" />
     <link rel="shortcut icon" href="favicon.ico" />
-    <link rel="stylesheet" href="style.css?v=37220" />
+    <link rel="stylesheet" href="style.css?v=37240" />
     <link rel="manifest" href="manifest.json" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
     <script>
@@ -380,8 +380,14 @@
                 <div class="popup-box history-box">
                     <button class="popup-close" onclick="closePopup('history-popup')"></button>
                     <div class="history-header">
-                        <h3>📜 Match History</h3>
-                        <button id="btn-clear-history" class="btn-clear-history" onclick="clearHistory()" title="Clear match history">🗑️ Clear</button>
+                        <h3>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            MATCH HISTORY
+                        </h3>
+                        <button id="btn-clear-history" class="btn-clear-history" onclick="clearHistory()" title="Clear match history">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:2px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            CLEAR
+                        </button>
                     </div>
                     <div id="history-list" class="history-list"></div>
                 </div>
@@ -596,8 +602,14 @@
 
                     <!-- Tab Switcher -->
                     <div class="lb-tabs">
-                        <button id="lb-tab-global" class="lb-tab active" onclick="switchLeaderboardTab('global')">🌐 GLOBAL ACES</button>
-                        <button id="lb-tab-runs" class="lb-tab" onclick="switchLeaderboardTab('runs')">📜 MY RUNS</button>
+                        <button id="lb-tab-global" class="lb-tab active" onclick="switchLeaderboardTab('global')">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            GLOBAL ACES
+                        </button>
+                        <button id="lb-tab-runs" class="lb-tab" onclick="switchLeaderboardTab('runs')">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            MY RUNS
+                        </button>
                     </div>
                 </div>
 
@@ -1006,7 +1018,10 @@
                     <button class="replenish-close-btn" onclick="closeInGameAdPrompt()" title="Resume Combat">&times;</button>
                     
                     <div class="replenish-header">
-                        <span class="replenish-badge">⚡ TACTICAL RESUPPLY</span>
+                        <span class="replenish-badge">
+                            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:2px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            TACTICAL RESUPPLY
+                        </span>
                         <div class="replenish-coin-chip">
                             <img src="image/coin.png" class="ui-icon" alt="">
                             <span id="replenish-user-coins">0</span>
@@ -1035,7 +1050,7 @@
                         <!-- Watch Ad -->
                         <button id="ingame-ad-watch-btn" class="replenish-action-btn btn-watch-ad">
                             <div class="btn-action-main">
-                                <span class="ad-film-icon">🎬</span>
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ui-icon" style="margin-right:2px;"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
                                 <span>WATCH AD (+1 FREE)</span>
                             </div>
                             <div class="btn-action-cost ad-free-badge">FREE DROP</div>
@@ -1062,13 +1077,19 @@
             <!-- Game Over Overlay -->
             <div id="game-over-overlay" class="big-overlay hidden">
                 <div class="big-overlay-box game-over-box">
-                    <h2>💀 GAME OVER</h2>
+                    <h2>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="M12.5 17l-.5-1-.5 1"/><path d="M16 20a3 3 0 0 0 3-3V9a7 7 0 0 0-14 0v8a3 3 0 0 0 3 3z"/></svg>
+                        GAME OVER
+                    </h2>
                     <p>Chapter <span id="go-chapter">1</span> — Level <span id="go-level">1</span></p>
                     <p>Score: <span id="go-score">0</span></p>
                     <p>Enemies destroyed: <span id="go-kills">0</span></p>
                     <div class="gameover-buttons">
                         <button class="btn secondary btn-go-exit" onclick="exitToMenu()"><img src="image/home_icon.png" class="ui-icon" alt=""> Exit</button>
-                        <button class="btn primary btn-ad-respawn" onclick="watchAdToRespawn()">📺 Watch Ad to Respawn</button>
+                        <button class="btn primary btn-ad-respawn" onclick="watchAdToRespawn()">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                            Watch Ad to Respawn
+                        </button>
                         <button class="btn primary btn-retry" onclick="retryLevel()">
                             <svg class="btn-icon-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
@@ -1131,9 +1152,9 @@
     <script src="https://sdk.crazygames.com/crazygames-sdk-v2.js"></script>
 
     <script src="daily_reward.js"></script>
-    <script src="data.js?v=37216"></script>
+    <script src="data.js?v=37240"></script>
     <script src="store.js"></script>
-    <script src="lootlocker.js?v=37216"></script>
-    <script src="game.js?v=37216"></script>
+    <script src="lootlocker.js?v=37240"></script>
+    <script src="game.js?v=37240"></script>
 </body>
 </html>

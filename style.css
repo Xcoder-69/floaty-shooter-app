@@ -4883,6 +4883,11 @@ html.is-desktop #btn-double-mobile.hidden {
         max-height: 135px !important;
         gap: 0.2rem !important;
     }
+    .leaderboard-list:has(.history-empty),
+    .leaderboard-list.is-empty {
+        max-height: none !important;
+        overflow: visible !important;
+    }
     .lb-row {
         padding: 0.28rem 0.5rem !important;
         border-radius: 7px !important;
@@ -5049,23 +5054,28 @@ html.is-desktop #btn-double-mobile.hidden {
         padding-bottom: 0.2rem !important;
         max-height: 150px !important;
     }
+    .history-list:has(.history-empty),
+    .history-list.is-empty {
+        max-height: none !important;
+        overflow: visible !important;
+    }
     /* Empty State in Leaderboard 'MY RUNS' & Match History — compact & no-scroll */
     .history-empty {
-        padding: 0.25rem 0.5rem !important;
-        gap: 0.12rem !important;
+        padding: 0.28rem 0.5rem 0.25rem !important;
+        gap: 0.1rem !important;
         margin: 0 !important;
         background: rgba(15, 23, 42, 0.4) !important;
         border: 1px solid rgba(255, 255, 255, 0.06) !important;
         border-radius: 8px !important;
     }
     .history-empty-icon {
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
         line-height: 1 !important;
         margin: 0 !important;
     }
     .history-empty-icon svg {
-        width: 18px !important;
-        height: 18px !important;
+        width: 16px !important;
+        height: 16px !important;
     }
     .history-empty-title {
         font-size: 0.65rem !important;
@@ -5074,8 +5084,8 @@ html.is-desktop #btn-double-mobile.hidden {
         line-height: 1.1 !important;
     }
     .history-empty-desc, .history-empty-sub {
-        font-size: 0.5rem !important;
-        line-height: 1.2 !important;
+        font-size: 0.48rem !important;
+        line-height: 1.25 !important;
         max-width: 280px !important;
         margin: 1px auto 3px !important;
         color: #cbd5e1 !important;
@@ -5086,6 +5096,7 @@ html.is-desktop #btn-double-mobile.hidden {
         border-radius: 5px !important;
         gap: 4px !important;
         letter-spacing: 1px !important;
+        margin-bottom: 1px !important;
     }
     .history-item {
         padding: 0.3rem 0.55rem !important;

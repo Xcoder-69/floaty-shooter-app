@@ -687,7 +687,9 @@ window.addEventListener('orientationchange',()=>{
 
         if (myRankCard) {
             myRankCard.innerHTML = `
-                <div class="lb-my-rank-badge">📊</div>
+                <div class="lb-my-rank-badge">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                </div>
                 <div class="lb-my-rank-info">
                     <div class="lb-my-name-row">
                         <span class="lb-my-name">${escapeHtml(pilotName)}</span>
@@ -714,9 +716,10 @@ window.addEventListener('orientationchange',()=>{
 
         if (!list) return;
         if (!history.length) {
+            list.classList.add('is-empty');
             list.innerHTML = `
                 <div class="history-empty">
-                    <div class="history-empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
+                    <div class="history-empty-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
                     <div class="history-empty-title">NO BATTLES RECORDED YET</div>
                     <div class="history-empty-sub">Play missions to log your scores on the Leaderboard!</div>
                     <button class="history-empty-btn" onclick="historyPlayRedirect()">
@@ -726,6 +729,7 @@ window.addEventListener('orientationchange',()=>{
             `;
             return;
         }
+        list.classList.remove('is-empty');
 
         list.innerHTML = history.map((r, i) => {
             const isWin = r.result === 'VICTORY';
@@ -1152,9 +1156,10 @@ function renderHistoryUI(){
 
     if (!history || !history.length) {
         if (clearBtn) clearBtn.style.display = 'none';
+        list.classList.add('is-empty');
         list.innerHTML = `
             <div class="history-empty">
-                <div class="history-empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
+                <div class="history-empty-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FDE047" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
                 <div class="history-empty-title">NO BATTLE LOGS YET</div>
                 <div class="history-empty-desc">Your combat record is clear. Take flight and defeat enemy squadrons to record your stats!</div>
                 <button class="history-empty-btn" onclick="historyPlayRedirect()">
@@ -1164,6 +1169,8 @@ function renderHistoryUI(){
         `;
         return;
     }
+
+    list.classList.remove('is-empty');
 
     if (clearBtn) clearBtn.style.display = 'inline-flex';
     history.forEach(r => {
