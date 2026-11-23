@@ -1224,6 +1224,7 @@ let game={
         const chapter=CHAPTERS[eqCh-1];const hp=getPlayerMaxHp(eqCh);
         const p = {x:MAP_W/2,y:MAP_H/2,vx:0,vy:0,angle:0,radius:22,hp,maxHp:hp,_hpM:hp, // Shadow HP Mirror
             eqCh: eqCh,
+            invulnerableTimer: 0,
             color:chapter.shooterColor,fireColor:chapter.fireColor,fireShadow:chapter.fireShadow,
             doubleFireMode:chapter.doubleFireMode||'parallel',
             spiralOffset:0,
@@ -1724,6 +1725,7 @@ function watchAdToRespawn(){
             if(ok){
                 game.player.hp=game.player.maxHp;
                 game.player._hpM=game.player.maxHp; // Update shadow
+                game.player.invulnerableTimer = 1.5; // 1.5s respawn protection
                 game.state='playing';
                 document.getElementById('game-over-overlay').classList.add('hidden');
                 showToast("SYSTEMS REBOOTED: Respawn Successful!");
@@ -1735,6 +1737,7 @@ function watchAdToRespawn(){
             if(ok){
                 game.player.hp=game.player.maxHp;
                 game.player._hpM=game.player.maxHp;
+                game.player.invulnerableTimer = 1.5;
                 game.state='playing';
                 document.getElementById('game-over-overlay').classList.add('hidden');
             }
@@ -1891,6 +1894,7 @@ function gameLoop(timestamp){
         p.vx-=Math.cos(p.angle)*0.8;p.vy-=Math.sin(p.angle)*0.8;
     }
     // Timers
+    if(p && p.invulnerableTimer > 0) p.invulnerableTimer -= dt;
     if(game.doubleBulletTimer>0)game.doubleBulletTimer-=dt*1000;
     if(game.speedBoostTimer>0)game.speedBoostTimer-=dt*1000;
     if(game.shieldActive){game.shieldTimer-=dt*1000;if(game.shieldTimer<=0||game.shieldHits<=0){game.shieldActive=false;}}
@@ -2141,22 +2145,43 @@ function gameLoop(timestamp){
                     dead = false; // Stay alive to hit enemies
                     spawnHitSpark(b.x, b.y, '#00eaff');
                     audio.play('shoot', 0.3); // "Ping" reflection sound
+                } else if (p.invulnerableTimer > 0) {
+                    dead = true; // Absorbed during brief i-frame grace period
                 } else {
-                    dead=true;
-                    p.hp = 0; p._hpM = 0; // Instant elimination on bullet hit
-                    hitFlash = 0.5; screenShake = 12;
+                    dead = true;
+                    // Balanced bullet damage: regular 5 HP, tank/volt 8 HP, boss beams 12 HP
+                    let dmg = 5;
+                    if (b.shapeType === 'bossBeam') dmg = 12;
+                    else if (b.shapeType === 'shadowVolt' || (b.size && b.size > 6)) dmg = 8;
+
+                    p.hp = Math.max(0, p.hp - dmg);
+                    p._hpM = p.hp;
+                    p.invulnerableTimer = 0.45; // 0.45s i-frame window prevents instant multi-shot vaporization
+
+                    hitFlash = 0.35;
+                    screenShake = 6;
                     spawnHitSpark(b.x, b.y, b.color || '#ff3a22');
-                    spawnExplosion(p.x, p.y, p.color);
-                    if(navigator.vibrate) navigator.vibrate(50);
-                    if(window.playCustomSound) playCustomSound('music/shooter_destoyed.ogg', 4, 0.5);
-                    audio.play('playerDeath', 1.0);
-                    if(game.mission && game.mission.id === 'no_damage'){
+                    if (navigator.vibrate) navigator.vibrate(25);
+                    if (audio && audio.play) audio.play('hit', 0.6);
+
+                    if (game.mission && game.mission.id === 'no_damage') {
+                        p.hp = 0; p._hpM = 0;
+                        spawnExplosion(p.x, p.y, p.color);
+                        if (navigator.vibrate) navigator.vibrate(50);
+                        if (window.playCustomSound) playCustomSound('music/shooter_destoyed.ogg', 4, 0.5);
+                        audio.play('playerDeath', 1.0);
                         showToast('❌ RULE BROKEN — You took damage! Game Over.');
-                    } else {
-                        showToast('💥 GAME OVER — Bullet hit shooter!');
+                        game.mission = null;
+                        triggerGameOver();
+                    } else if (p.hp <= 0) {
+                        spawnExplosion(p.x, p.y, p.color);
+                        if (navigator.vibrate) navigator.vibrate(50);
+                        if (window.playCustomSound) playCustomSound('music/shooter_destoyed.ogg', 4, 0.5);
+                        audio.play('playerDeath', 1.0);
+                        showToast('💥 DESTROYED — Hull Integrity Depleted!');
+                        game.mission = null;
+                        triggerGameOver();
                     }
-                    game.mission = null;
-                    triggerGameOver();
                 }
             }
         }
@@ -2423,7 +2448,9 @@ function renderFrame(dt,now){
     if(p&&game.state!=='gameOver'){
         const dx=p.x-camera.x,dy=p.y-camera.y;
         if(game.shieldActive)drawShield(dx,dy,p.radius,now);
+        if(p.invulnerableTimer > 0 && Math.floor(now / 90) % 2 === 0) ctx.globalAlpha = 0.35;
         drawShip(dx,dy,p.angle,p.radius,p.color,true,false, 'player');
+        ctx.globalAlpha = 1.0;
         drawHPBar(dx,dy,p.hp,p.maxHp,p.radius,true);
     }
     // Clones (Multiplied Shooter Wingmen — fully visible with tactical cyber aura)
