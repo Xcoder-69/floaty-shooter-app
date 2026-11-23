@@ -118,7 +118,7 @@ const CHAPTERS = [
 const ENEMY_TYPES = {
     basic: {
         name: 'Scout',
-        hp: 2,
+        hp: 3,             // Finished in 3 hits by player bullets across all levels
         speed: 0.32,       // base multiplier (was 0.4)
         fireRate: 190,     // frames between shots (was 320)
         radius: 22,
@@ -359,12 +359,9 @@ function getTankDrop(chapter) {
 
 // ======================== HP RECOVERY ========================
 function getHpOnKill(chapter, level, enemyType) {
-    // Only heavy miniboss/tank/boss drops give HP on kill (equal to 1 hit of recovery)
+    // Only heavy miniboss/tank/boss drops give HP on kill (equal to 1 bullet worth of recovery)
     if (enemyType === 'tank' || enemyType === 'miniboss' || enemyType === 'boss' || enemyType === 'bossTankA' || enemyType === 'bossTankB') {
-        const ch = Math.max(1, chapter || 1);
-        const maxHp = getPlayerMaxHp(ch);
-        const hitsToDestroy = ch + 1;
-        return Math.ceil(maxHp / hitsToDestroy);
+        return 2;
     }
     return 0;
 }
