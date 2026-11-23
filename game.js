@@ -1366,7 +1366,8 @@ function spawnEnemy(ch, lvl, type) {
     e.maxHp = hp;
     e.speed = et.speed * cfg.speedMult;
     e.fireRate = Math.ceil(et.fireRate * cfg.fireRateMult);
-    e.shootCooldown = Math.floor(Math.random() * 40) + Math.max(40, Math.floor(et.fireRate * cfg.fireRateMult * 0.25));
+    // Stagger initial cooldown across the fire interval so enemies never start synchronized
+    e.shootCooldown = Math.floor(Math.random() * e.fireRate) + 35;
     e.type = type;
     e.pushbackTimer = 0;
     e.color = et.color;
@@ -1410,6 +1411,7 @@ function spawnPickup(x,y,type){
         game.score=0;game.levelKills=0;game.totalKills=0;game.coinsEarned=0;game.state='playing';
         game.combo={count:0,timer:0,multiplier:1};
         game.doubleBulletTimer=0;game.speedBoostTimer=0;game.shieldActive=false;game.shieldHits=0;game.shieldTimer=0;
+        game.lastEnemyShootTime = 0;
         game.safeTimer=SAFE_START_DELAY;game.lastTime=0;game.levelStartTime=performance.now();
         game.mission=getMissionForLevel(chapter,level);game.missionProgress=0;game.missionTimer=0;game.noDamageTimer=0;
         game.activeMissileStrike = null;
@@ -1996,51 +1998,59 @@ function gameLoop(timestamp){
         }
         // Enemy shoot
         if(game.safeTimer<=0){e.shootCooldown--;
-            if(dist<750&&e.shootCooldown<=0){e.shootCooldown=e.fireRate;
-                const baseSpd = (11.0 + (game.chapter - 1) * 1.0) * 0.66; // Increased by 10%
-                const bs = baseSpd + Math.min(game.level * 0.08, 2.5) * 0.66;
-                const aimSpread = Math.max(0.01, (3 - game.chapter) * 0.025);
-                const shootAngle = Math.atan2(p.y - e.y, p.x - e.x) + (Math.random() - 0.5) * aimSpread;
-                const eox=e.x+Math.cos(shootAngle)*(e.radius+6), eoy=e.y+Math.sin(shootAngle)*(e.radius+6);
-
-                const addEnemyBullet = (ang, color, shadow, shape, spd) => {
-                    const b = acquireBullet();
-                    b.x = eox; b.y = eoy;
-                    const s = spd || bs;
-                    b.vx = Math.cos(ang) * s;
-                    b.vy = Math.sin(ang) * s;
-                    b.life = 240; // Extended lifetime ensures slower bullets cross full screen
-                    b.ownerType = 'enemy';
-                    b.color = color; b.shadow = shadow;
-                    b.size = shape === 'bossBeam' ? 8 : 5;
-                    b.shapeType = shape;
-                    game.bullets.push(b);
-                };
-
-                if(e.type==='bossTankA') {
-                    [-0.5,-0.25,0,0.25,0.5].forEach(a => addEnemyBullet(shootAngle+a, '#ff5500', '#ff2200', 'bossBeam', bs*1.2));
-                    spawnMuzzleFlash(e.x,e.y,shootAngle);
-                    if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
-                    else if (game.chapter >= 2) playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
-                    else audio.play('enemyShoot');
-                } else if(e.type==='bossTankB') {
-                    for(let burst=0;burst<3;burst++) addEnemyBullet(shootAngle+(Math.random()-0.5)*0.08, '#cc66ff', '#8800ff', 'shadowVolt', bs*1.28);
-                    spawnMuzzleFlash(e.x,e.y,shootAngle);
-                    if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
-                    else playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
+            if(dist<750&&e.shootCooldown<=0){
+                // Ensure enemies take turns shooting rather than firing simultaneously at the exact same instant
+                if(timestamp - (game.lastEnemyShootTime || 0) < 400) {
+                    e.shootCooldown = Math.floor(Math.random() * 25) + 20; // Stagger next shot by 0.3s - 0.7s
                 } else {
-                    addEnemyBullet(shootAngle, '#ff3a22', '#ff0000', 'redDash');
-                    spawnMuzzleFlash(e.x,e.y,shootAngle);
-                    if (e.type === 'tank') {
+                    game.lastEnemyShootTime = timestamp;
+                    // Stagger cooldown with random variation so enemies don't synchronize on future shots
+                    e.shootCooldown = Math.floor(e.fireRate * (0.8 + Math.random() * 0.4));
+                    const baseSpd = (11.0 + (game.chapter - 1) * 1.0) * 0.66; // Increased by 10%
+                    const bs = baseSpd + Math.min(game.level * 0.08, 2.5) * 0.66;
+                    const aimSpread = Math.max(0.01, (3 - game.chapter) * 0.025);
+                    const shootAngle = Math.atan2(p.y - e.y, p.x - e.x) + (Math.random() - 0.5) * aimSpread;
+                    const eox=e.x+Math.cos(shootAngle)*(e.radius+6), eoy=e.y+Math.sin(shootAngle)*(e.radius+6);
+
+                    const addEnemyBullet = (ang, color, shadow, shape, spd) => {
+                        const b = acquireBullet();
+                        b.x = eox; b.y = eoy;
+                        const s = spd || bs;
+                        b.vx = Math.cos(ang) * s;
+                        b.vy = Math.sin(ang) * s;
+                        b.life = 240; // Extended lifetime ensures slower bullets cross full screen
+                        b.ownerType = 'enemy';
+                        b.color = color; b.shadow = shadow;
+                        b.size = shape === 'bossBeam' ? 8 : 5;
+                        b.shapeType = shape;
+                        game.bullets.push(b);
+                    };
+
+                    if(e.type==='bossTankA') {
+                        [-0.5,-0.25,0,0.25,0.5].forEach(a => addEnemyBullet(shootAngle+a, '#ff5500', '#ff2200', 'bossBeam', bs*1.2));
+                        spawnMuzzleFlash(e.x,e.y,shootAngle);
+                        if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
+                        else if (game.chapter >= 2) playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
+                        else audio.play('enemyShoot');
+                    } else if(e.type==='bossTankB') {
+                        for(let burst=0;burst<3;burst++) addEnemyBullet(shootAngle+(Math.random()-0.5)*0.08, '#cc66ff', '#8800ff', 'shadowVolt', bs*1.28);
+                        spawnMuzzleFlash(e.x,e.y,shootAngle);
                         if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
                         else playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
                     } else {
-                        if (game.level % 2 === 0) playCustomSound('music/enemy2.ogg', 8, 0.6);
-                        else playCustomSound('music/enemy.ogg', 8, 0.6);
-                    }
-                    if(e.isMiniboss || e.type==='boss'){
-                        (e.type==='boss' ? [-0.6,-0.3,0.3,0.6] : [-0.3,0.3]).forEach(a => addEnemyBullet(shootAngle+a, e.type==='boss'?'#ff3a5c':'#ff66ff', e.type==='boss'?'#ff0000':'#ff00ff', 'redDash', bs*1.08));
-                        if(e.type==='boss'&&Math.random()<0.3) for(let j=0;j<8;j++) addEnemyBullet(j*Math.PI/4, '#ff3a5c', '#ff0000', 'redDash', bs*0.95);
+                        addEnemyBullet(shootAngle, '#ff3a22', '#ff0000', 'redDash');
+                        spawnMuzzleFlash(e.x,e.y,shootAngle);
+                        if (e.type === 'tank') {
+                            if (game.chapter >= 5) playCustomSound('music/tank5,6.ogg', 5, 0.7);
+                            else playCustomSound('music/tank4,3,2.ogg', 5, 0.7);
+                        } else {
+                            if (game.level % 2 === 0) playCustomSound('music/enemy2.ogg', 8, 0.6);
+                            else playCustomSound('music/enemy.ogg', 8, 0.6);
+                        }
+                        if(e.isMiniboss || e.type==='boss'){
+                            (e.type==='boss' ? [-0.6,-0.3,0.3,0.6] : [-0.3,0.3]).forEach(a => addEnemyBullet(shootAngle+a, e.type==='boss'?'#ff3a5c':'#ff66ff', e.type==='boss'?'#ff0000':'#ff00ff', 'redDash', bs*1.08));
+                            if(e.type==='boss'&&Math.random()<0.3) for(let j=0;j<8;j++) addEnemyBullet(j*Math.PI/4, '#ff3a5c', '#ff0000', 'redDash', bs*0.95);
+                        }
                     }
                 }
             }
