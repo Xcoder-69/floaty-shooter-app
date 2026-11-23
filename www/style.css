@@ -4223,6 +4223,34 @@ kbd {
     }
 }
 
+/* Floating Damage Combat Text */
+.damage-float {
+    position: fixed;
+    z-index: 9500;
+    pointer-events: none;
+    font-family: var(--font-head);
+    font-size: 1rem;
+    font-weight: 900;
+    color: #ff2a4b;
+    text-shadow: 0 0 10px #ff0033, 0 0 20px #ff0000;
+    transform: translate(-50%, -50%);
+    animation: damageFloatAnim 0.9s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+@keyframes damageFloatAnim {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1.3);
+    }
+    30% {
+        transform: translate(-50%, -18px) scale(1.1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -38px) scale(0.85);
+    }
+}
+
 .hud-top-left {
     position: absolute;
     top: .8rem;

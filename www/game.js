@@ -2149,20 +2149,20 @@ function gameLoop(timestamp){
                     dead = true; // Absorbed during brief i-frame grace period
                 } else {
                     dead = true;
-                    // Balanced bullet damage: regular 5 HP, tank/volt 8 HP, boss beams 12 HP
-                    let dmg = 5;
-                    if (b.shapeType === 'bossBeam') dmg = 12;
-                    else if (b.shapeType === 'shadowVolt' || (b.size && b.size > 6)) dmg = 8;
+                    // Standard enemy bullets take 1 HP; boss beams take 2 HP on higher ships
+                    let dmg = 1;
+                    if (b.shapeType === 'bossBeam' && p.hp > 2) dmg = 2;
 
                     p.hp = Math.max(0, p.hp - dmg);
                     p._hpM = p.hp;
-                    p.invulnerableTimer = 0.45; // 0.45s i-frame window prevents instant multi-shot vaporization
+                    p.invulnerableTimer = 0.5; // 0.5s i-frame window prevents instant multi-shot vaporization
 
-                    hitFlash = 0.35;
-                    screenShake = 6;
+                    hitFlash = 0.5;
+                    screenShake = 10;
                     spawnHitSpark(b.x, b.y, b.color || '#ff3a22');
-                    if (navigator.vibrate) navigator.vibrate(25);
-                    if (audio && audio.play) audio.play('hit', 0.6);
+                    spawnDamageFloat(p.x - camera.x, p.y - camera.y, '-' + dmg + ' HP');
+                    if (navigator.vibrate) navigator.vibrate(35);
+                    if (audio && audio.play) audio.play('hit', 0.7);
 
                     if (game.mission && game.mission.id === 'no_damage') {
                         p.hp = 0; p._hpM = 0;
@@ -2368,6 +2368,12 @@ function updateHUD(){
     const pct=Math.max(0,p.hp/p.maxHp)*100;
     document.getElementById('hp-bar').style.width=pct+'%';
     document.getElementById('hp-text').textContent=Math.max(0,p.hp)+'/'+p.maxHp;
+    const isCritical = p.hp > 0 && (p.hp / p.maxHp <= 0.25 || p.hp === 1);
+    const lowAlert = document.getElementById('low-hp-alert');
+    if (lowAlert) {
+        if (isCritical && game.state === 'playing') lowAlert.classList.remove('hidden');
+        else lowAlert.classList.add('hidden');
+    }
     document.getElementById('hud-coins').textContent=window.getSaveData().coins;
     document.getElementById('hud-chapter-text').textContent='CH.'+game.chapter;
     document.getElementById('hud-level-text').textContent='LVL '+game.level;
@@ -2553,6 +2559,18 @@ function renderFrame(dt,now){
     ctx.globalAlpha=1;ctx.restore();
     // Hit flash
     if(hitFlash>0){ctx.fillStyle=`rgba(255,58,92,${hitFlash*0.35})`;ctx.fillRect(0,0,canvas.width,canvas.height);}
+
+    // Low HP Critical Red Warning Vignette Animation (HP <= 20% or 1 HP)
+    if(p && game.state === 'playing' && p.hp > 0 && (p.hp / p.maxHp <= 0.25 || p.hp === 1)){
+        const pulse = 0.22 + 0.16 * Math.sin(now * 0.007);
+        const w = canvas.width, h = canvas.height;
+        const grad = ctx.createRadialGradient(w/2, h/2, Math.min(w, h)*0.35, w/2, h/2, Math.max(w, h)*0.72);
+        grad.addColorStop(0, 'rgba(255, 0, 0, 0)');
+        grad.addColorStop(0.7, `rgba(220, 0, 20, ${pulse * 0.6})`);
+        grad.addColorStop(1, `rgba(255, 10, 30, ${pulse})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+    }
 
     // BOSS ALERT UI
     if (game.bossAlert && now - game.bossAlertTime < 3000) {
@@ -2954,6 +2972,15 @@ function spawnCoinFloat(sx,sy,amount){
     el.style.top=sy+'px';
     document.body.appendChild(el);
     setTimeout(()=>el.remove(),1000);
+}
+function spawnDamageFloat(sx,sy,text){
+    const el=document.createElement('div');
+    el.className='damage-float';
+    el.textContent=text||'-1 HP';
+    el.style.left=sx+'px';
+    el.style.top=sy+'px';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),900);
 }
 
 // =====================================================================
