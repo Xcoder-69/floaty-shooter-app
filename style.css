@@ -7818,6 +7818,7 @@ html.is-desktop #btn-double-mobile.hidden {
         max-height: none !important;
         overflow: visible !important;
     }
+
     .lb-row {
         padding: 0.28rem 0.5rem !important;
         border-radius: 7px !important;
@@ -8065,6 +8066,7 @@ html.is-desktop #btn-double-mobile.hidden {
         max-height: none !important;
         overflow: visible !important;
     }
+
     /* Empty State in Leaderboard 'MY RUNS' & Match History — compact & no-scroll */
     .history-empty {
         padding: 0.28rem 0.5rem 0.25rem !important;
