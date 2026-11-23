@@ -1997,8 +1997,8 @@ function gameLoop(timestamp){
         // Enemy shoot
         if(game.safeTimer<=0){e.shootCooldown--;
             if(dist<750&&e.shootCooldown<=0){e.shootCooldown=e.fireRate;
-                const baseSpd = (11.0 + (game.chapter - 1) * 1.0) * 0.60; // Decreased by 40%
-                const bs = baseSpd + Math.min(game.level * 0.08, 2.5) * 0.60;
+                const baseSpd = (11.0 + (game.chapter - 1) * 1.0) * 0.66; // Increased by 10%
+                const bs = baseSpd + Math.min(game.level * 0.08, 2.5) * 0.66;
                 const aimSpread = Math.max(0.01, (3 - game.chapter) * 0.025);
                 const shootAngle = Math.atan2(p.y - e.y, p.x - e.x) + (Math.random() - 0.5) * aimSpread;
                 const eox=e.x+Math.cos(shootAngle)*(e.radius+6), eoy=e.y+Math.sin(shootAngle)*(e.radius+6);
