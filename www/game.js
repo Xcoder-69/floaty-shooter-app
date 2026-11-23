@@ -1218,10 +1218,12 @@ let game={
     activeMissileStrike: null // Track cinematic missile strike
 };
 
-    function createPlayer(ch){
+    function createPlayer(ch, lvl){
         const _esd = window.getSaveData ? window.getSaveData() : {};
         const eqCh = (window.game && window.game.trialShipId) || (_esd.equippedShip !== null ? _esd.equippedShip : (window.game && window.game.chapter) || ch || 1);
-        const chapter=CHAPTERS[eqCh-1];const hp=getPlayerMaxHp(eqCh);
+        const level = lvl || (window.game && window.game.level) || 1;
+        const chapter = CHAPTERS[eqCh-1];
+        const hp = getPlayerMaxHp(eqCh, level);
         const p = {x:MAP_W/2,y:MAP_H/2,vx:0,vy:0,angle:0,radius:22,hp,maxHp:hp,_hpM:hp, // Shadow HP Mirror
             eqCh: eqCh,
             invulnerableTimer: 0,
@@ -1403,7 +1405,7 @@ function spawnPickup(x,y,type){
     window.startLevel = function(chapter,level){
         tryLockLandscape();
         game.chapter=chapter;game.level=level;
-        game.player=createPlayer(chapter);
+        game.player=createPlayer(chapter,level);
         game.enemies=[]; game.bullets=[]; game.pickups=[]; game.clones=[];
         game.score=0;game.levelKills=0;game.totalKills=0;game.coinsEarned=0;game.state='playing';
         game.combo={count:0,timer:0,multiplier:1};
@@ -2368,12 +2370,6 @@ function updateHUD(){
     const pct=Math.max(0,p.hp/p.maxHp)*100;
     document.getElementById('hp-bar').style.width=pct+'%';
     document.getElementById('hp-text').textContent=Math.max(0,p.hp)+'/'+p.maxHp;
-    const isCritical = p.hp > 0 && (p.hp / p.maxHp <= 0.25 || p.hp === 1);
-    const lowAlert = document.getElementById('low-hp-alert');
-    if (lowAlert) {
-        if (isCritical && game.state === 'playing') lowAlert.classList.remove('hidden');
-        else lowAlert.classList.add('hidden');
-    }
     document.getElementById('hud-coins').textContent=window.getSaveData().coins;
     document.getElementById('hud-chapter-text').textContent='CH.'+game.chapter;
     document.getElementById('hud-level-text').textContent='LVL '+game.level;
@@ -2559,18 +2555,6 @@ function renderFrame(dt,now){
     ctx.globalAlpha=1;ctx.restore();
     // Hit flash
     if(hitFlash>0){ctx.fillStyle=`rgba(255,58,92,${hitFlash*0.35})`;ctx.fillRect(0,0,canvas.width,canvas.height);}
-
-    // Low HP Critical Red Warning Vignette Animation (HP <= 20% or 1 HP)
-    if(p && game.state === 'playing' && p.hp > 0 && (p.hp / p.maxHp <= 0.25 || p.hp === 1)){
-        const pulse = 0.22 + 0.16 * Math.sin(now * 0.007);
-        const w = canvas.width, h = canvas.height;
-        const grad = ctx.createRadialGradient(w/2, h/2, Math.min(w, h)*0.35, w/2, h/2, Math.max(w, h)*0.72);
-        grad.addColorStop(0, 'rgba(255, 0, 0, 0)');
-        grad.addColorStop(0.7, `rgba(220, 0, 20, ${pulse * 0.6})`);
-        grad.addColorStop(1, `rgba(255, 10, 30, ${pulse})`);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-    }
 
     // BOSS ALERT UI
     if (game.bossAlert && now - game.bossAlertTime < 3000) {
